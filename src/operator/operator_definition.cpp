@@ -4,7 +4,7 @@
 namespace SampleDB
 {
 
-    Operator::Operator(const std::vector<std::string> columns, std::shared_ptr<Operator> next_operator) : _output_vector ({}), _input_vector (_output_vector),
+    Operator::Operator(const std::vector<std::string>& columns, std::shared_ptr<Operator> next_operator) : _output_vector ({}), _input_vector ({}),
                                                                                                         _columns(columns), _operator_type (get_operator_type()),
                                                                                                         _next_operator(next_operator)
 
@@ -45,8 +45,8 @@ namespace SampleDB
 
         std::uniform_int_distribution<int> dist(0, 15);
 
-        const char *v = "0123456789abcdef";
-        const bool dash[] = {0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0};
+        constexpr auto v = "0123456789abcdef";
+        const uint8_t dash[] = {0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0};
 
         std::string res;
         for (int i = 0; i < 16; i++)

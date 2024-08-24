@@ -1,5 +1,8 @@
 #include "include/operator_utils.hh"
+#include "../utils/include/debug_enabled.h"
 #include <iostream>
+
+
 namespace SampleDB
 {
     const std::string get_operator_type_as_string (operator_type_t type)
@@ -26,8 +29,10 @@ namespace SampleDB
         return type + " " + uuid;
     }
 
-    void log_vector (const Vector& vector, const std::string& operator_info, const std::string fn)
+    void log_vector (const Vector& vector, const std::string& operator_info, const std::string& fn)
     {
+        if (!is_debug_enabled()) return;
+
         std::cout << "For operator : " <<  operator_info << "\n";
         std::cout << "In function : " << fn << "\n";
         vector.print_debug_info();
@@ -36,6 +41,8 @@ namespace SampleDB
 
     void log_operator_debug_msg (const Operator * op)
     {
+        if (!is_debug_enabled()) return;
+
         std::cout << "OPERATOR DEBUG INFO:\n";
         std::cout << "Inside Operator : " << get_operator_name_as_string (op->get_operator_type (), op->get_uuid()) << "\n";
         std::cout << "Attribute name(s): " << "\n";

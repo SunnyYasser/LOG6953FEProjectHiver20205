@@ -30,7 +30,7 @@ namespace SampleDB
     public:
         int32_t get_pos() const;
         int32_t get_size() const;
-        State get_state() const;
+        State get_state();
 
     private:
         std::vector<int32_t> _vector;

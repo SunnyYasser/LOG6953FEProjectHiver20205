@@ -21,6 +21,9 @@ namespace SampleDB
 
     void Scan::execute()
     {
+        const std::string fn_name = "Scan::execute()";
+        const std::string operator_name = get_operator_name_as_string (get_operator_type (), get_uuid ());
+
         int start_idx = 0, end_idx;
         while (start_idx < _attribute_data.size())
         {
@@ -28,10 +31,10 @@ namespace SampleDB
             auto _chunked_data = std::vector<int32_t>(begin(_attribute_data) + start_idx, begin(_attribute_data) + end_idx + 1);
 
             // update output vector for this operator
-            _output_vector = Vector (_chunked_data);
+            _output_vector = Vector(_chunked_data);
 
             // log updated output vector
-            log_vector(_output_vector, get_operator_name_as_string (get_operator_type (), get_uuid ()), "Scan::execute()");
+            log_vector (_output_vector, operator_name, fn_name);
 
             // update output vector in context
             _context_memory->update_operator_data(_attribute, _output_vector);

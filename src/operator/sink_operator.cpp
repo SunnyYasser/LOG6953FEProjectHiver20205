@@ -10,7 +10,7 @@ namespace SampleDB
     int Sink::fixed_size_vector_cnt = 0;
     int Sink::total_size_if_materialized = 1;
 
-    Sink::Sink(const std::vector<std::string> columns) : Operator(columns, nullptr), _attribute (columns.front())
+    Sink::Sink(const std::vector<std::string>& columns) : Operator(columns, nullptr), _attribute (columns.front())
     {}
 
     operator_type_t Sink::get_operator_type () const
@@ -51,7 +51,6 @@ namespace SampleDB
     void Sink::init(std::shared_ptr <ContextMemory> context, std::shared_ptr <DataStore> datastore)
     {
         _input_vector = context->read_vector_for_attribute (_attribute);
-        get_next_operator()->init(context, datastore);
     }
 
 }

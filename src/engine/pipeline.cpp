@@ -2,7 +2,7 @@
 
 namespace SampleDB
 {
-    Pipeline::Pipeline(const std::vector<std::string> &columns) : _columns(columns), _first_operator(nullptr)
+    Pipeline::Pipeline(const std::vector<std::string> &table_names, const std::unordered_map<>) : _columns(columns), _first_operator(nullptr)
     {
         _context_memory = std::make_shared<SampleDB::ContextMemory>();
         _datastore = std::make_shared<SampleDB::DataStore>(_columns);
@@ -14,14 +14,14 @@ namespace SampleDB
         _first_operator->debug();
     }
 
-    bool Pipeline::execute()
+    void Pipeline::execute()
     {
-        return _first_operator->execute();
+        _first_operator->execute();
     }
 
-    bool Pipeline::init()
+    void Pipeline::init()
     {
-        return _first_operator->init(_context_memory, _datastore);
+        _first_operator->init(_context_memory, _datastore);
     }
 
     void Pipeline::clear()

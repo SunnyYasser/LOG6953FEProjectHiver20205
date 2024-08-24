@@ -16,15 +16,16 @@ namespace SampleDB
     public:
         Operator() = delete;
         Operator(const Operator &) = delete;
-        Operator(const std::vector<std::string>);
-        Operator(const std::vector<std::string>, std::shared_ptr<Operator>);
+        explicit Operator(const std::vector<std::string>);
+        Operator(const std::vector<std::string>&, std::shared_ptr<Operator>);
+        virtual ~Operator() = default;
 
     public:
-        const std::string get_uuid() const;
-        const std::string get_operator_info () const;
+        [[nodiscard]] const std::string get_uuid() const;
+        [[nodiscard]] const std::string get_operator_info () const;
         std::shared_ptr <Operator> get_next_operator ();
-        virtual operator_type_t get_operator_type () const;
-        std::vector <std::string> get_attributes () const;
+        [[nodiscard]] virtual operator_type_t get_operator_type () const;
+        [[nodiscard]] std::vector <std::string> get_attributes () const;
 
 
     public:
@@ -33,8 +34,8 @@ namespace SampleDB
         virtual void init(std::shared_ptr <ContextMemory>, std::shared_ptr <DataStore>) = 0;
 
     public:
-        Vector _output_vector; // write enabled, need seperate copy
-        Vector& _input_vector; // since read only, can live with a reference
+        Vector _output_vector;
+        Vector _input_vector;
 
 
 

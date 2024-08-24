@@ -13,7 +13,7 @@ namespace SampleDB
         Sink() = delete;
         Sink(const Sink &) = delete;
         Sink(const std::vector<std::string>, std::shared_ptr<Operator>) = delete;
-        Sink(const std::vector<std::string>);
+        Sink(const std::vector<std::string>&);
 
 
     public:
@@ -22,7 +22,7 @@ namespace SampleDB
         void init(std::shared_ptr <ContextMemory>, std::shared_ptr <DataStore>) override;
 
     private:
-        operator_type_t get_operator_type () const override;
+        [[nodiscard]] operator_type_t get_operator_type () const override;
         std::string _attribute;
         static int fixed_size_vector_cnt;
         static int total_size_if_materialized;

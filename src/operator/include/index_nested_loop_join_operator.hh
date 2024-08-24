@@ -8,7 +8,6 @@
 #include "../../memory/include/vector.hh"
 #include "operator_definition.hh"
 #include "operator_types.hh"
-#include "oeprator_utils.hh"
 
 namespace SampleDB
 {
@@ -19,7 +18,7 @@ namespace SampleDB
         IndexNestedLoopJoin() = delete;
         IndexNestedLoopJoin(const IndexNestedLoopJoin &) = delete;
         IndexNestedLoopJoin(const std::vector<std::string>) = delete;
-        IndexNestedLoopJoin(const std::vector<std::string>, std::shared_ptr<Operator>);
+        IndexNestedLoopJoin(const std::vector<std::string>&, std::shared_ptr<Operator>);
 
         void execute() override;
         void debug() override;
@@ -27,7 +26,7 @@ namespace SampleDB
 
     private:
         void execute_in_chunks();
-        operator_type_t get_operator_type () const override;
+        [[nodiscard]] operator_type_t get_operator_type () const override;
 
 
     private:

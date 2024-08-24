@@ -16,12 +16,12 @@ namespace SampleDB
     {
     public:
         Pipeline() = delete;
-        Pipeline(const std::vector<std::string> &);
+        explicit Pipeline(const std::vector<std::string> &, const std::unordered_map<std::string, std::vector<std::string>>&);
 
     public:
         void debug();
-        bool init();
-        bool execute();
+        void init();
+        void execute();
         void clear();
         std::shared_ptr<SampleDB::ContextMemory> get_context_memory();
         std::shared_ptr<SampleDB::DataStore> get_datastore();
@@ -35,5 +35,6 @@ namespace SampleDB
     };
 
 }
+
 
 #endif

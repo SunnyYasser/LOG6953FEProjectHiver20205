@@ -23,7 +23,7 @@ namespace SampleDB
         void init(std::shared_ptr <ContextMemory>, std::shared_ptr <DataStore>) override;
 
     private:
-        operator_type_t get_operator_type () const override;
+        [[nodiscard]] operator_type_t get_operator_type () const override;
         const std::string _attribute;
         std::vector <int32_t> _attribute_data;
         std::shared_ptr <ContextMemory> _context_memory;
