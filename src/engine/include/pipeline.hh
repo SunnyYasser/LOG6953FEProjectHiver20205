@@ -19,16 +19,16 @@ namespace SampleDB
         explicit Pipeline(const std::vector<std::string> &, const std::unordered_map<std::string, std::vector<std::string>>&);
 
     public:
-        void debug();
-        void init();
-        void execute();
-        void clear();
+        void debug() const;
+        void init() const;
+        void execute() const;
+        void clear() const;
         std::shared_ptr<SampleDB::ContextMemory> get_context_memory();
         std::shared_ptr<SampleDB::DataStore> get_datastore();
         void set_first_operator(const std::shared_ptr<SampleDB::Operator> &);
 
     private:
-        const std::vector<std::string> _columns;
+        const std::vector<std::string> _tables;
         std::shared_ptr<SampleDB::Operator> _first_operator;
         std::shared_ptr<SampleDB::ContextMemory> _context_memory;
         std::shared_ptr<SampleDB::DataStore> _datastore;

@@ -3,12 +3,9 @@
 #include <iostream>
 
 
-namespace SampleDB
-{
-    const std::string get_operator_type_as_string (operator_type_t type)
-    {
-        switch (type)
-        {
+namespace SampleDB {
+    std::string get_operator_type_as_string(operator_type_t type) {
+        switch (type) {
             case OP_GENERIC: return "GENERIC_OPERATOR";
             case OP_SCAN: return "SCAN_OPERATOR";
             case OP_INLJ: return "INLJ_OPERATOR";
@@ -19,41 +16,39 @@ namespace SampleDB
         return "UNKNOWN_OPERATOR";
     }
 
-    const std::string get_operator_name_as_string (operator_type_t type, const std::string& uuid)
-    {
-        return get_operator_type_as_string (type) + " " + uuid;
+    std::string get_operator_name_as_string(operator_type_t type, const std::string &uuid) {
+        return get_operator_type_as_string(type) + " " + uuid;
     }
 
-    const std::string get_operator_name_as_string (const std::string& type, const std::string& uuid)
-    {
+    std::string get_operator_name_as_string(const std::string &type, const std::string &uuid) {
         return type + " " + uuid;
     }
 
-    void log_vector (const Vector& vector, const std::string& operator_info, const std::string& fn)
-    {
+    void log_vector(const Vector &vector, const std::string &operator_info, const std::string &fn, const std::string &table_name) {
         if (!is_debug_enabled()) return;
 
-        std::cout << "For operator : " <<  operator_info << "\n";
+        std::cout << "For operator : " << operator_info << "\n";
         std::cout << "In function : " << fn << "\n";
+        std::cout << "For table : " << table_name << "\n";
         vector.print_debug_info();
         std::cout << "\n-------------------\n";
     }
 
-    void log_operator_debug_msg (const Operator * op)
-    {
+    void log_operator_debug_msg(const Operator *op) {
         if (!is_debug_enabled()) return;
 
         std::cout << "OPERATOR DEBUG INFO:\n";
-        std::cout << "Inside Operator : " << get_operator_name_as_string (op->get_operator_type (), op->get_uuid()) << "\n";
+        std::cout << "Inside Operator : " << get_operator_name_as_string(op->get_operator_type(), op->get_uuid()) <<
+                "\n";
+        std::cout << "For table : " << op->get_table_name() <<
+                "\n";
+
         std::cout << "Attribute name(s): " << "\n";
-        auto&& attributes = op->get_attributes ();
-        for (auto& attribute : attributes)
-        {
+        auto &&attributes = op->get_attributes();
+        for (auto &attribute: attributes) {
             std::cout << attribute << " ";
         }
         std::cout << "\n";
         std::cout << "OPERATOR DEBUG INFO ENDS\n";
     }
 }
-
-

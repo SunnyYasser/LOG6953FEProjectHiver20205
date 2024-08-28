@@ -14,31 +14,40 @@
 #include <unordered_map>
 
 
-namespace SampleDB
-{
+namespace SampleDB {
+    class DataSourceTable {
+    public:
+        explicit DataSourceTable(const std::string &, const std::vector<std::string> &);
 
-class DataSourceTable
-{
-public:
-    explicit DataSourceTable (std::vector<std::string>&);
-    DataSourceTable (const DataSourceTable&) = default;
-    //TODO- this is just a testing API, and will be removed
-    void populate_store_with_temporary_data();
+        DataSourceTable(const DataSourceTable &) = default;
 
-    /*raw data table*/
-    std::vector<std::vector<int32_t>> _table;
+        int32_t rows_size() const;
 
-     /*simple index*/
-    std::unordered_map<int32_t, std::vector<int32_t>> _index;
+        int32_t columns_size() const;
 
-    /*"a" -> 0th, "b" -> 1st etc..*/
-    std::unordered_map<std::string, uint32_t> _column_name_to_index_map;
+        /*name*/
+        std::string _name;
 
-private:
-    void populate_index();
+        /*raw data table*/
+        std::vector<std::vector<int32_t> > _table;
 
+        /*simple index*/
+        std::unordered_map<int32_t, std::vector<int32_t> > _index;
 
-};
+        /*"a" -> 0th, "b" -> 1st etc..*/
+        std::unordered_map<std::string, uint32_t> _column_name_to_index_map;
+
+    private:
+        void populate_index();
+
+        //TODO- this is just a testing API, and will be removed
+        void populate_store_with_temporary_data();
+
+        void populate();
+
+        int32_t _rows{};
+        int32_t _columns{};
+    };
 }
 
 #endif //SAMPLE_DB_DATASOURCE_H

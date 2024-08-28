@@ -14,8 +14,8 @@ namespace SampleDB
     public:
         Scan() = delete;
         Scan(const Scan &) = delete;
-        Scan(const std::vector<std::string>) = delete;
-        Scan(const std::vector<std::string>&, std::shared_ptr<Operator>);
+        Scan(const std::vector<std::string>&) = delete;
+        Scan(const std::vector<std::pair<std::string, std::string>>&,  std::shared_ptr<Operator>);
 
     public:
         void execute() override;

@@ -9,35 +9,37 @@
 #include "operator_definition.hh"
 #include "operator_types.hh"
 
-namespace SampleDB
-{
-    class IndexNestedLoopJoin : public Operator
-    {
-
+namespace SampleDB {
+    class IndexNestedLoopJoin : public Operator {
     public:
         IndexNestedLoopJoin() = delete;
+
         IndexNestedLoopJoin(const IndexNestedLoopJoin &) = delete;
-        IndexNestedLoopJoin(const std::vector<std::string>) = delete;
-        IndexNestedLoopJoin(const std::vector<std::string>&, std::shared_ptr<Operator>);
+
+        IndexNestedLoopJoin(const std::vector<std::string> &) = delete;
+
+        IndexNestedLoopJoin(const std::string &, const std::string &,
+                            const std::vector<std::string> &,
+                            std::shared_ptr<Operator>);
 
         void execute() override;
+
         void debug() override;
+
         void init(std::shared_ptr<ContextMemory>, std::shared_ptr<DataStore>) override;
 
     private:
         void execute_in_chunks();
-        [[nodiscard]] operator_type_t get_operator_type () const override;
 
+        [[nodiscard]] operator_type_t get_operator_type() const override;
 
     private:
         Vector create_new_state(const Vector &);
 
     private:
-        const std::string _input_attribute, _output_attribute;
-        std::shared_ptr <ContextMemory> _context_memory;
-        std::shared_ptr <DataStore> _datastore ;
-
-
+        const std::string _input_attribute, _output_attribute, _right_table;
+        std::shared_ptr<ContextMemory> _context_memory;
+        std::shared_ptr<DataStore> _datastore;
     };
 };
 

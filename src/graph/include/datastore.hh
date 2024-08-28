@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <cstdint>
 #include <datasource.hh>
-
+#include <memory>
 #include "graph.hh"
 
 /*
@@ -16,26 +16,37 @@ Will send an object of this class to Pipeline to help
 setup stuff during operator init ()
 */
 
-namespace SampleDB
-{
-    class DataStore
-    {
+namespace SampleDB {
+    class DataStore {
     public:
         DataStore() = delete;
-        explicit DataStore(const std::vector<std::string> &);
+
+        explicit DataStore(const std::vector<std::string> &,
+                           const std::unordered_map<std::string, std::vector<std::string> > &);
+
         DataStore(const DataStore &) = delete;
+
         DataStore(DataStore &&) = delete;
 
     public:
-        [[nodiscard]] std::vector<int32_t> get_data_vector_for_column_index(const std::string&, const uint32_t);
-        [[nodiscard]] std::vector<int32_t> get_data_vector_for_column(const std::string&, const std::string &);
-        [[nodiscard]] std::vector<int32_t> get_values_from_index (const std::string&, const int32_t);
+        [[nodiscard]] std::vector<int32_t> get_data_vector_for_column_index(const std::string &, uint32_t) const;
+
+        [[nodiscard]] std::vector<int32_t> get_data_vector_for_column(const std::string &, const std::string &) const;
+
+        [[nodiscard]] std::vector<int32_t> get_values_from_table_index(const std::string &, int32_t) const;
+
+        [[nodiscard]] int32_t get_table_columns_size(const std::string &) const;
+
+        [[nodiscard]] int32_t get_table_rows_size(const std::string &) const;
 
     private:
-		uint32_t get_column_idx (const std::string&, const std::string&);
-        std::unordered_map<std::string, DataSourceTable> _table_map;
-        std::vector <std::string> _table_names;
+        uint32_t get_column_idx(const std::string &, const std::string &) const;
 
+        void populate_tables();
+
+        std::vector<std::string> _table_names;
+        std::unordered_map<std::string, std::vector<std::string> > _table_to_column_map;
+        std::unordered_map<std::string, std::shared_ptr<DataSourceTable> > _table_map;
     };
 }
 

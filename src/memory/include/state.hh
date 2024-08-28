@@ -1,19 +1,23 @@
 #ifndef SAMPLE_DB_STATE_HH
 #define SAMPLE_DB_STATE_HH
 
-#include <stdint.h>
+#include <cstdint>
 
-namespace SampleDB
-{
-    class State
-    {
+namespace SampleDB {
+    class State {
     public:
         State() = delete;
-        State(const size_t &);
-        uint32_t get_pos() const;
-        int32_t get_size() const;
+
+        explicit State(const int32_t &);
+
+        [[nodiscard]] int32_t get_pos() const;
+
+        [[nodiscard]] int32_t get_size() const;
+
         void update_pos();
+
         void update_size();
+
         void print_debug_info() const;
 
     public:

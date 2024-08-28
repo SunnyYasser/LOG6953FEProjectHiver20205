@@ -6,26 +6,28 @@
 #include <string>
 #include "vector.hh"
 
-namespace SampleDB
-{
-    class ContextMemory
-    {
-
+namespace SampleDB {
+    class ContextMemory {
     public:
         ContextMemory() = default;
+
         ContextMemory(ContextMemory &&) = delete;
+
         ContextMemory(const ContextMemory &) = delete;
 
     public:
-        void allocate_memory_for_operator(const std::string &);
-        bool update_operator_data(const std::string &, Vector);
-        Vector read_vector_for_attribute (const std::string &);
+        void allocate_memory_for_column(const std::string &, const std::string &);
+
+        bool update_column_data(const std::string &, const std::string &, Vector);
+
+        Vector read_vector_for_column(const std::string &, const std::string &, bool &);
+
+        Vector read_vector_for_column(const std::string &, const std::string &);
 
     private:
-
-        std::unordered_map<std::string, Vector> _context;
+        // <table_name : <column : vector>>
+        std::unordered_map<std::string, std::unordered_map<std::string, Vector> > _context;
     };
-
 }
 
 #endif
