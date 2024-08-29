@@ -10,6 +10,8 @@
 #include "operator_definition.hh"
 #include "operator_types.hh"
 
+#include <unordered_set>
+
 namespace SampleDB {
     class Sink : public Operator {
     public:
@@ -17,10 +19,7 @@ namespace SampleDB {
 
         Sink(const Sink &) = delete;
 
-        Sink(const std::vector<std::string> &, std::shared_ptr<Operator>) = delete;
-
-        Sink(const std::unordered_map<std::string, std::vector<std::string> > &);
-
+        Sink (const std::string&, const std::vector <std::string>&);
     public:
         void execute() override;
 
@@ -29,19 +28,22 @@ namespace SampleDB {
         void init(std::shared_ptr<ContextMemory>, std::shared_ptr<DataStore>) override;
 
     private:
-        void update_size(const std::string &, const std::string &, const Vector &);
+        void update_total_row_size_if_materialized(const std::string &, const std::string &, const Vector &);
+        void update_total_column_size_if_materialized(const std::string &, bool);
+        void update_total_column_size_if_materialized(const std::string &);
+
+
 
     private:
         [[nodiscard]] operator_type_t get_operator_type() const override;
 
-        std::vector<std::pair<std::string, std::string> > _table_column_operation_pairs;
         static int fixed_size_vector_cnt;
         static int total_row_size_if_materialized;
         static int total_column_size_if_materialized;
-
-        std::unordered_map<std::string, std::vector<std::string> > _table_to_columns_map;
+        const std::string _input_attribute;
         std::shared_ptr<ContextMemory> _context_memory;
         std::shared_ptr<DataStore> _datastore;
+
     };
 };
 

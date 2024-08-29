@@ -11,7 +11,7 @@
 namespace SampleDB {
     class Operator {
     public:
-        Operator() = default;
+        Operator();
 
         Operator(const Operator &) = delete;
 
@@ -41,7 +41,7 @@ namespace SampleDB {
 
     public:
         Vector _output_vector;
-        Vector _input_vector;
+        Vector& _input_vector;
 
     private:
         static std::string create_uuid();

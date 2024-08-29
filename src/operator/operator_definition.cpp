@@ -3,11 +3,22 @@
 #include "include/operator_utils.hh"
 
 namespace SampleDB {
+    static Vector temp; // to initialize the _input_vector reference
+    static std::string table_name {"TEMP TABLE"};
+
+    Operator::Operator() : _output_vector(temp), _input_vector(temp),
+                           _table_name(table_name),
+                           _columns({}),
+                           _operator_type(Operator::get_operator_type()),
+                           _next_operator(nullptr) {
+        _uuid = create_uuid();
+    }
+
     Operator::Operator(const std::string &table_name, const std::vector<std::string> &columns,
-                       std::shared_ptr<Operator> next_operator) : _output_vector({}), _input_vector({}),
+                       std::shared_ptr<Operator> next_operator) : _output_vector(temp), _input_vector(temp),
                                                                   _table_name(table_name),
                                                                   _columns(columns),
-                                                                  _operator_type(get_operator_type()),
+                                                                  _operator_type(Operator::get_operator_type()),
                                                                   _next_operator(next_operator) {
         _uuid = create_uuid();
     }
@@ -45,7 +56,7 @@ namespace SampleDB {
         const uint8_t dash[] = {0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0};
 
         std::string res;
-        for (unsigned char i : dash) {
+        for (unsigned char i: dash) {
             constexpr auto v = "0123456789abcdef";
             if (i)
                 res += "-";

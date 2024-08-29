@@ -10,10 +10,13 @@
 namespace SampleDB
 {
     void log_vector (const Vector&, const std::string&, const std::string&, const std::string&);
+    void log_vector (const Vector&, const Vector&, const std::string&, const std::string&, const std::string&, const std::string&);
     std::string get_operator_type_as_string (operator_type_t);
     std::string get_operator_name_as_string (operator_type_t, const std::string&);
     std::string get_operator_name_as_string (const std::string&, const std::string&);
     void log_operator_debug_msg (const Operator *);
+    void remove_duplicates (std::vector <int32_t>, std::vector <int32_t>&);
+
 }
 
 #endif

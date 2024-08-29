@@ -37,7 +37,7 @@ namespace SampleDB {
         Vector create_new_state(const Vector &);
 
     private:
-        const std::string _input_attribute, _output_attribute, _right_table;
+        const std::string _input_attribute, _output_attribute, _right_table, _left_table;
         std::shared_ptr<ContextMemory> _context_memory;
         std::shared_ptr<DataStore> _datastore;
     };

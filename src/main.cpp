@@ -10,25 +10,40 @@
 
 std::shared_ptr<SampleDB::Operator> create_operator_plan(
     const std::unordered_map<std::string, std::vector<std::string> > &table_to_column_map) {
+
     // Sink
+    std::string sink_table = "R2";
+    std::vector<std::string> sink_column {"b"};
     auto sink = std::static_pointer_cast<SampleDB::Operator>(
-        std::make_shared<SampleDB::Sink>(table_to_column_map));
+        std::make_shared<SampleDB::Sink>(sink_table, sink_column));
 
-    // Join
-    std::vector<std::pair<std::string, std::string> > join_pair{{"R1", "a"}, {"R2", "b"}};
-    const auto left_table = join_pair.front().first;
-    const auto right_table = join_pair.back().first;
-    auto left_column = join_pair.front().second;
-    auto right_column = join_pair.back().second;
+    // Join2
+    std::vector<std::pair<std::string, std::string> > join_pair2{{"R1", "b"}, {"R2", "b"}};
+    const auto left_table2 = join_pair2.front().first;
+    const auto right_table2 = join_pair2.back().first;
+    auto left_column2 = join_pair2.front().second;
+    auto right_column2 = join_pair2.back().second;
+    const std::vector<std::string> columns2{left_column2, right_column2};
 
-    const std::vector<std::string> columns{left_column, right_column};
+    auto extend2 = std::static_pointer_cast<SampleDB::Operator>(
+        std::make_shared<SampleDB::IndexNestedLoopJoin>(left_table2, right_table2, columns2, sink));
 
-    auto extend = std::static_pointer_cast<SampleDB::Operator>(
-        std::make_shared<SampleDB::IndexNestedLoopJoin>(left_table, right_table, columns, sink));
+
+    // Join1
+    std::vector<std::pair<std::string, std::string> > join_pair1{{"R1", "a"}, {"R1", "b"}};
+    const auto left_table1 = join_pair1.front().first;
+    const auto right_table1 = join_pair1.back().first;
+    auto left_column1 = join_pair1.front().second;
+    auto right_column1 = join_pair1.back().second;
+
+    const std::vector<std::string> columns1{left_column1, right_column1};
+
+    auto extend1 = std::static_pointer_cast<SampleDB::Operator>(
+        std::make_shared<SampleDB::IndexNestedLoopJoin>(left_table1, right_table1, columns1, extend2));
 
     //Scan
     std::vector<std::pair<std::string, std::string> > scan_attribute{{"R1", "a"}};
-    auto scan = std::static_pointer_cast<SampleDB::Operator>(std::make_shared<SampleDB::Scan>(scan_attribute, extend));
+    auto scan = std::static_pointer_cast<SampleDB::Operator>(std::make_shared<SampleDB::Scan>(scan_attribute, extend1));
 
     return scan;
 }

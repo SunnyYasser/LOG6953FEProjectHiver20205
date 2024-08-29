@@ -1,7 +1,10 @@
-#include <iostream>
-#include <exception>
-#include <cassert>
 #include "include/scan_operator.hh"
+#include <cassert>
+#include <exception>
+#include <iostream>
+
+#include <unordered_set>
+
 #include "include/operator_utils.hh"
 
 namespace SampleDB {
@@ -25,9 +28,9 @@ namespace SampleDB {
         const std::string fn_name = "Scan::execute()";
         const std::string operator_name = get_operator_name_as_string(get_operator_type(), get_uuid());
 
-        int32_t start_idx = 0, prev_end_idx = 0;
+        int32_t start_idx = 0;
         while (start_idx < _attribute_data.size()) {
-            int32_t end_idx = std::min(static_cast<int32_t>(_attribute_data.size()) - 1 - prev_end_idx,
+            int32_t end_idx = std::min(start_idx + static_cast<int32_t>(_attribute_data.size()) - 1,
                                        start_idx + static_cast<int32_t>(State::MAX_VECTOR_SIZE));
             auto _chunked_data = std::vector<int32_t>(begin(_attribute_data) + start_idx,
                                                       begin(_attribute_data) + end_idx + 1);
@@ -43,7 +46,6 @@ namespace SampleDB {
 
             // increment next chunk starting idx
             start_idx = end_idx + 1;
-            prev_end_idx  = end_idx;
 
             // call next operator
             get_next_operator()->execute();
@@ -62,7 +64,8 @@ namespace SampleDB {
     void Scan::init(std::shared_ptr<ContextMemory> context, std::shared_ptr<DataStore> datastore) {
         _context_memory = context;
         _context_memory->allocate_memory_for_column(get_table_name(), _attribute);
-        _attribute_data = datastore->get_data_vector_for_column(get_table_name(), _attribute);
+        auto tmp_data = datastore->get_data_vector_for_column(get_table_name(), _attribute);
+        remove_duplicates (std::move (tmp_data), _attribute_data);
         get_next_operator()->init(context, datastore);
     }
 }
