@@ -20,9 +20,7 @@ namespace SampleDB {
         const auto &data = _input_vector.get_data_vector();
 
         while (_input_vector.get_pos() < _input_vector.get_size()) {
-            if (_input_vector.get_pos() == -1) {
-                _input_vector.increment_pos();
-            }
+            _input_vector.increment_pos();
 
             const auto &_data_idx = _input_vector.get_pos();
 
@@ -57,9 +55,6 @@ namespace SampleDB {
 
                 start_idx = end_idx + 1;
             }
-
-
-            _input_vector.increment_pos();
         }
     }
 

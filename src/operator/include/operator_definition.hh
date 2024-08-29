@@ -41,7 +41,7 @@ namespace SampleDB {
 
     public:
         Vector _output_vector;
-        Vector& _input_vector;
+        Vector _input_vector;
 
     private:
         static std::string create_uuid();

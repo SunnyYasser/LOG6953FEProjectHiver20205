@@ -36,11 +36,10 @@ namespace SampleDB {
 
     private:
         [[nodiscard]] operator_type_t get_operator_type() const override;
-
+        const std::string _input_attribute;
         static int fixed_size_vector_cnt;
         static int total_row_size_if_materialized;
         static int total_column_size_if_materialized;
-        const std::string _input_attribute;
         std::shared_ptr<ContextMemory> _context_memory;
         std::shared_ptr<DataStore> _datastore;
 

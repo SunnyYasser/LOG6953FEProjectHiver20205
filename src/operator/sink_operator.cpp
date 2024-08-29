@@ -6,11 +6,11 @@
 
 namespace SampleDB {
     int Sink::fixed_size_vector_cnt = 0;
-    int Sink::total_row_size_if_materialized = 1;
+    int Sink::total_row_size_if_materialized = 0;
     int Sink::total_column_size_if_materialized = 0;
 
     Sink::Sink(const std::string &table_name, const std::vector<std::string> &column) :
-        Operator(table_name, column, nullptr) {}
+        Operator(table_name, column, nullptr), _input_attribute(column.front()) {}
 
     operator_type_t Sink::get_operator_type() const { return OP_SINK; }
 
