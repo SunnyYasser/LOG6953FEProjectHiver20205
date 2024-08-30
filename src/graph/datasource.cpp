@@ -3,6 +3,7 @@
 //
 #include "include/datasource.hh"
 #include "../data/include/CSVIngestor.hh"
+#include "../data/include/serialize_deserialize.hh"
 #include "../utils/include/testpaths.hh"
 
 namespace SampleDB {
@@ -58,4 +59,16 @@ namespace SampleDB {
             _index[row[0]].push_back(row[1]);
         }
     }
+
+    void DataSourceTable::read_table_from_data_on_disk(const std::string& filepath) {
+        Serialize_deserialize<int> engine {filepath};
+        _table = engine.deserializeVector();
+    }
+
+    void DataSourceTable::write_table_as_data_on_disk(const std::string& filepath) const{
+        Serialize_deserialize<int> engine {filepath};
+        engine.serializeVector(_table);
+    }
+
+
 } // namespace SampleDB
