@@ -14,7 +14,7 @@ namespace SampleDB {
     operator_type_t IndexNestedLoopJoin::get_operator_type() const { return OP_INLJ; }
 
     void IndexNestedLoopJoin::execute_in_chunks() {
-        const std::string fn_name = "INLJ::execute()";
+        const std::string fn_name = "IndexNestedLoopJoin::execute()";
         const std::string operator_name = get_operator_name_as_string(get_operator_type(), get_uuid());
 
         const auto &data = _input_vector.get_data_vector();

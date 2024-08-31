@@ -6,10 +6,10 @@
 #include "include/serialize_deserialize.hh"
 
 template<typename T>
-Serialize_deserialize<T>::Serialize_deserialize(const std::string &filename) : _filename(filename) {}
+SerializeDeserialize<T>::SerializeDeserialize(const std::string &filename) : _filename(filename) {}
 
 template<typename T>
-void Serialize_deserialize<T>::serializeVector(const std::vector<std::vector<T>> &vec) {
+void SerializeDeserialize<T>::serializeVector(const std::vector<std::vector<T>> &vec) {
     std::ofstream ofs(_filename, std::ios::binary);
     if (!ofs) {
         std::cerr << "Error opening file for writing." << std::endl;
@@ -31,7 +31,7 @@ void Serialize_deserialize<T>::serializeVector(const std::vector<std::vector<T>>
 }
 
 template<typename T>
-std::vector<std::vector<T>> Serialize_deserialize<T>::deserializeVector() {
+std::vector<std::vector<T>> SerializeDeserialize<T>::deserializeVector() {
     std::ifstream ifs(_filename, std::ios::binary);
     if (!ifs) {
         std::cerr << "Error opening file for reading." << std::endl;
@@ -59,4 +59,4 @@ std::vector<std::vector<T>> Serialize_deserialize<T>::deserializeVector() {
 }
 
 
-template class Serialize_deserialize<int>;
+template class SerializeDeserialize<int>;

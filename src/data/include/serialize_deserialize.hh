@@ -9,13 +9,13 @@
 #include <vector>
 
 template<typename T>
-class Serialize_deserialize {
+class SerializeDeserialize {
 public:
-    Serialize_deserialize(const std::string &);
-    Serialize_deserialize() = delete;
-    Serialize_deserialize(const Serialize_deserialize &) = delete;
-    Serialize_deserialize &operator=(const Serialize_deserialize &) = delete;
-    Serialize_deserialize &&operator=(Serialize_deserialize &&) = delete;
+    SerializeDeserialize(const std::string &);
+    SerializeDeserialize() = delete;
+    SerializeDeserialize(const SerializeDeserialize &) = delete;
+    SerializeDeserialize &operator=(const SerializeDeserialize &) = delete;
+    SerializeDeserialize &&operator=(SerializeDeserialize &&) = delete;
 
     void serializeVector(const std::vector<std::vector<T>>&);
     std::vector<std::vector<T>> deserializeVector();

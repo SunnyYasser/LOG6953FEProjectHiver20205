@@ -61,12 +61,12 @@ namespace SampleDB {
     }
 
     void DataSourceTable::read_table_from_data_on_disk(const std::string& filepath) {
-        Serialize_deserialize<int> engine {filepath};
+        SerializeDeserialize<int> engine {filepath};
         _table = engine.deserializeVector();
     }
 
     void DataSourceTable::write_table_as_data_on_disk(const std::string& filepath) const{
-        Serialize_deserialize<int> engine {filepath};
+        SerializeDeserialize<int> engine {filepath};
         engine.serializeVector(_table);
     }
 
