@@ -4,9 +4,10 @@
 
 #include "include/testpaths.hh"
 
-const std::string fb_0edges_path = "../datasets/facebook/0.edges";
-
-
 const std::string get_fb_0edges_path () {
-    return fb_0edges_path;
+    const char* ev_val = getenv("FB_0EDGES_DATASET_PATH");
+    if (ev_val == nullptr) {
+        return "";
+    }
+    return std::string{ ev_val };
 }
