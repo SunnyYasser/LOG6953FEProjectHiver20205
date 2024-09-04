@@ -19,19 +19,20 @@ namespace SampleDB {
                                               std::min(size, (int32_t) State::MAX_VECTOR_SIZE))) {
     }
 
-    int32_t Vector::get_data(const int32_t idx) const {
+
+    int32_t Vector::get_data(const int32_t& idx) const {
         assert(idx < _state->get_size());
         return _vector[idx];
     }
 
-    bool Vector::update_data(const int32_t idx, const int32_t value) {
+    bool Vector::update_data(const int32_t& idx, const int32_t& value) {
         assert(idx < _state->get_size());
         _vector[idx] = value;
 
         return true;
     }
 
-    bool Vector::push_data(const int32_t value) {
+    bool Vector::push_data(const int32_t& value) {
         assert(_state->get_size() < State::MAX_VECTOR_SIZE);
         _vector[_state->get_size()] = value;
         increment_size();
@@ -75,4 +76,21 @@ namespace SampleDB {
     std::shared_ptr<State> Vector::get_state() const {
         return _state;
     }
+
+    void Vector::set_data_vector(const std::vector<int32_t> & data) {
+        _vector = std::vector (begin(data), end(data));
+    }
+
+    void Vector::set_pos(const int32_t& value) const {
+        _state->set_pos(value);
+    }
+
+    void Vector::set_size(const int32_t& value) const {
+        _state->set_size(value);
+    }
+
+    void Vector::set_state (const std::shared_ptr<State>& state) {
+        _state = state;
+    }
+
 }

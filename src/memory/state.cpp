@@ -25,4 +25,13 @@ namespace SampleDB {
         std::cout << "[STATE pos]: " << _pos << std::endl;
         std::cout << "[STATE size]: " << _size << std::endl;
     }
+
+    void State::set_pos(const int32_t &pos) {
+        _pos = pos;
+    }
+
+    void State::set_size(const int32_t &size) {
+        _size = size;
+    }
+
 }

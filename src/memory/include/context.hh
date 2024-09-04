@@ -16,13 +16,11 @@ namespace SampleDB {
         ContextMemory(const ContextMemory &) = delete;
 
     public:
-        void allocate_memory_for_column(const std::string &, const std::string &);
+        void allocate_memory_for_column(const std::string & column, const std::string & table = "R");
 
-        bool update_column_data(const std::string &, const std::string &, Vector);
+        bool update_column_data(const std::string & column, const Vector&, const std::string & table = "R");
 
-        Vector read_vector_for_column(const std::string &, const std::string &, bool &);
-
-        Vector read_vector_for_column(const std::string &, const std::string &);
+        Vector& read_vector_for_column(const std::string & column, const std::string & table= "R");
 
     private:
         // <table_name : <column : vector>>

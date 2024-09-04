@@ -1,51 +1,33 @@
-#include <random>
 #include "include/operator_definition.hh"
+#include <random>
 #include "include/operator_utils.hh"
 
 namespace SampleDB {
     static Vector temp; // to initialize the _input_vector reference
-    static std::string table_name {"TEMP TABLE"};
+    static std::string table_name{"TEMP TABLE"};
 
-    Operator::Operator() : _output_vector(temp), _input_vector(temp),
-                           _table_name(table_name),
-                           _columns({}),
-                           _operator_type(Operator::get_operator_type()),
-                           _next_operator(nullptr) {
+    Operator::Operator(const std::shared_ptr<Schema> &schema) :
+        _output_vector(temp), _input_vector(temp), _table_name("R"), _operator_type(Operator::get_operator_type()),
+        _schema(schema), _next_operator(nullptr) {
         _uuid = create_uuid();
     }
 
-    Operator::Operator(const std::string &table_name, const std::vector<std::string> &columns,
-                       std::shared_ptr<Operator> next_operator) : _output_vector(temp), _input_vector(temp),
-                                                                  _table_name(table_name),
-                                                                  _columns(columns),
-                                                                  _operator_type(Operator::get_operator_type()),
-                                                                  _next_operator(next_operator) {
+    Operator::Operator(const std::string &table_name, const std::shared_ptr<Schema> &schema,
+                       const std::shared_ptr<Operator> &next_operator) :
+        _output_vector(temp), _input_vector(temp), _table_name(table_name),
+        _operator_type(Operator::get_operator_type()), _schema(schema), _next_operator(next_operator) {
         _uuid = create_uuid();
     }
 
-    std::string Operator::get_uuid() const {
-        return _uuid;
-    }
+    std::string Operator::get_uuid() const { return _uuid; }
 
-    std::string Operator::get_operator_info() const {
-        return get_operator_name_as_string(_operator_type, _uuid);
-    }
+    std::string Operator::get_operator_info() const { return get_operator_name_as_string(_operator_type, _uuid); }
 
-    operator_type_t Operator::get_operator_type() const {
-        return OP_GENERIC;
-    }
+    operator_type_t Operator::get_operator_type() const { return OP_GENERIC; }
 
-    std::shared_ptr<Operator> Operator::get_next_operator() {
-        return _next_operator;
-    }
+    std::shared_ptr<Operator> Operator::get_next_operator() { return _next_operator; }
 
-    std::vector<std::string> Operator::get_attributes() const {
-        return _columns;
-    }
-
-    std::string Operator::get_table_name() const {
-        return _table_name;
-    }
+    std::string Operator::get_table_name() const { return _table_name; }
 
     std::string Operator::create_uuid() {
         static std::random_device dev;
@@ -66,4 +48,4 @@ namespace SampleDB {
 
         return res;
     }
-}
+} // namespace SampleDB

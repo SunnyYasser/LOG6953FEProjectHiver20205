@@ -2,6 +2,7 @@
 #define SAMPLE_DB_STATE_HH
 
 #include <cstdint>
+#include <memory>
 
 namespace SampleDB {
     class State {
@@ -18,15 +19,17 @@ namespace SampleDB {
 
         void update_size();
 
+        void set_pos(const int32_t &);
+
+        void set_size(const int32_t &);
+
         void print_debug_info() const;
 
-    public:
         static constexpr size_t MAX_VECTOR_SIZE = 1024;
 
     private:
         int32_t _pos;
         int32_t _size;
     };
-}
-
+} // namespace SampleDB
 #endif

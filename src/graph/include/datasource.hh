@@ -28,6 +28,9 @@ namespace SampleDB {
         void write_table_as_data_on_disk(const std::string &) const;
         void read_table_from_data_on_disk(const std::string &);
 
+        const std::unordered_map<int32_t, std::vector<int32_t>> &get_fwd_adj_list() const;
+
+        const std::unordered_map<int32_t, std::vector<int32_t>> &get_bwd_adj_list() const;
 
         /*name*/
         std::string _name;
@@ -35,19 +38,26 @@ namespace SampleDB {
         /*raw data table*/
         std::vector<std::vector<int32_t>> _table;
 
-        /*simple index*/
-        std::unordered_map<int32_t, std::vector<int32_t>> _index;
+        /*simple adj_lists*/
+        std::unordered_map<int32_t, std::vector<int32_t>> _fwd_adj_list;
+
+        std::unordered_map<int32_t, std::vector<int32_t>> _bwd_adj_list;
 
         /*"a" -> 0th, "b" -> 1st etc..*/
         std::unordered_map<std::string, uint32_t> _column_name_to_index_map;
 
     private:
-        void populate_index();
-
         // TODO- this is just a testing API, and will be removed
         void populate_store_with_temporary_data();
 
-        void populate();
+        void populate_store();
+
+        void populate_adj_list();
+
+        void populate_fwd_adj_list();
+
+        void populate_bwd_adj_list();
+
 
         int32_t _rows{};
         int32_t _columns{};

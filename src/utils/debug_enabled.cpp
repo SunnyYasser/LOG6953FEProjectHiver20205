@@ -1,7 +1,7 @@
 //
 // Created by Sunny on 21-08-2024.
 //
-#include "include/debug_enabled.h"
+#include "include/debug_enabled.hh"
 
 static bool _is_debug_enabled = false;
 

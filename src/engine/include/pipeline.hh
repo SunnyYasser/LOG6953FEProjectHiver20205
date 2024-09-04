@@ -2,21 +2,20 @@
 #define SAMPLE_DB_PIPELINE_HH
 
 #include <memory>
-#include <vector>
 #include <string>
+#include <vector>
+#include "../../graph/include/datastore.hh"
 #include "../../memory/include/context.hh"
 #include "../../operator/include/operator_definition.hh"
-#include "../../graph/include/datastore.hh"
 
-namespace SampleDB
-{
+namespace SampleDB {
     class Operator;
 
-    class Pipeline
-    {
+    class Pipeline {
     public:
         Pipeline() = delete;
-        explicit Pipeline(const std::vector<std::string> &, const std::unordered_map<std::string, std::vector<std::string>>&);
+        Pipeline(const std::vector<std::string> &, const std::unordered_map<std::string, std::vector<std::string>> &,
+                 const std::unordered_map<std::string, std::string> &);
 
     public:
         void debug() const;
@@ -34,7 +33,7 @@ namespace SampleDB
         std::shared_ptr<SampleDB::DataStore> _datastore;
     };
 
-}
+} // namespace SampleDB
 
 
 #endif

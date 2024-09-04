@@ -5,62 +5,86 @@
 
 
 namespace SampleDB {
-    IndexNestedLoopJoin::IndexNestedLoopJoin(const std::string &left_table, const std::string &right_table,
-                                             const std::vector<std::string> &columns,
-                                             std::shared_ptr<Operator> next_operator) :
-        Operator(left_table, columns, next_operator), _input_attribute(columns.front()),
-        _output_attribute(columns.back()), _right_table(right_table), _left_table(left_table) {}
+    IndexNestedLoopJoin::IndexNestedLoopJoin(const std::string &table, const std::string &input_attribute,
+                                             const std::string &output_attribute, const bool reverse,
+                                             const RelationType relation_type, const std::shared_ptr<Schema> &schema,
+                                             const std::shared_ptr<Operator> &next_operator) :
+        Operator(table, schema, next_operator), _reverse(reverse), _relation_type(relation_type),
+        _states_sharing(false), _input_attribute(input_attribute),
+        _output_attribute(output_attribute) {}
 
     operator_type_t IndexNestedLoopJoin::get_operator_type() const { return OP_INLJ; }
 
-    void IndexNestedLoopJoin::execute_in_chunks() {
-        const std::string fn_name = "IndexNestedLoopJoin::execute()";
+    void IndexNestedLoopJoin::execute_in_chunks_incremental() {
+        const std::string fn_name = "IndexNestedLoopJoin::execute_in_chunks_incremental()";
         const std::string operator_name = get_operator_name_as_string(get_operator_type(), get_uuid());
 
-        const auto &data = _input_vector.get_data_vector();
+        _schema->_schema_map[_input_attribute] = FLAT;
+        _schema->_schema_map [_output_attribute] = UNFLAT;
 
+        _input_vector.increment_pos();
         while (_input_vector.get_pos() < _input_vector.get_size()) {
+            execute_internal (fn_name, operator_name);
             _input_vector.increment_pos();
+        }
+    }
 
-            const auto &_data_idx = _input_vector.get_pos();
+    void IndexNestedLoopJoin::execute_in_chunks_non_incremental() {
+        const std::string fn_name = "IndexNestedLoopJoin::execute_in_chunks_non_incremental()";
+        const std::string operator_name = get_operator_name_as_string(get_operator_type(), get_uuid());
 
-            const auto &newdata_values = _datastore->get_values_from_table_index(get_table_name(), data[_data_idx]);
+        /*
+         * no need to mark i/p FLAT here, already pos != -1
+         */
+        _schema->_schema_map [_output_attribute] = UNFLAT;
 
-            int32_t start_idx = 0;
-            std::vector<int32_t> _chunked_data;
+        execute_internal (fn_name, operator_name);
+    }
 
-            while (start_idx < newdata_values.size()) {
-                int32_t end_idx = std::min(start_idx + static_cast<int32_t>(newdata_values.size()) - 1,
-                                           start_idx + static_cast<int32_t>(State::MAX_VECTOR_SIZE));
+    void IndexNestedLoopJoin::execute_internal (const std::string& fn_name, const std::string& operator_name) {
+        const auto &_data_idx = _input_vector.get_pos();
+        const auto &data = _input_vector.get_data_vector();
+        const auto &newdata_values = _adj_list[data[_data_idx]];
 
-                auto start_itr = newdata_values.begin();
-                std::advance(start_itr, start_idx);
+        int32_t start_idx = 0;
+        std::vector<int32_t> _chunked_data;
 
-                auto end_itr = newdata_values.begin();
-                std::advance(end_itr, end_idx + 1);
+        while (start_idx < newdata_values.size()) {
+            int32_t end_idx = std::min(start_idx + static_cast<int32_t>(newdata_values.size()) - 1,
+                                       start_idx + static_cast<int32_t>(State::MAX_VECTOR_SIZE));
 
-                // TODO: copy happening here, must come up with a better way for slicing
-                _chunked_data = std::vector<int32_t>(start_itr, end_itr);
+            auto start_itr = newdata_values.begin();
+            std::advance(start_itr, start_idx);
 
-                _output_vector = Vector(_chunked_data);
+            auto end_itr = newdata_values.begin();
+            std::advance(end_itr, end_idx + 1);
 
-                log_vector(_input_vector, _output_vector, operator_name, fn_name, _left_table, _right_table);
+            // TODO: copy happening here, must come up with a better way for slicing
+            _chunked_data = std::vector<int32_t>(start_itr, end_itr);
+            _output_vector = Vector(_chunked_data);
 
-                _context_memory->update_column_data(_right_table, _output_attribute, _output_vector);
+            log_vector(_input_vector, _output_vector, operator_name, fn_name);
 
-                /*
-                 * For each element in source vector,
-                 */
-                get_next_operator()->execute();
+            if (_states_sharing)
+                _output_vector.set_state(_input_vector.get_state());
 
-                start_idx = end_idx + 1;
-            }
+            _context_memory->update_column_data(_output_attribute, _output_vector);
+
+            /*
+             * For each element in source vector,
+             */
+            get_next_operator()->execute();
+
+            start_idx = end_idx + 1;
         }
     }
 
     void IndexNestedLoopJoin::execute() {
-        _input_vector = _context_memory->read_vector_for_column(get_table_name(), _input_attribute);
-        execute_in_chunks();
+        _input_vector = _context_memory->read_vector_for_column(_input_attribute, get_table_name());
+        if (_input_vector.get_pos() == -1)
+            execute_in_chunks_incremental();
+        else
+            execute_in_chunks_non_incremental();
     }
 
 
@@ -69,10 +93,26 @@ namespace SampleDB {
         get_next_operator()->debug();
     }
 
-    void IndexNestedLoopJoin::init(std::shared_ptr<ContextMemory> context, std::shared_ptr<DataStore> datastore) {
+    bool IndexNestedLoopJoin::should_enable_state_sharing() const {
+        return _relation_type == RelationType::ONE_TO_ONE or
+               (_relation_type == RelationType::MANY_TO_ONE and !_reverse) or
+               (_relation_type == RelationType::ONE_TO_MANY and _reverse);
+    }
+
+    void IndexNestedLoopJoin::init(const std::shared_ptr<ContextMemory> &context,
+                                   const std::shared_ptr<DataStore> &datastore) {
         _context_memory = context;
-        _context_memory->allocate_memory_for_column(_right_table, _output_attribute);
+        _context_memory->allocate_memory_for_column(_output_attribute);
         _datastore = datastore;
+
+        if (should_enable_state_sharing())
+            _states_sharing = true;
+
+        if (_reverse)
+            _adj_list = _datastore->get_bwd_adj_list();
+        else
+            _adj_list = _datastore->get_fwd_adj_list();
+
         get_next_operator()->init(context, datastore);
     }
 } // namespace SampleDB

@@ -9,6 +9,8 @@
 
 #include "operator_definition.hh"
 #include "operator_types.hh"
+#include "schema.hh"
+#include "../../memory/include/state_hash.hh"
 
 #include <unordered_set>
 
@@ -19,29 +21,24 @@ namespace SampleDB {
 
         Sink(const Sink &) = delete;
 
-        Sink (const std::string&, const std::vector <std::string>&);
+        explicit Sink (const std::shared_ptr<Schema>& schema);
     public:
         void execute() override;
 
         void debug() override;
 
-        void init(std::shared_ptr<ContextMemory>, std::shared_ptr<DataStore>) override;
+        void init(const std::shared_ptr<ContextMemory>&, const std::shared_ptr<DataStore>&) override;
 
     private:
-        void update_total_row_size_if_materialized(const std::string &, const std::string &, const Vector &);
-        void update_total_column_size_if_materialized(const std::string &, bool);
-        void update_total_column_size_if_materialized(const std::string &);
+        void update_total_row_size_if_materialized() const;
+        void update_total_column_size_if_materialized();
 
-
-
-    private:
         [[nodiscard]] operator_type_t get_operator_type() const override;
-        const std::string _input_attribute;
-        static int fixed_size_vector_cnt;
-        static int total_row_size_if_materialized;
-        static int total_column_size_if_materialized;
         std::shared_ptr<ContextMemory> _context_memory;
         std::shared_ptr<DataStore> _datastore;
+        std::unordered_set<std::shared_ptr<State>, StateSharedPtrHash, StateSharedPtrEqual> _unique_states;
+        static long total_row_size_if_materialized;
+        static long total_column_size_if_materialized;
 
     };
 };
