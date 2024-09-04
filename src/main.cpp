@@ -20,19 +20,19 @@ std::shared_ptr<SampleDB::Operator> create_operator_plan1() {
     // Join2
     const std::string ip_attribute2 = "a";
     const std::string op_attribute2 = "c";
-    bool reverse2 = false;
+    bool is_join_index_fwd2 = true;
     SampleDB::RelationType relation_type2 = SampleDB::MANY_TO_MANY;
     auto extend2 = std::static_pointer_cast<SampleDB::Operator>(std::make_shared<SampleDB::IndexNestedLoopJoin>(
-            table, ip_attribute2, op_attribute2, reverse2, relation_type2, schema, sink));
+            table, ip_attribute2, op_attribute2, is_join_index_fwd2, relation_type2, schema, sink));
 
 
     // Join1
     const std::string ip_attribute1 = "a";
     const std::string op_attribute1 = "b";
-    bool reverse1 = false;
+    bool is_join_index_fwd1 = true;
     SampleDB::RelationType relation_type1 = SampleDB::MANY_TO_MANY;
     auto extend1 = std::static_pointer_cast<SampleDB::Operator>(std::make_shared<SampleDB::IndexNestedLoopJoin>(
-            table, ip_attribute1, op_attribute1, reverse1, relation_type1, schema, extend2));
+            table, ip_attribute1, op_attribute1, is_join_index_fwd1, relation_type1, schema, extend2));
 
     // Scan
     const std::string scan_attribute = "a";
@@ -54,19 +54,19 @@ std::shared_ptr<SampleDB::Operator> create_operator_plan2() {
     // Join2
     const std::string ip_attribute2 = "b";
     const std::string op_attribute2 = "c";
-    bool reverse2 = false;
+    bool is_join_index_fwd2 = true;
     SampleDB::RelationType relation_type2 = SampleDB::MANY_TO_MANY;
     auto extend2 = std::static_pointer_cast<SampleDB::Operator>(std::make_shared<SampleDB::IndexNestedLoopJoin>(
-            table, ip_attribute2, op_attribute2, reverse2, relation_type2, schema, sink));
+            table, ip_attribute2, op_attribute2, is_join_index_fwd2, relation_type2, schema, sink));
 
 
     // Join1
     const std::string ip_attribute1 = "a";
     const std::string op_attribute1 = "b";
-    bool reverse1 = false;
+    bool is_join_index_fwd1 = true;
     SampleDB::RelationType relation_type1 = SampleDB::MANY_TO_MANY;
     auto extend1 = std::static_pointer_cast<SampleDB::Operator>(std::make_shared<SampleDB::IndexNestedLoopJoin>(
-            table, ip_attribute1, op_attribute1, reverse1, relation_type1, schema, extend2));
+            table, ip_attribute1, op_attribute1, is_join_index_fwd1, relation_type1, schema, extend2));
 
     // Scan
     const std::string scan_attribute = "a";
@@ -88,11 +88,11 @@ std::shared_ptr<SampleDB::Operator> create_operator_plan3() {
     // Join1
     const std::string ip_attribute = "a";
     const std::string op_attribute = "b";
-    bool reverse = false;
+    bool is_join_index_fwd = true;
     SampleDB::RelationType relation_type = SampleDB::MANY_TO_MANY;
 
     auto extend = std::static_pointer_cast<SampleDB::Operator>(std::make_shared<SampleDB::IndexNestedLoopJoin>(
-            table, ip_attribute, op_attribute, reverse, relation_type, schema, sink));
+            table, ip_attribute, op_attribute, is_join_index_fwd, relation_type, schema, sink));
 
     // Scan
     const std::string scan_attribute = "a";
@@ -114,19 +114,19 @@ std::shared_ptr<SampleDB::Operator> create_operator_plan4() {
     // Join2
     const std::string ip_attribute2 = "b";
     const std::string op_attribute2 = "c";
-    bool reverse2 = true;
+    bool is_join_index_fwd2 = false;
     SampleDB::RelationType relation_type2 = SampleDB::MANY_TO_MANY;
     auto extend2 = std::static_pointer_cast<SampleDB::Operator>(std::make_shared<SampleDB::IndexNestedLoopJoin>(
-            table, ip_attribute2, op_attribute2, reverse2, relation_type2, schema, sink));
+            table, ip_attribute2, op_attribute2, is_join_index_fwd2, relation_type2, schema, sink));
 
 
     // Join1
     const std::string ip_attribute1 = "a";
     const std::string op_attribute1 = "b";
-    bool reverse1 = false;
+    bool is_join_index_fwd1 = true;
     SampleDB::RelationType relation_type1 = SampleDB::MANY_TO_MANY;
     auto extend1 = std::static_pointer_cast<SampleDB::Operator>(std::make_shared<SampleDB::IndexNestedLoopJoin>(
-            table, ip_attribute1, op_attribute1, reverse1, relation_type1, schema, extend2));
+            table, ip_attribute1, op_attribute1, is_join_index_fwd1, relation_type1, schema, extend2));
 
     // Scan
     const std::string scan_attribute = "a";
@@ -248,10 +248,10 @@ int main() {
         } while (std::cin.get() != '\n');
     }
 
-    //pipeline_example1();
+    pipeline_example1();
     //pipeline_example2();
     //pipeline_example3();
-    pipeline_example4();
+    //pipeline_example4();
 
 
     return 0;

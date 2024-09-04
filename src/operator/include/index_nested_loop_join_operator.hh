@@ -38,7 +38,7 @@ namespace SampleDB {
         void execute_internal (const std::string& fn_name, const std::string& operator_name);
 
     private:
-        bool _reverse;
+        bool _is_join_index_fwd;
         RelationType _relation_type;
         bool _states_sharing;
         const std::string _input_attribute, _output_attribute;

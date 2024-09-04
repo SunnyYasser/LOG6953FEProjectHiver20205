@@ -6,10 +6,10 @@
 
 namespace SampleDB {
     IndexNestedLoopJoin::IndexNestedLoopJoin(const std::string &table, const std::string &input_attribute,
-                                             const std::string &output_attribute, const bool reverse,
+                                             const std::string &output_attribute, const bool is_join_index_fwd,
                                              const RelationType relation_type, const std::shared_ptr<Schema> &schema,
                                              const std::shared_ptr<Operator> &next_operator) :
-        Operator(table, schema, next_operator), _reverse(reverse), _relation_type(relation_type),
+        Operator(table, schema, next_operator), _is_join_index_fwd(is_join_index_fwd), _relation_type(relation_type),
         _states_sharing(false), _input_attribute(input_attribute),
         _output_attribute(output_attribute) {}
 
@@ -95,8 +95,8 @@ namespace SampleDB {
 
     bool IndexNestedLoopJoin::should_enable_state_sharing() const {
         return _relation_type == RelationType::ONE_TO_ONE or
-               (_relation_type == RelationType::MANY_TO_ONE and !_reverse) or
-               (_relation_type == RelationType::ONE_TO_MANY and _reverse);
+               (_relation_type == RelationType::MANY_TO_ONE and _is_join_index_fwd) or
+               (_relation_type == RelationType::ONE_TO_MANY and !_is_join_index_fwd);
     }
 
     void IndexNestedLoopJoin::init(const std::shared_ptr<ContextMemory> &context,
@@ -108,10 +108,10 @@ namespace SampleDB {
         if (should_enable_state_sharing())
             _states_sharing = true;
 
-        if (_reverse)
-            _adj_list = _datastore->get_bwd_adj_list();
-        else
+        if (_is_join_index_fwd)
             _adj_list = _datastore->get_fwd_adj_list();
+        else
+            _adj_list = _datastore->get_bwd_adj_list();
 
         get_next_operator()->init(context, datastore);
     }

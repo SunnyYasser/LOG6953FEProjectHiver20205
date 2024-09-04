@@ -1,11 +1,7 @@
 #include "include/scan_operator.hh"
-#include <cassert>
-#include <exception>
-#include <iostream>
-
-#include <unordered_set>
-
 #include "include/operator_utils.hh"
+#include <cassert>
+#include <unordered_set>
 
 namespace SampleDB {
     Scan::Scan(const std::string &table_name, const std::string &scan_attribute, const std::shared_ptr<Schema> &schema,

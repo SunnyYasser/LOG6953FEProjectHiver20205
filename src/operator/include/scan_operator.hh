@@ -1,7 +1,6 @@
 #ifndef SAMPLE_DB_SCAN_OPERATOR_HH
 #define SAMPLE_DB_SCAN_OPERATOR_HH
 
-#include "../../memory/include/vector.hh"
 #include "operator_definition.hh"
 #include "operator_types.hh"
 
