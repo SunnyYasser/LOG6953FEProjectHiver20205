@@ -24,7 +24,7 @@ namespace VFEngine {
 
         long curr{1};
         for (const auto &state: _unique_states) {
-            curr *= state->get_size();
+            curr *= state->_size;
         }
 
         total_row_size_if_materialized += curr;
@@ -43,7 +43,7 @@ namespace VFEngine {
         for (const auto &[column, value]: _schema) {
             if (value == UNFLAT) {
                 const auto &vector = _context_memory->read_vector_for_column(column, get_table_name());
-                const auto &state = vector.get_state();
+                const auto &state = vector._state;
 
                 bool add_to_unique_states = true;
 

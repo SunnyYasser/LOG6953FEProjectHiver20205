@@ -17,10 +17,10 @@ namespace VFEngine {
     void IndexNestedLoopJoin::execute_in_chunks_incremental() {
         const std::string fn_name = "IndexNestedLoopJoin::execute_in_chunks_incremental()";
         const std::string operator_name = get_operator_name_as_string(get_operator_type(), get_uuid());
-        _input_vector.increment_pos();
-        while (_input_vector.get_pos() < _input_vector.get_size()) {
+        _input_vector._state->_pos++;
+        while (_input_vector._state->_pos < _input_vector._state->_size) {
             execute_internal(fn_name, operator_name);
-            _input_vector.increment_pos();
+            _input_vector._state->_pos++;
         }
     }
 
@@ -31,8 +31,8 @@ namespace VFEngine {
     }
 
     void IndexNestedLoopJoin::execute_internal(const std::string &fn_name, const std::string &operator_name) {
-        const auto &_data_idx = _input_vector.get_pos();
-        const auto &data = _input_vector.get_data_vector();
+        const auto &_data_idx = _input_vector._state->_pos;
+        const auto &data = _input_vector._vector;
         const auto &newdata_values = _adj_list[data[_data_idx]];
 
         int32_t start_idx = 0;
@@ -67,7 +67,7 @@ namespace VFEngine {
 
     void IndexNestedLoopJoin::execute() {
         _input_vector = _context_memory->read_vector_for_column(_input_attribute, get_table_name());
-        if (_input_vector.get_pos() == -1)
+        if (_input_vector._state->_pos == -1)
             execute_in_chunks_incremental();
         else
             execute_in_chunks_non_incremental();
@@ -94,7 +94,7 @@ namespace VFEngine {
         if (should_enable_state_sharing()) {
             auto &ip_vector = _context_memory->read_vector_for_column(_input_attribute, get_table_name());
             auto &op_vector = _context_memory->read_vector_for_column(_output_attribute, get_table_name());
-            op_vector.set_state(ip_vector.get_state());
+            op_vector._state = ip_vector._state;
         }
 
         if (_is_join_index_fwd)

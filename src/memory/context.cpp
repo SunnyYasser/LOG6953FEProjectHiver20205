@@ -11,7 +11,7 @@ namespace VFEngine {
 
         auto &table = _context[table_name];
 
-        if (table.find (column) != table.end()) {
+        if (table.find(column) != table.end()) {
             return;
         }
 
@@ -30,9 +30,10 @@ namespace VFEngine {
         }
 
         auto &original_vector = table[column];
-        original_vector.set_data_vector(new_vector.get_data_vector());
-        original_vector.set_size(new_vector.get_size());
-        original_vector.set_pos(new_vector.get_pos());
+        original_vector._state->_pos = new_vector._state->_pos;
+        original_vector._state->_size = new_vector._state->_size;
+        original_vector._vector = new_vector._vector;
+
 
         return true;
     }

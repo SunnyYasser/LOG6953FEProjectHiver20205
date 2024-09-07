@@ -236,10 +236,10 @@ int main() {
         } while (std::cin.get() != '\n');
     }
 
-    // pipeline_example1();
-    // pipeline_example2();
-    // pipeline_example3();
-    pipeline_example4();
+    pipeline_example1();
+    //pipeline_example2();
+    //pipeline_example3();
+    //pipeline_example4();
 
 
     return 0;
