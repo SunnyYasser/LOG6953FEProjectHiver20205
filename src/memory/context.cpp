@@ -1,6 +1,6 @@
 #include "include/context.hh"
 
-namespace SampleDB {
+namespace VFEngine {
     static Vector tmp{};
     void ContextMemory::allocate_memory_for_column(const std::string &column, const std::string &table_name) {
         const auto &table_itr = _context.find(table_name);
@@ -53,4 +53,4 @@ namespace SampleDB {
         return vec;
     }
 
-} // namespace SampleDB
+} // namespace VFEngine

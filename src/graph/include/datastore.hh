@@ -1,5 +1,5 @@
-#ifndef SAMPLE_DB_DATASTORE_HH
-#define SAMPLE_DB_DATASTORE_HH
+#ifndef VFENGINE_DATASTORE_HH
+#define VFENGINE_DATASTORE_HH
 
 #include <cstdint>
 #include <datasource.hh>
@@ -16,7 +16,7 @@ Will send an object of this class to Pipeline to help
 setup stuff during operator init ()
 */
 
-namespace SampleDB {
+namespace VFEngine {
     class DataStore {
     public:
         DataStore() = delete;

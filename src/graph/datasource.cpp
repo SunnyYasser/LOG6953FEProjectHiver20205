@@ -6,7 +6,7 @@
 #include "../data/include/serialize_deserialize.hh"
 #include "../utils/include/testpaths.hh"
 
-namespace SampleDB {
+namespace VFEngine {
     DataSourceTable::DataSourceTable(const std::string &name, const std::vector<std::string> &columns) :
         _name(name), _fwd_adj_list({}), _bwd_adj_list({}) {
 
@@ -28,9 +28,9 @@ namespace SampleDB {
 
     void DataSourceTable::populate_store() {
         const std::string file = get_fb_0edges_path();
-        if (SampleDB::CSVIngestionEngine::can_open_file(file)) {
+        if (VFEngine::CSVIngestionEngine::can_open_file(file)) {
             std::ifstream file_handle;
-            SampleDB::CSVIngestionEngine::process_file(file, file_handle);
+            VFEngine::CSVIngestionEngine::process_file(file, file_handle);
             int src, dest;
 
             while (file_handle >> src >> dest) {
@@ -94,4 +94,4 @@ namespace SampleDB {
     }
 
 
-} // namespace SampleDB
+} // namespace VFEngine

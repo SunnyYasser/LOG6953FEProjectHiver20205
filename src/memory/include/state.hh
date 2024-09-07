@@ -1,15 +1,15 @@
-#ifndef SAMPLE_DB_STATE_HH
-#define SAMPLE_DB_STATE_HH
+#ifndef VFENGINE_STATE_HH
+#define VFENGINE_STATE_HH
 
 #include <cstdint>
 #include <memory>
 
-namespace SampleDB {
+namespace VFEngine {
     class State {
     public:
         State() = delete;
 
-        explicit State(const int32_t &);
+        explicit State(const int32_t &size);
 
         [[nodiscard]] int32_t get_pos() const;
 

@@ -2,20 +2,19 @@
 #include <random>
 #include "include/operator_utils.hh"
 
-namespace SampleDB {
+namespace VFEngine {
     static Vector temp; // to initialize the _input_vector reference
     static std::string table_name{"TEMP TABLE"};
 
-    Operator::Operator(const std::shared_ptr<Schema> &schema) :
-        _output_vector(temp), _input_vector(temp), _table_name("R"), _operator_type(Operator::get_operator_type()),
-        _schema(schema), _next_operator(nullptr) {
+    Operator::Operator() :
+        _output_vector(temp), _input_vector(temp), _table_name("R"), _next_operator(nullptr),
+        _operator_type(Operator::get_operator_type()) {
         _uuid = create_uuid();
     }
 
-    Operator::Operator(const std::string &table_name, const std::shared_ptr<Schema> &schema,
-                       const std::shared_ptr<Operator> &next_operator) :
-        _output_vector(temp), _input_vector(temp), _table_name(table_name),
-        _operator_type(Operator::get_operator_type()), _schema(schema), _next_operator(next_operator) {
+    Operator::Operator(const std::string &table_name, const std::shared_ptr<Operator> &next_operator) :
+        _output_vector(temp), _input_vector(temp), _table_name(table_name), _next_operator(next_operator),
+        _operator_type(Operator::get_operator_type()) {
         _uuid = create_uuid();
     }
 
@@ -48,4 +47,4 @@ namespace SampleDB {
 
         return res;
     }
-} // namespace SampleDB
+} // namespace VFEngine

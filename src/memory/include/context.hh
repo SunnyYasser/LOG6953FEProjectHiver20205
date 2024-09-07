@@ -1,12 +1,11 @@
-#ifndef SAMPLE_DB_CONTEXT_MEMORY_HH
-#define SAMPLE_DB_CONTEXT_MEMORY_HH
+#ifndef VFENGINE_CONTEXT_MEMORY_HH
+#define VFENGINE_CONTEXT_MEMORY_HH
 
-#include <cstddef>
 #include <unordered_map>
 #include <string>
 #include "vector.hh"
 
-namespace SampleDB {
+namespace VFEngine {
     class ContextMemory {
     public:
         ContextMemory() = default;

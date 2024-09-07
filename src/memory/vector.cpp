@@ -3,7 +3,7 @@
 #include <algorithm>
 #include "include/vector.hh"
 
-namespace SampleDB {
+namespace VFEngine {
     Vector::Vector() : _vector(std::vector<int32_t>(State::MAX_VECTOR_SIZE, 0)),
                        _state(std::make_shared<State>(State::MAX_VECTOR_SIZE)) {
     }
@@ -28,14 +28,6 @@ namespace SampleDB {
     bool Vector::update_data(const int32_t& idx, const int32_t& value) {
         assert(idx < _state->get_size());
         _vector[idx] = value;
-
-        return true;
-    }
-
-    bool Vector::push_data(const int32_t& value) {
-        assert(_state->get_size() < State::MAX_VECTOR_SIZE);
-        _vector[_state->get_size()] = value;
-        increment_size();
 
         return true;
     }

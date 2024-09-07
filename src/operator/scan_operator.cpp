@@ -1,12 +1,12 @@
 #include "include/scan_operator.hh"
-#include "include/operator_utils.hh"
 #include <cassert>
 #include <unordered_set>
+#include "include/operator_utils.hh"
 
-namespace SampleDB {
-    Scan::Scan(const std::string &table_name, const std::string &scan_attribute, const std::shared_ptr<Schema> &schema,
+namespace VFEngine {
+    Scan::Scan(const std::string &table_name, const std::string &scan_attribute,
                const std::shared_ptr<Operator> &next_operator) :
-        Operator(table_name, schema, next_operator), _attribute(scan_attribute), _attribute_data({}) {}
+        Operator(table_name, next_operator), _attribute(scan_attribute), _attribute_data({}) {}
 
     operator_type_t Scan::get_operator_type() const { return OP_SCAN; }
 
@@ -61,8 +61,6 @@ namespace SampleDB {
             _attribute_data.push_back(k);
         }
 
-        _schema->_schema_map[_attribute] = UNFLAT;
-
         get_next_operator()->init(context, datastore);
     }
-} // namespace SampleDB
+} // namespace VFEngine

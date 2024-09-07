@@ -1,10 +1,10 @@
-#ifndef SAMPLE_DB_SCAN_OPERATOR_HH
-#define SAMPLE_DB_SCAN_OPERATOR_HH
+#ifndef VFENGINE_SCAN_OPERATOR_HH
+#define VFENGINE_SCAN_OPERATOR_HH
 
 #include "operator_definition.hh"
 #include "operator_types.hh"
 
-namespace SampleDB
+namespace VFEngine
 
 {
     class Scan : public Operator {
@@ -13,10 +13,10 @@ namespace SampleDB
         Scan() = delete;
         Scan(const Scan &) = delete;
         Scan(const std::vector<std::string> &) = delete;
-        Scan(const std::string &, const std::string &, const std::shared_ptr<Schema> &,
-             const std::shared_ptr<Operator> &);
+        Scan(const std::string &table_name, const std::string &scan_attribute,
+             const std::shared_ptr<Operator> &next_operator);
 
-    public:
+
         void execute() override;
         void debug() override;
         void init(const std::shared_ptr<ContextMemory> &, const std::shared_ptr<DataStore> &) override;
@@ -28,6 +28,6 @@ namespace SampleDB
         std::shared_ptr<ContextMemory> _context_memory;
         std::shared_ptr<DataStore> _data_store;
     };
-}; // namespace SampleDB
+}; // namespace VFEngine
 
 #endif

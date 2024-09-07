@@ -4,7 +4,7 @@
 #include "include/graph.hh"
 #include "../data/include/CSVIngestor.hh"
 
-namespace SampleDB {
+namespace VFEngine {
     template<typename T>
     Graph<T>::Graph(std::string filename) : _filename(std::move(filename)) {
     }

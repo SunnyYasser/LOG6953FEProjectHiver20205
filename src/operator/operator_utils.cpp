@@ -6,7 +6,7 @@
 #include "../utils/include/debug_enabled.hh"
 
 
-namespace SampleDB {
+namespace VFEngine {
     std::string get_operator_type_as_string(operator_type_t type) {
         switch (type) {
             case OP_GENERIC:
@@ -80,4 +80,4 @@ namespace SampleDB {
     }
 
 
-} // namespace SampleDB
+} // namespace VFEngine

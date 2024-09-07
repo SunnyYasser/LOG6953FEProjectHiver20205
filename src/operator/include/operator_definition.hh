@@ -1,5 +1,5 @@
-#ifndef SAMPLE_DB_OPERATOR_DEFINITION_HH
-#define SAMPLE_DB_OPERATOR_DEFINITION_HH
+#ifndef VFENGINE_OPERATOR_DEFINITION_HH
+#define VFENGINE_OPERATOR_DEFINITION_HH
 
 #include <memory>
 #include <string>
@@ -8,19 +8,14 @@
 #include "operator_types.hh"
 #include "schema.hh"
 
-namespace SampleDB {
+namespace VFEngine {
     class Operator {
     public:
-        Operator() = delete;
+        Operator();
         Operator(const Operator &) = delete;
-
-        explicit Operator(const std::shared_ptr<Schema> &);
-
-        Operator(const std::string &, const std::shared_ptr<Schema> &, const std::shared_ptr<Operator> &);
-
+        Operator(const std::string &table_name, const std::shared_ptr<Operator> &next_operator);
         virtual ~Operator() = default;
 
-    public:
         [[nodiscard]] std::string get_uuid() const;
 
         [[nodiscard]] std::string get_table_name() const;
@@ -31,14 +26,11 @@ namespace SampleDB {
 
         [[nodiscard]] virtual operator_type_t get_operator_type() const;
 
-    public:
         virtual void execute() = 0;
 
         virtual void debug() = 0;
 
         virtual void init(const std::shared_ptr<ContextMemory> &, const std::shared_ptr<DataStore> &) = 0;
-
-        std::shared_ptr<Schema> _schema;
 
     public:
         Vector _output_vector;
@@ -55,6 +47,6 @@ namespace SampleDB {
         const std::shared_ptr<ContextMemory> _context_memory;
         const std::shared_ptr<DataStore> _data_store;
     };
-} // namespace SampleDB
+} // namespace VFEngine
 
 #endif

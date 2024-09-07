@@ -1,9 +1,7 @@
-#ifndef SAMPLE_DB_OPERATOR_TYPES_HH
-#define SAMPLE_DB_OPERATOR_TYPES_HH
+#ifndef VFENGINE_OPERATOR_TYPES_HH
+#define VFENGINE_OPERATOR_TYPES_HH
 
-#include <string>
-
-namespace SampleDB
+namespace VFEngine
 {
     enum operator_type_t 
     {

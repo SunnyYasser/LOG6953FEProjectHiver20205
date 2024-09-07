@@ -1,27 +1,24 @@
-#ifndef SAMPLE_DB_VECTOR_HH
-#define SAMPLE_DB_VECTOR_HH
+#ifndef VFENGINE_VECTOR_HH
+#define VFENGINE_VECTOR_HH
 
 #include <cstdint>
 #include <memory>
 #include <vector>
 #include "state.hh"
 
-namespace SampleDB {
+namespace VFEngine {
     class Vector {
     public:
         Vector();
 
-        explicit Vector(const int32_t &);
+        explicit Vector(const int32_t &size);
 
-        explicit Vector(const std::vector<int32_t> &);
+        explicit Vector(const std::vector<int32_t> &vector);
 
         Vector(const Vector &) = default;
         Vector &operator=(const Vector &) = default;
 
-    public:
-        bool push_data(const int32_t &);
-
-        bool update_data(const int32_t &, const int32_t &);
+        bool update_data(const int32_t &idx, const int32_t &value);
 
         void increment_pos() const;
 
@@ -54,6 +51,6 @@ namespace SampleDB {
         std::vector<int32_t> _vector;
         std::shared_ptr<State> _state;
     };
-} // namespace SampleDB
+} // namespace VFEngine
 
 #endif

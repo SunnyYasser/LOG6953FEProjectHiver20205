@@ -1,7 +1,7 @@
 #include <iostream>
 #include "include/state.hh"
 
-namespace SampleDB {
+namespace VFEngine {
     State::State(const int32_t &size) : _pos(-1), _size(size) {
     }
 

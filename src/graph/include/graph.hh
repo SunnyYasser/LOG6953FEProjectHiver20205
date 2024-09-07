@@ -1,5 +1,5 @@
-#ifndef SAMPLE_DB_GRAPH_HH
-#define SAMPLE_DB_GRAPH_HH
+#ifndef VFENGINE_GRAPH_HH
+#define VFENGINE_GRAPH_HH
 
 /*
 Will integrate this code with CSVIngestor and
@@ -9,18 +9,16 @@ mapped files
  */
 
 
-#include <vector>
-#include <unordered_map>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
-namespace SampleDB
-{
-    template <typename T>
-    class Graph
-    {
+namespace VFEngine {
+    template<typename T>
+    class Graph {
     public:
         Graph() = default;
-        explicit Graph(std::string );
+        explicit Graph(std::string filename);
         Graph(const Graph<T> &) = delete;
         bool build_graph();
         void print_graph();
@@ -31,6 +29,6 @@ namespace SampleDB
         std::unordered_map<T, std::vector<T>> _adjList;
         const std::string _filename;
     };
-}
+} // namespace VFEngine
 
 #endif

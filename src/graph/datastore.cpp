@@ -3,7 +3,7 @@
 #include <limits>
 #include <memory>
 
-namespace SampleDB {
+namespace VFEngine {
     static std::unordered_map<int32_t, std::vector<int32_t>> empty_adj_list {};
 
     DataStore::DataStore(const std::vector<std::string> &table_names,
@@ -97,4 +97,4 @@ namespace SampleDB {
         return empty_adj_list;
     }
 
-} // namespace SampleDB
+} // namespace VFEngine

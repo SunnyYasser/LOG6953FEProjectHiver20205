@@ -1,13 +1,12 @@
-#ifndef SAMPLE_DB_OPERATOR_UTILS_HH
-#define SAMPLE_DB_OPERATOR_UTILS_HH
+#ifndef VFENGINE_OPERATOR_UTILS_HH
+#define VFENGINE_OPERATOR_UTILS_HH
 
 #include <string>
-#include "../../memory/include/state.hh"
 #include "../../memory/include/vector.hh"
 #include "operator_definition.hh"
 #include "operator_types.hh"
 
-namespace SampleDB {
+namespace VFEngine {
     void log_vector(const Vector &vector, const std::string &operator_info, const std::string &fn,
                     const std::string &table_name="R");
 

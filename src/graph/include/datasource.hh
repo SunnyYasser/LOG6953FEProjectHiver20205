@@ -5,8 +5,8 @@
 /*
  * This represents a table in SQL
  */
-#ifndef SAMPLE_DB_DATASOURCE_H
-#define SAMPLE_DB_DATASOURCE_H
+#ifndef VFENGINE_DATASOURCE_H
+#define VFENGINE_DATASOURCE_H
 
 #include <cstdint>
 #include <string>
@@ -14,10 +14,10 @@
 #include <vector>
 
 
-namespace SampleDB {
+namespace VFEngine {
     class DataSourceTable {
     public:
-        explicit DataSourceTable(const std::string &, const std::vector<std::string> &);
+        explicit DataSourceTable(const std::string &name, const std::vector<std::string> &columns);
 
         DataSourceTable(const DataSourceTable &) = default;
 
@@ -25,8 +25,8 @@ namespace SampleDB {
 
         int32_t columns_size() const;
 
-        void write_table_as_data_on_disk(const std::string &) const;
-        void read_table_from_data_on_disk(const std::string &);
+        void write_table_as_data_on_disk(const std::string &filepath) const;
+        void read_table_from_data_on_disk(const std::string &filepath);
 
         const std::unordered_map<int32_t, std::vector<int32_t>> &get_fwd_adj_list() const;
 
@@ -58,10 +58,9 @@ namespace SampleDB {
 
         void populate_bwd_adj_list();
 
-
         int32_t _rows{};
         int32_t _columns{};
     };
-} // namespace SampleDB
+} // namespace VFEngine
 
-#endif // SAMPLE_DB_DATASOURCE_H
+#endif

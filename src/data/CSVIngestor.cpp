@@ -5,7 +5,7 @@
 #include <sstream>
 #include "include/CSVIngestor.hh"
 
-namespace SampleDB {
+namespace VFEngine {
     CSVIngestionEngine &CSVIngestionEngine::get_reader_engine() {
         static CSVIngestionEngine engine;
         return engine;

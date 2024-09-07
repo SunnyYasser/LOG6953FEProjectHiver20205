@@ -2,19 +2,19 @@
 // Created by Sunny on 13-06-2024.
 //
 
-#ifndef SAMPLE_DB_CSV_INGESTOR_HH
-#define SAMPLE_DB_CSV_INGESTOR_HH
+#ifndef VFENGINE_CSV_INGESTOR_HH
+#define VFENGINE_CSV_INGESTOR_HH
 
-#include <string>
 #include <fstream>
+#include <string>
 
-namespace SampleDB {
+namespace VFEngine {
     class CSVIngestionEngine {
     public:
         static CSVIngestionEngine &get_reader_engine();
-        static bool can_open_file(const std::string &);
-        static void process_file(const std::string &, std::ifstream &);
-        static void print_data(const std::string &);
+        static bool can_open_file(const std::string &filename);
+        static void process_file(const std::string &filename, std::ifstream &file);
+        static void print_data(const std::string &filename);
         CSVIngestionEngine(const CSVIngestionEngine &) = delete;
         CSVIngestionEngine &operator=(const CSVIngestionEngine &) = delete;
         CSVIngestionEngine(CSVIngestionEngine &&) = delete;
@@ -26,7 +26,7 @@ namespace SampleDB {
     private:
         const std::string _filename;
     };
-}
+} // namespace VFEngine
 
 
 #endif
