@@ -26,6 +26,8 @@ namespace VFEngine {
 
         void init(const std::shared_ptr<ContextMemory>&, const std::shared_ptr<DataStore>&) override;
 
+        static long get_total_row_size_if_materialized () ;
+
     private:
         void update_total_row_size_if_materialized() const;
         void update_total_column_size_if_materialized();
