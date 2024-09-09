@@ -31,5 +31,3 @@
 *.out
 *.app
 
-#scripts
-scripts/*
