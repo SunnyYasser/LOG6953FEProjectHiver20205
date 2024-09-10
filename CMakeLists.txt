@@ -18,5 +18,8 @@ add_subdirectory(src/utils)
 add_executable(mydb2 main.cpp)
 target_link_libraries(mydb2 PUBLIC libgraph liboperator libmem libengine libutils)
 
+target_compile_options(mydb2 PRIVATE -fsanitize=address PRIVATE -fsanitize=leak)
+target_link_options(mydb2 PRIVATE -fsanitize=address PRIVATE -fsanitize=leak)
+
 # Add the tests directory
 add_subdirectory(tests)
