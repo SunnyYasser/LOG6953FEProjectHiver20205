@@ -30,21 +30,23 @@ namespace VFEngine {
         DataStore(DataStore &&) = delete;
 
     public:
-        [[nodiscard]] std::vector<int32_t> get_data_vector_for_column_index(const uint32_t &,
-                                                                            const std::string & = "R") const;
+        [[nodiscard]] std::vector<uint64_t> get_data_vector_for_column_index(const uint32_t &column_idx,
+                                                                             const std::string &table = "R") const;
 
-        [[nodiscard]] std::vector<int32_t> get_data_vector_for_column(const std::string &,
-                                                                      const std::string & = "R") const;
+        [[nodiscard]] std::vector<uint64_t> get_data_vector_for_column(const std::string &column,
+                                                                       const std::string &table = "R") const;
 
-        [[nodiscard]] int32_t get_table_columns_size(const std::string & = "R") const;
+        [[nodiscard]] int32_t get_table_columns_size(const std::string &table = "R") const;
 
-        [[nodiscard]] int32_t get_table_rows_size(const std::string & = "R") const;
+        [[nodiscard]] int32_t get_table_rows_size(const std::string &table = "R") const;
 
-        [[nodiscard]] const std::unordered_map<int32_t, std::vector<int32_t>> &
+        [[nodiscard]] const std::unordered_map<uint64_t, std::vector<uint64_t>> &
         get_fwd_adj_list(const std::string & = "R") const;
 
-        [[nodiscard]] const std::unordered_map<int32_t, std::vector<int32_t>> &
+        [[nodiscard]] const std::unordered_map<uint64_t, std::vector<uint64_t>> &
         get_bwd_adj_list(const std::string & = "R") const;
+
+        [[nodiscard]] uint64_t get_max_id_value(const std::string &column, const std::string &table = "R") const;
 
 
     private:
@@ -57,6 +59,6 @@ namespace VFEngine {
         std::unordered_map<std::string, std::shared_ptr<DataSourceTable>> _table_map;
         const std::unordered_map<std::string, std::string> _column_alias_map;
     };
-} // namespace SampleDB
+} // namespace VFEngine
 
 #endif

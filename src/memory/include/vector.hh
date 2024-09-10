@@ -13,11 +13,11 @@ namespace VFEngine {
 
         explicit Vector(const int32_t &size);
 
-        explicit Vector(const std::vector<int32_t> &vector);
+        explicit Vector(const std::vector<uint64_t> &vector);
 
         void print_debug_info() const;
 
-        std::vector<int32_t> _vector;
+        std::vector<uint64_t> _vector;
         std::shared_ptr<State> _state;
     };
 } // namespace VFEngine

@@ -53,19 +53,18 @@ long pipeline_example() {
 }
 
 
-long test_3() {
-    return pipeline_example();
-}
+long test_3() { return pipeline_example(); }
 
-int main () {
+int main() {
     const std::string datalog3 = "Q = R(a, b)";
     std::cout << "Test 3: " << datalog3 << std::endl;
 
-    long expected_result_test_3  = 6;
+    long expected_result_test_3 = 6;
     long actual_result_test_3 = test_3();
 
     if (actual_result_test_3 != expected_result_test_3) {
-        std::cerr << "Test 1 failed: Expected " << expected_result_test_3 << " but got " << actual_result_test_3 << std::endl;
+        std::cerr << "Test 1 failed: Expected " << expected_result_test_3 << " but got " << actual_result_test_3
+                  << std::endl;
         return 1;
     }
 

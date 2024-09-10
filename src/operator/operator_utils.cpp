@@ -74,8 +74,8 @@ namespace VFEngine {
         std::cout << "OPERATOR DEBUG INFO ENDS\n\n";
     }
 
-    void remove_duplicates(std::vector<int32_t> vec, std::vector<int32_t> &_attribute_data) {
-        std::unordered_set<int32_t> set{begin(vec), end(vec)};
+    void remove_duplicates(std::vector<uint64_t> vec, std::vector<uint64_t> &_attribute_data) {
+        std::unordered_set<uint64_t> set{begin(vec), end(vec)};
         _attribute_data = {begin(set), end(set)};
     }
 

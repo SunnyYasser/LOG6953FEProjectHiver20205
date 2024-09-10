@@ -15,9 +15,6 @@ namespace VFEngine {
 
     void Sink::execute() {
         update_total_row_size_if_materialized();
-
-        //std::cout << "For Sink Operator " << get_operator_name_as_string(get_operator_type(), get_uuid()) << "\n";
-        //std::cout << "Total size output if materialized= " << total_row_size_if_materialized << "\n";
     }
 
     void Sink::update_total_row_size_if_materialized() const {

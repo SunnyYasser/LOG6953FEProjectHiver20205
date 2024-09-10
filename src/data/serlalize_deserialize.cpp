@@ -1,6 +1,7 @@
 //
 // Created by sunny on 8/30/24.
 //
+#include <cstdint>
 #include <fstream>
 #include <iostream>
 #include "include/serialize_deserialize.hh"
@@ -46,7 +47,7 @@ std::vector<std::vector<T>> SerializeDeserialize<T>::deserializeVector() {
         return {};
     }
 
-    std::vector<std::vector<int>> vec(rows);
+    std::vector<std::vector<T>> vec(rows);
     size_t cols;
     ifs.read(reinterpret_cast<char *>(&cols), sizeof(cols));
 
@@ -59,4 +60,4 @@ std::vector<std::vector<T>> SerializeDeserialize<T>::deserializeVector() {
 }
 
 
-template class SerializeDeserialize<int>;
+template class SerializeDeserialize<uint64_t>;

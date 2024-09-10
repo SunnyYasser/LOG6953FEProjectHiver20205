@@ -28,20 +28,22 @@ namespace VFEngine {
         void write_table_as_data_on_disk(const std::string &filepath) const;
         void read_table_from_data_on_disk(const std::string &filepath);
 
-        const std::unordered_map<int32_t, std::vector<int32_t>> &get_fwd_adj_list() const;
+        const std::unordered_map<uint64_t, std::vector<uint64_t>> &get_fwd_adj_list() const;
 
-        const std::unordered_map<int32_t, std::vector<int32_t>> &get_bwd_adj_list() const;
+        const std::unordered_map<uint64_t, std::vector<uint64_t>> &get_bwd_adj_list() const;
+
+        uint64_t get_max_id_value (const std::string& column) const;
 
         /*name*/
         std::string _name;
 
         /*raw data table*/
-        std::vector<std::vector<int32_t>> _table;
+        std::vector<std::vector<uint64_t>> _table;
 
         /*simple adj_lists*/
-        std::unordered_map<int32_t, std::vector<int32_t>> _fwd_adj_list;
+        std::unordered_map<uint64_t, std::vector<uint64_t>> _fwd_adj_list;
 
-        std::unordered_map<int32_t, std::vector<int32_t>> _bwd_adj_list;
+        std::unordered_map<uint64_t, std::vector<uint64_t>> _bwd_adj_list;
 
         /*"a" -> 0th, "b" -> 1st etc..*/
         std::unordered_map<std::string, uint32_t> _column_name_to_index_map;

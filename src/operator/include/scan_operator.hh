@@ -23,10 +23,9 @@ namespace VFEngine
 
     private:
         [[nodiscard]] operator_type_t get_operator_type() const override;
+        uint64_t _max_id_value;
         const std::string _attribute;
-        std::vector<int32_t> _attribute_data;
         std::shared_ptr<ContextMemory> _context_memory;
-        std::shared_ptr<DataStore> _data_store;
     };
 }; // namespace VFEngine
 

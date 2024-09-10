@@ -16,7 +16,7 @@ std::shared_ptr<VFEngine::Operator> create_operator_plan() {
     const std::string table = "R";
     const std::vector<std::string> columns = {"a", "b", "c"};
     const std::unordered_map<std::string, VFEngine::SchemaType> schema{
-                {"a", VFEngine::FLAT}, {"b", VFEngine::UNFLAT}, {"c", VFEngine::UNFLAT}};
+            {"a", VFEngine::FLAT}, {"b", VFEngine::UNFLAT}, {"c", VFEngine::UNFLAT}};
 
     // Sink
     auto sink = std::static_pointer_cast<VFEngine::Operator>(std::make_shared<VFEngine::Sink>(schema));
@@ -63,18 +63,17 @@ long pipeline_example() {
 }
 
 
-long test_1() {
-    return pipeline_example();
-}
+long test_1() { return pipeline_example(); }
 
-int main () {
+int main() {
     const std::string datalog1 = "Q = R(a, b), R(a, c)";
     std::cout << "Test 1: " << datalog1 << std::endl;
-    long expected_result_test_1  = 14;
+    long expected_result_test_1 = 14;
     long actual_result_test_1 = test_1();
 
     if (actual_result_test_1 != expected_result_test_1) {
-        std::cerr << "Test 1 failed: Expected " << expected_result_test_1 << " but got " << actual_result_test_1 << std::endl;
+        std::cerr << "Test 1 failed: Expected " << expected_result_test_1 << " but got " << actual_result_test_1
+                  << std::endl;
         return 1;
     }
 

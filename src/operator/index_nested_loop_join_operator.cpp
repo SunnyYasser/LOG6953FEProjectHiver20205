@@ -1,5 +1,6 @@
 #include "include/index_nested_loop_join_operator.hh"
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include "include/operator_utils.hh"
 
@@ -34,36 +35,48 @@ namespace VFEngine {
         const auto &_data_idx = _input_vector._state->_pos;
         const auto &data = _input_vector._vector;
         const auto &newdata_values = _adj_list[data[_data_idx]];
+        const auto vector_size = newdata_values.size();
+        constexpr auto chunk_size = State::MAX_VECTOR_SIZE;
 
-        int32_t start_idx = 0;
-        std::vector<int32_t> _chunked_data{};
+        size_t number_chunks = std::ceil(static_cast<double>(vector_size) / chunk_size);
+        size_t start = 0, end = 0;
 
-        while (start_idx < newdata_values.size()) {
-            int32_t end_idx = std::min(start_idx + static_cast<int32_t>(newdata_values.size()) - 1,
-                                       start_idx + static_cast<int32_t>(State::MAX_VECTOR_SIZE));
+        for (size_t chunk = 1; chunk <= number_chunks; ++chunk) {
+            start = (chunk - 1) * chunk_size;
+
+            // Branch less calculation of end index to handle leftover elements
+            // If (max_id - start) >= chunk_size, then end = start + chunk_size
+            // Else, end = max_id (remaining elements are less than chunk size)
+
+            end = start + chunk_size * ((vector_size - start) >= chunk_size) +
+                  (vector_size - start) * ((vector_size - start) < chunk_size);
+
+            std::vector<uint64_t> _chunked_data(end - start + 1);
 
             auto start_itr = newdata_values.begin();
-            std::advance(start_itr, start_idx);
+            std::advance(start_itr, start);
 
             auto end_itr = newdata_values.begin();
-            std::advance(end_itr, end_idx + 1);
+            std::advance(end_itr, end);
 
             // TODO: copy happening here, must come up with a better way for slicing
-            _chunked_data = std::vector<int32_t>(start_itr, end_itr);
+            _chunked_data = std::vector(start_itr, end_itr);
             _output_vector = Vector(_chunked_data);
 
+            // update output vector for this operator
+            _output_vector = Vector(_chunked_data);
+
+            // log updated output vector
             log_vector(_input_vector, _output_vector, operator_name, fn_name);
 
+            // update output vector in context
             _context_memory->update_column_data(_output_attribute, _output_vector);
 
-            /*
-             * For each element in source vector,
-             */
+            // call next operator
             get_next_operator()->execute();
-
-            start_idx = end_idx + 1;
         }
     }
+
 
     void IndexNestedLoopJoin::execute() {
         _input_vector = _context_memory->read_vector_for_column(_input_attribute, get_table_name());

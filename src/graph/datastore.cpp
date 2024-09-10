@@ -4,7 +4,7 @@
 #include <memory>
 
 namespace VFEngine {
-    static std::unordered_map<int32_t, std::vector<int32_t>> empty_adj_list {};
+    static std::unordered_map<uint64_t, std::vector<uint64_t>> empty_adj_list {};
 
     DataStore::DataStore(const std::vector<std::string> &table_names,
                          const std::unordered_map<std::string, std::vector<std::string>> &table_to_column_map,
@@ -20,9 +20,9 @@ namespace VFEngine {
         }
     }
 
-    std::vector<int32_t> DataStore::get_data_vector_for_column_index(const uint32_t &idx,
+    std::vector<uint64_t> DataStore::get_data_vector_for_column_index(const uint32_t &idx,
                                                                      const std::string &table_name) const {
-        std::vector<int32_t> data{};
+        std::vector<uint64_t> data{};
 
         auto table_itr = _table_map.find(table_name);
 
@@ -36,7 +36,7 @@ namespace VFEngine {
         return data;
     }
 
-    std::vector<int32_t> DataStore::get_data_vector_for_column(const std::string &column,
+    std::vector<uint64_t> DataStore::get_data_vector_for_column(const std::string &column,
                                                                const std::string &table_name) const {
         const auto idx = get_column_idx(table_name, column);
         return get_data_vector_for_column_index(idx, column);
@@ -75,7 +75,7 @@ namespace VFEngine {
         return size;
     }
 
-    const std::unordered_map<int32_t, std::vector<int32_t>> &
+    const std::unordered_map<uint64_t, std::vector<uint64_t>> &
     DataStore::get_fwd_adj_list(const std::string &table_name) const {
         auto table_itr = _table_map.find(table_name);
         if (table_itr != _table_map.end()) {
@@ -86,7 +86,7 @@ namespace VFEngine {
         return empty_adj_list;
     }
 
-    const std::unordered_map<int32_t, std::vector<int32_t>> &
+    const std::unordered_map<uint64_t, std::vector<uint64_t>> &
     DataStore::get_bwd_adj_list(const std::string &table_name) const {
         auto table_itr = _table_map.find(table_name);
         if (table_itr != _table_map.end()) {
@@ -95,6 +95,18 @@ namespace VFEngine {
         }
 
         return empty_adj_list;
+    }
+
+    uint64_t DataStore::get_max_id_value(const std::string &column, const std::string &table_name) const {
+
+        auto table_itr = _table_map.find(table_name);
+
+        if (table_itr != _table_map.end()) {
+            const auto &table = table_itr->second;
+            return table->get_max_id_value (column);
+        }
+
+        return std::numeric_limits<uint64_t>::max();
     }
 
 } // namespace VFEngine

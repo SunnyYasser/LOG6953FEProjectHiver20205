@@ -21,7 +21,7 @@ namespace VFEngine {
 
     void log_operator_debug_msg(const Operator *op);
 
-    void remove_duplicates(std::vector<int32_t> vec, std::vector<int32_t> &_attribute_data);
+    void remove_duplicates(std::vector<uint64_t> vec, std::vector<uint64_t> &_attribute_data);
 
 
 } // namespace SampleDB

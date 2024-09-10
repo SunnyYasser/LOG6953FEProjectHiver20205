@@ -40,7 +40,7 @@ namespace VFEngine {
         bool _is_join_index_fwd;
         RelationType _relation_type;
         const std::string _input_attribute, _output_attribute;
-        std::unordered_map<int32_t, std::vector<int32_t>> _adj_list;
+        std::unordered_map<uint64_t, std::vector<uint64_t>> _adj_list;
         std::shared_ptr<ContextMemory> _context_memory;
         std::shared_ptr<DataStore> _datastore;
     };

@@ -31,7 +31,7 @@ namespace VFEngine {
         if (VFEngine::CSVIngestionEngine::can_open_file(file)) {
             std::ifstream file_handle;
             VFEngine::CSVIngestionEngine::process_file(file, file_handle);
-            int src, dest;
+            uint64_t src, dest;
 
             while (file_handle >> src >> dest) {
                 _table.push_back({src, dest});
@@ -76,22 +76,25 @@ namespace VFEngine {
     }
 
     void DataSourceTable::read_table_from_data_on_disk(const std::string &filepath) {
-        SerializeDeserialize<int> engine{filepath};
+        SerializeDeserialize<uint64_t> engine{filepath};
         _table = engine.deserializeVector();
     }
 
     void DataSourceTable::write_table_as_data_on_disk(const std::string &filepath) const {
-        SerializeDeserialize<int> engine{filepath};
+        SerializeDeserialize<uint64_t> engine{filepath};
         engine.serializeVector(_table);
     }
 
-    const std::unordered_map<int32_t, std::vector<int32_t>> &DataSourceTable::get_fwd_adj_list() const {
+    const std::unordered_map<uint64_t, std::vector<uint64_t>> &DataSourceTable::get_fwd_adj_list() const {
         return _fwd_adj_list;
     }
 
-    const std::unordered_map<int32_t, std::vector<int32_t>> &DataSourceTable::get_bwd_adj_list() const {
+    const std::unordered_map<uint64_t, std::vector<uint64_t>> &DataSourceTable::get_bwd_adj_list() const {
         return _bwd_adj_list;
     }
 
+    uint64_t DataSourceTable::get_max_id_value(const std::string &column) const {
+        return 3; // will update API to read from CSVIngestor later
+    }
 
 } // namespace VFEngine
