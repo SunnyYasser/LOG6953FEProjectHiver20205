@@ -10,7 +10,6 @@
 
 std::shared_ptr<VFEngine::Operator> create_operator_plan1() {
 
-    const std::string table = "R";
     const std::vector<std::string> columns = {"a", "b", "c"};
     const std::unordered_map<std::string, VFEngine::SchemaType> schema{
             {"a", VFEngine::FLAT}, {"b", VFEngine::UNFLAT}, {"c", VFEngine::UNFLAT}};
@@ -24,7 +23,7 @@ std::shared_ptr<VFEngine::Operator> create_operator_plan1() {
     bool is_join_index_fwd2 = true;
     VFEngine::RelationType relation_type2 = VFEngine::MANY_TO_MANY;
     auto extend2 = std::static_pointer_cast<VFEngine::Operator>(std::make_shared<VFEngine::IndexNestedLoopJoin>(
-            table, ip_attribute2, op_attribute2, is_join_index_fwd2, relation_type2, sink));
+            ip_attribute2, op_attribute2, is_join_index_fwd2, relation_type2, sink));
 
 
     // Join1
@@ -33,23 +32,22 @@ std::shared_ptr<VFEngine::Operator> create_operator_plan1() {
     bool is_join_index_fwd1 = true;
     VFEngine::RelationType relation_type1 = VFEngine::MANY_TO_MANY;
     auto extend1 = std::static_pointer_cast<VFEngine::Operator>(std::make_shared<VFEngine::IndexNestedLoopJoin>(
-            table, ip_attribute1, op_attribute1, is_join_index_fwd1, relation_type1, extend2));
+            ip_attribute1, op_attribute1, is_join_index_fwd1, relation_type1, extend2));
 
     // Scan
     const std::string scan_attribute = "a";
-    auto scan = std::static_pointer_cast<VFEngine::Operator>(
-            std::make_shared<VFEngine::Scan>(table, scan_attribute, extend1));
+    auto scan = std::static_pointer_cast<VFEngine::Operator>(std::make_shared<VFEngine::Scan>(scan_attribute, extend1));
 
     return scan;
 }
 
 void pipeline_example1() {
-    std::vector<std::string> table_names{"R"};
+    std::vector<std::string> column_names{"src", "dest"};
     std::unordered_map<std::string, std::vector<std::string>> table_to_column_map{{"R", {"src", "dest"}}};
     const std::string datalog = "Q = R(a, b), R(a, c)";
     const std::unordered_map<std::string, std::string> column_alias_map{{"a", "src"}, {"b", "dest"}, {"c", "dest"}};
 
-    auto pipeline = std::make_shared<VFEngine::Pipeline>(table_names, table_to_column_map, column_alias_map);
+    auto pipeline = std::make_shared<VFEngine::Pipeline>(column_names, column_alias_map);
 
     auto first_op = create_operator_plan1();
     pipeline->set_first_operator(first_op);

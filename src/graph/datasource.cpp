@@ -2,6 +2,9 @@
 // Created by Sunny on 21-08-2024.
 //
 #include "include/datasource.hh"
+
+#include <cstring>
+
 #include "../data/include/CSVIngestor.hh"
 #include "../data/include/serialize_deserialize.hh"
 #include "../utils/include/testpaths.hh"
@@ -64,12 +67,14 @@ namespace VFEngine {
     }
 
     void DataSourceTable::populate_fwd_adj_list() {
+        _fwd_adj_list.resize(get_max_id_value() + 1);
         for (auto &row: _table) {
             _fwd_adj_list[row[0]].push_back(row[1]);
         }
     }
 
     void DataSourceTable::populate_bwd_adj_list() {
+        _bwd_adj_list.resize(get_max_id_value() + 1);
         for (auto &row: _table) {
             _bwd_adj_list[row[1]].push_back(row[0]);
         }
@@ -85,16 +90,12 @@ namespace VFEngine {
         engine.serializeVector(_table);
     }
 
-    const std::unordered_map<uint64_t, std::vector<uint64_t>> &DataSourceTable::get_fwd_adj_list() const {
-        return _fwd_adj_list;
-    }
+    const std::vector<std::vector<uint64_t>> &DataSourceTable::get_fwd_adj_list() const { return _fwd_adj_list; }
 
-    const std::unordered_map<uint64_t, std::vector<uint64_t>> &DataSourceTable::get_bwd_adj_list() const {
-        return _bwd_adj_list;
-    }
+    const std::vector<std::vector<uint64_t>> &DataSourceTable::get_bwd_adj_list() const { return _bwd_adj_list; }
 
-    uint64_t DataSourceTable::get_max_id_value(const std::string &column) const {
-        return 3; // will update API to read from CSVIngestor later
+    uint64_t DataSourceTable::get_max_id_value() const {
+        return 4; // will update API to read from CSVIngestor later
     }
 
 } // namespace VFEngine

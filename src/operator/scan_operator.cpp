@@ -1,15 +1,15 @@
 #include "include/scan_operator.hh"
+
+#include <array>
 #include <cassert>
 #include <chrono>
 #include <cmath>
 #include <numeric>
-#include <unordered_set>
 #include "include/operator_utils.hh"
 
 namespace VFEngine {
-    Scan::Scan(const std::string &table_name, const std::string &scan_attribute,
-               const std::shared_ptr<Operator> &next_operator) :
-        Operator(table_name, next_operator), _max_id_value(0), _attribute(scan_attribute) {}
+    Scan::Scan(const std::string &scan_attribute, const std::shared_ptr<Operator> &next_operator) :
+        Operator(next_operator), _max_id_value(0), _attribute(scan_attribute) {}
 
     operator_type_t Scan::get_operator_type() const { return OP_SCAN; }
 
@@ -36,22 +36,17 @@ namespace VFEngine {
             end = start + chunk_size * ((_max_id_value - start) >= chunk_size) +
                   (_max_id_value - start) * ((_max_id_value - start) < chunk_size);
 
-            std::vector<uint64_t> _chunked_data (end - start + 1);
-            auto start_itr = _chunked_data.begin();
-            std::advance(start_itr, start);
-            auto end_itr = _chunked_data.begin();
-            std::advance(end_itr, end + 1);
+            const size_t _curr_chunk_size = end - start + 1;
 
-            std::iota(start_itr, end_itr, start);
+            for (size_t i = 0; i < _curr_chunk_size; ++i) {
+                _output->_values[i] = start + i;
+            }
 
-            // update output vector for this operator
-            _output_vector = Vector(_chunked_data);
+            _output->_state->_size = static_cast<int32_t>(_curr_chunk_size);
+            _output->_state->_pos = -1;
 
             // log updated output vector
-            log_vector(_output_vector, operator_name, fn_name, get_table_name());
-
-            // update output vector in context
-            _context_memory->update_column_data(_attribute, _output_vector);
+            log_vector(_output, operator_name, fn_name);
 
             // call next operator
             get_next_operator()->execute();
@@ -68,9 +63,9 @@ namespace VFEngine {
      * Input vector is not required for scan operator
      */
     void Scan::init(const std::shared_ptr<ContextMemory> &context, const std::shared_ptr<DataStore> &datastore) {
-        _context_memory = context;
-        _context_memory->allocate_memory_for_column(_attribute, get_table_name());
-        _max_id_value = datastore->get_max_id_value(_attribute);
+        context->allocate_memory_for_column(_attribute);
+        _output = context->read_vector_for_column(_attribute);
+        _max_id_value = datastore->get_max_id_value();
         get_next_operator()->init(context, datastore);
     }
 } // namespace VFEngine

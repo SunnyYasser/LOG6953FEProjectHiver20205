@@ -33,7 +33,6 @@ namespace VFEngine {
         void update_total_column_size_if_materialized();
 
         [[nodiscard]] operator_type_t get_operator_type() const override;
-        std::shared_ptr<ContextMemory> _context_memory;
         std::unordered_map<std::string, SchemaType> _schema;
         std::vector<State*> _unique_states;
         static long total_row_size_if_materialized;

@@ -13,8 +13,7 @@ namespace VFEngine
         Scan() = delete;
         Scan(const Scan &) = delete;
         Scan(const std::vector<std::string> &) = delete;
-        Scan(const std::string &table_name, const std::string &scan_attribute,
-             const std::shared_ptr<Operator> &next_operator);
+        Scan(const std::string &scan_attribute, const std::shared_ptr<Operator> &next_operator);
 
 
         void execute() override;
@@ -23,9 +22,9 @@ namespace VFEngine
 
     private:
         [[nodiscard]] operator_type_t get_operator_type() const override;
+        Vector *_output;
         uint64_t _max_id_value;
         const std::string _attribute;
-        std::shared_ptr<ContextMemory> _context_memory;
     };
 }; // namespace VFEngine
 

@@ -3,18 +3,15 @@
 #include "include/operator_utils.hh"
 
 namespace VFEngine {
-    static Vector temp; // to initialize the _input_vector reference
-    static std::string table_name{"TEMP TABLE"};
+    static Vector temp{}; // to initialize the _input_vector reference
+    static std::string table_name{"R"};
 
-    Operator::Operator() :
-        _output_vector(temp), _input_vector(temp), _table_name("R"), _next_operator(nullptr),
-        _operator_type(Operator::get_operator_type()) {
+    Operator::Operator() : _next_operator(nullptr), _operator_type(Operator::get_operator_type()) {
         _uuid = create_uuid();
     }
 
-    Operator::Operator(const std::string &table_name, const std::shared_ptr<Operator> &next_operator) :
-        _output_vector(temp), _input_vector(temp), _table_name(table_name), _next_operator(next_operator),
-        _operator_type(Operator::get_operator_type()) {
+    Operator::Operator(const std::shared_ptr<Operator> &next_operator) :
+        _next_operator(next_operator), _operator_type(Operator::get_operator_type()) {
         _uuid = create_uuid();
     }
 
@@ -25,8 +22,6 @@ namespace VFEngine {
     operator_type_t Operator::get_operator_type() const { return OP_GENERIC; }
 
     std::shared_ptr<Operator> Operator::get_next_operator() { return _next_operator; }
-
-    std::string Operator::get_table_name() const { return _table_name; }
 
     std::string Operator::create_uuid() {
         static std::random_device dev;

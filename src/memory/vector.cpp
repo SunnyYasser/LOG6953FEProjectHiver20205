@@ -1,24 +1,18 @@
-#include <cassert>
-#include <iostream>
-#include <algorithm>
 #include "include/vector.hh"
+#include <algorithm>
+#include <iostream>
 
 namespace VFEngine {
-    Vector::Vector() : _vector(std::vector<uint64_t>(State::MAX_VECTOR_SIZE, 0)),
-                       _state(std::make_shared<State>(State::MAX_VECTOR_SIZE)) {
+    Vector::Vector() :
+        _state(std::make_shared<State>(State::MAX_VECTOR_SIZE)),
+        _values_uptr(std::make_unique<uint64_t[]>(State::MAX_VECTOR_SIZE)) {
+        _values = _values_uptr.get();
     }
 
-    Vector::Vector(const std::vector<uint64_t> &vector) : _vector(vector),
-                                                         _state(std::make_shared<State>(
-                                                             std::min(vector.size(), State::MAX_VECTOR_SIZE))) {
+    Vector::Vector(const int32_t &size) :
+        _state(std::make_shared<State>(size)), _values_uptr(std::make_unique<uint64_t[]>(State::MAX_VECTOR_SIZE)) {
+        _values = _values_uptr.get();
     }
-
-    Vector::Vector(const int32_t &size) : _vector(std::vector<uint64_t>(std::min(static_cast<int32_t>(State::MAX_VECTOR_SIZE), size),
-                                                                       0)),
-                                          _state(std::make_shared<State>(
-                                              std::min(size, static_cast<int32_t>(State::MAX_VECTOR_SIZE)))) {
-    }
-
 
     void Vector::print_debug_info() const {
         std::cout << "VECTOR DEBUG INFO BEGINS:\n";
@@ -26,11 +20,11 @@ namespace VFEngine {
 
         std::cout << "VECTOR DATA VALUES:\n";
 
-        for (auto &v: _vector) {
-            std::cout << v << "\n";
+        for (int32_t idx = 0; idx < _state->_size; idx++) {
+            std::cout << _values[idx] << "\n";
         }
 
         std::cout << "VECTOR DEBUG INFO ENDS:\n";
     }
 
-}
+} // namespace VFEngine

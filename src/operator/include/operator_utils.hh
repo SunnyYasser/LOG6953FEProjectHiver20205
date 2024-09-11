@@ -7,11 +7,11 @@
 #include "operator_types.hh"
 
 namespace VFEngine {
-    void log_vector(const Vector &vector, const std::string &operator_info, const std::string &fn,
-                    const std::string &table_name="R");
+    void log_vector(const Vector * vector, const std::string &operator_info, const std::string &fn,
+                    const std::string &table_name = "R");
 
-    void log_vector(const Vector &ip_vector, const Vector &op_vector, const std::string &operator_info,
-                    const std::string &fn, const std::string &table_name="R");
+    void log_vector(const Vector * ip_vector, const Vector * op_vector, const std::string &operator_info,
+                    const std::string &fn, const std::string &table_name = "R");
 
     std::string get_operator_type_as_string(operator_type_t type);
 
@@ -24,6 +24,6 @@ namespace VFEngine {
     void remove_duplicates(std::vector<uint64_t> vec, std::vector<uint64_t> &_attribute_data);
 
 
-} // namespace SampleDB
+} // namespace VFEngine
 
 #endif

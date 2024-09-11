@@ -32,7 +32,7 @@ namespace VFEngine {
         return type + " " + uuid;
     }
 
-    void log_vector(const Vector &vector, const std::string &operator_info, const std::string &fn,
+    void log_vector(const Vector *vector, const std::string &operator_info, const std::string &fn,
                     const std::string &table_name) {
         if (!is_debug_enabled())
             return;
@@ -40,11 +40,11 @@ namespace VFEngine {
         std::cout << "For operator : " << operator_info << "\n";
         std::cout << "In function : " << fn << "\n";
         std::cout << "For table : " << table_name << "\n";
-        vector.print_debug_info();
+        vector->print_debug_info();
         std::cout << "\n-------------------\n\n";
     }
 
-    void log_vector(const Vector &ip_vector, const Vector &op_vector, const std::string &operator_info,
+    void log_vector(const Vector *ip_vector, const Vector *op_vector, const std::string &operator_info,
                     const std::string &fn, const std::string &table_name) {
         if (!is_debug_enabled())
             return;
@@ -53,8 +53,8 @@ namespace VFEngine {
         std::cout << "In function : " << fn << "\n";
         std::cout << "For table : " << table_name << "\n";
 
-        ip_vector.print_debug_info();
-        op_vector.print_debug_info();
+        ip_vector->print_debug_info();
+        op_vector->print_debug_info();
 
         std::cout << "\n-------------------\n\n";
     }
@@ -67,10 +67,6 @@ namespace VFEngine {
         std::cout << "OPERATOR DEBUG INFO:\n";
         std::cout << "Inside Operator : " << get_operator_name_as_string(op->get_operator_type(), op->get_uuid())
                   << "\n";
-
-        std::cout << "For table : " << op->get_table_name() << "\n";
-
-        std::cout << "\n";
         std::cout << "OPERATOR DEBUG INFO ENDS\n\n";
     }
 

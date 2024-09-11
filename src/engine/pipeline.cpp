@@ -1,12 +1,11 @@
 #include "include/pipeline.hh"
 
 namespace VFEngine {
-    Pipeline::Pipeline(const std::vector<std::string> &table_names,
-                       const std::unordered_map<std::string, std::vector<std::string>> &table_to_column_map,
+    Pipeline::Pipeline(const std::vector<std::string> &columns,
                        const std::unordered_map<std::string, std::string> &column_alias_map) :
         _first_operator(nullptr) {
         _context_memory = std::make_shared<ContextMemory>();
-        _datastore = std::make_shared<DataStore>(table_names, table_to_column_map, column_alias_map);
+        _datastore = std::make_shared<DataStore>(columns, column_alias_map);
     }
 
     void Pipeline::debug() const { _first_operator->debug(); }

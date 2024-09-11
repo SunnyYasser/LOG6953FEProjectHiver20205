@@ -14,8 +14,7 @@ namespace VFEngine {
     class Pipeline {
     public:
         Pipeline() = delete;
-        Pipeline(const std::vector<std::string> &table_names,
-                 const std::unordered_map<std::string, std::vector<std::string>> &table_to_column_map,
+        Pipeline(const std::vector<std::string> &columns,
                  const std::unordered_map<std::string, std::string> &column_alias_map);
 
     public:
@@ -27,7 +26,7 @@ namespace VFEngine {
         void set_first_operator(const std::shared_ptr<Operator> &);
 
     private:
-        const std::vector<std::string> _tables;
+        const std::vector<std::string> _columns;
         std::shared_ptr<Operator> _first_operator;
         std::shared_ptr<ContextMemory> _context_memory;
         std::shared_ptr<DataStore> _datastore;

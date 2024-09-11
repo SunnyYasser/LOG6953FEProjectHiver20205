@@ -13,7 +13,7 @@ namespace VFEngine {
 
         void print_debug_info() const;
 
-        static constexpr size_t MAX_VECTOR_SIZE = 1024;
+        static constexpr int32_t MAX_VECTOR_SIZE = 1024;
 
         int32_t _pos;
         int32_t _size;

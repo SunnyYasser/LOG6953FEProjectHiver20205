@@ -13,9 +13,7 @@ namespace VFEngine {
 
     operator_type_t Sink::get_operator_type() const { return OP_SINK; }
 
-    void Sink::execute() {
-        update_total_row_size_if_materialized();
-    }
+    void Sink::execute() { update_total_row_size_if_materialized(); }
 
     void Sink::update_total_row_size_if_materialized() const {
 
@@ -36,11 +34,10 @@ namespace VFEngine {
      * Output vector is not required for sink operator
      */
     void Sink::init(const std::shared_ptr<ContextMemory> &context, const std::shared_ptr<DataStore> &datastore) {
-        _context_memory = context;
         for (const auto &[column, value]: _schema) {
             if (value == UNFLAT) {
-                const auto &vector = _context_memory->read_vector_for_column(column, get_table_name());
-                const auto &state = vector._state;
+                const auto vector = context->read_vector_for_column(column);
+                const auto &state = vector->_state;
 
                 bool add_to_unique_states = true;
 
@@ -57,9 +54,7 @@ namespace VFEngine {
         }
     }
 
-    long Sink::get_total_row_size_if_materialized() {
-        return total_row_size_if_materialized;
-    }
+    long Sink::get_total_row_size_if_materialized() { return total_row_size_if_materialized; }
 
 
 } // namespace VFEngine
