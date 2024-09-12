@@ -11,7 +11,7 @@
 #include <relation_types.hh>
 
 namespace VFEngine {
-    class IndexNestedLoopJoin : public Operator {
+    class IndexNestedLoopJoin final : public Operator {
     public:
         IndexNestedLoopJoin() = delete;
 
@@ -22,10 +22,10 @@ namespace VFEngine {
                             const std::shared_ptr<Operator> &next_operator);
 
         void execute() override;
-
         void debug() override;
-
         void init(const std::shared_ptr<ContextMemory> &, const std::shared_ptr<DataStore> &) override;
+        ulong get_exec_call_counter() const;
+
 
     private:
         void execute_in_chunks_non_incremental();
@@ -40,6 +40,7 @@ namespace VFEngine {
         const RelationType _relation_type;
         const std::string _input_attribute, _output_attribute;
         std::vector<std::vector<uint64_t>> _adj_list;
+        ulong _exec_call_counter{};
     };
 }; // namespace VFEngine
 

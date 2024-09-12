@@ -19,6 +19,7 @@ namespace VFEngine {
     void IndexNestedLoopJoin::execute_in_chunks_incremental() {
         const std::string fn_name = "IndexNestedLoopJoin::execute_in_chunks_incremental()";
         const std::string operator_name = get_operator_name_as_string(get_operator_type(), get_uuid());
+        _exec_call_counter++;
         _input_vector->_state->_pos++;
         while (_input_vector->_state->_pos < _input_vector->_state->_size) {
             execute_internal(fn_name, operator_name);
@@ -27,6 +28,7 @@ namespace VFEngine {
     }
 
     void IndexNestedLoopJoin::execute_in_chunks_non_incremental() {
+        _exec_call_counter++;
         const std::string fn_name = "IndexNestedLoopJoin::execute_in_chunks_non_incremental()";
         const std::string operator_name = get_operator_name_as_string(get_operator_type(), get_uuid());
         execute_internal(fn_name, operator_name);
@@ -111,4 +113,7 @@ namespace VFEngine {
 
         get_next_operator()->init(context, datastore);
     }
+
+    ulong IndexNestedLoopJoin::get_exec_call_counter() const { return _exec_call_counter; }
+
 } // namespace VFEngine

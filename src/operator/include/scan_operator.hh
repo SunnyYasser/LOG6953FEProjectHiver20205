@@ -7,7 +7,7 @@
 namespace VFEngine
 
 {
-    class Scan : public Operator {
+    class Scan final : public Operator {
 
     public:
         Scan() = delete;
@@ -19,12 +19,15 @@ namespace VFEngine
         void execute() override;
         void debug() override;
         void init(const std::shared_ptr<ContextMemory> &, const std::shared_ptr<DataStore> &) override;
+        ulong get_exec_call_counter() const;
+
 
     private:
         [[nodiscard]] operator_type_t get_operator_type() const override;
-        Vector *_output;
+        Vector *_output_vector;
         uint64_t _max_id_value;
         const std::string _attribute;
+        ulong _exec_call_counter{};
     };
 }; // namespace VFEngine
 

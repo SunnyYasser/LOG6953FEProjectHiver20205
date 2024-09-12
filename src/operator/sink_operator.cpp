@@ -5,15 +5,18 @@
 
 
 namespace VFEngine {
-    long Sink::total_row_size_if_materialized = 0;
-    long Sink::total_column_size_if_materialized = 0;
+    ulong Sink::total_row_size_if_materialized = 0;
+    ulong Sink::total_column_size_if_materialized = 0;
 
     Sink::Sink(const std::unordered_map<std::string, SchemaType> &schema) :
         Operator(), _schema(schema), _unique_states({}) {}
 
     operator_type_t Sink::get_operator_type() const { return OP_SINK; }
 
-    void Sink::execute() { update_total_row_size_if_materialized(); }
+    void Sink::execute() {
+        _exec_call_counter++;
+        update_total_row_size_if_materialized();
+    }
 
     void Sink::update_total_row_size_if_materialized() const {
 
@@ -54,7 +57,8 @@ namespace VFEngine {
         }
     }
 
-    long Sink::get_total_row_size_if_materialized() { return total_row_size_if_materialized; }
+    ulong Sink::get_total_row_size_if_materialized() { return total_row_size_if_materialized; }
+    ulong Sink::get_exec_call_counter() const { return _exec_call_counter; }
 
 
 } // namespace VFEngine
