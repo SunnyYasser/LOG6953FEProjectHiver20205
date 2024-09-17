@@ -35,7 +35,7 @@ namespace VFEngine {
             end = start + chunk_size * ((_max_id_value - start) >= chunk_size) +
                   (_max_id_value - start) * ((_max_id_value - start) < chunk_size);
 
-            const size_t _curr_chunk_size = end - start + 1;
+            const size_t _curr_chunk_size = end - start;
 
             for (size_t i = 0; i < _curr_chunk_size; ++i) {
                 _output_vector->_values[i] = start + i;

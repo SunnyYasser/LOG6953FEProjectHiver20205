@@ -1,6 +1,4 @@
 #include "include/operator_utils.hh"
-
-#include <index_nested_loop_join_operator.hh>
 #include <iostream>
 #include <unordered_set>
 #include "../utils/include/debug_enabled.hh"

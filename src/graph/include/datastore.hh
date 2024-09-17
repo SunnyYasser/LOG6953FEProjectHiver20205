@@ -28,13 +28,11 @@ namespace VFEngine {
 
         DataStore(DataStore &&) = delete;
 
-        [[nodiscard]] int32_t get_table_columns_size() const;
+        [[nodiscard]] uint64_t get_table_rows_size() const;
 
-        [[nodiscard]] int32_t get_table_rows_size() const;
+        [[nodiscard]] const std::unique_ptr<AdjList[]> &get_fwd_adj_list() const;
 
-        [[nodiscard]] const std::vector<std::vector<uint64_t>> &get_fwd_adj_list() const;
-
-        [[nodiscard]] const std::vector<std::vector<uint64_t>> &get_bwd_adj_list() const;
+        [[nodiscard]] const std::unique_ptr<AdjList[]> &get_bwd_adj_list() const;
 
         [[nodiscard]] uint64_t get_max_id_value() const;
 

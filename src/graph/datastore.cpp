@@ -12,14 +12,11 @@ namespace VFEngine {
 
     void DataStore::populate_table() { _table = std::make_shared<DataSourceTable>("R", _columns); }
 
+    uint64_t DataStore::get_table_rows_size() const { return _table->get_rows_size(); }
 
-    int32_t DataStore::get_table_columns_size() const { return _table->columns_size(); }
+    const std::unique_ptr<AdjList[]> &DataStore::get_fwd_adj_list() const { return _table->get_fwd_adj_list(); }
 
-    int32_t DataStore::get_table_rows_size() const { return _table->rows_size(); }
-
-    const std::vector<std::vector<uint64_t>> &DataStore::get_fwd_adj_list() const { return _table->get_fwd_adj_list(); }
-
-    const std::vector<std::vector<uint64_t>> &DataStore::get_bwd_adj_list() const { return _table->get_bwd_adj_list(); }
+    const std::unique_ptr<AdjList[]> &DataStore::get_bwd_adj_list() const { return _table->get_bwd_adj_list(); }
 
     uint64_t DataStore::get_max_id_value() const { return _table->get_max_id_value(); }
 

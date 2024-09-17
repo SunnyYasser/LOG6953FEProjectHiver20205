@@ -6,7 +6,6 @@
 
 namespace VFEngine {
     ulong Sink::total_row_size_if_materialized = 0;
-    ulong Sink::total_column_size_if_materialized = 0;
 
     Sink::Sink(const std::unordered_map<std::string, SchemaType> &schema) :
         Operator(), _schema(schema), _unique_states({}) {}

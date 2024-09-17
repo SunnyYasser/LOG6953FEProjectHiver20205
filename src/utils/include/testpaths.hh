@@ -5,8 +5,8 @@
 #ifndef VFENGINE_TESTPATHS_H
 #define VFENGINE_TESTPATHS_H
 
-#include <string>
-
-const std::string get_fb_0edges_path ();
+const char* get_amazon0601_csv_path ();
+const char* get_amazon0601_serialized_data_reading_path ();
+const char* get_amazon0601_serialized_data_writing_path ();
 
 #endif

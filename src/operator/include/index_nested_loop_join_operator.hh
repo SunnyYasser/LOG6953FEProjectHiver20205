@@ -39,7 +39,8 @@ namespace VFEngine {
         bool _is_join_index_fwd;
         const RelationType _relation_type;
         const std::string _input_attribute, _output_attribute;
-        std::vector<std::vector<uint64_t>> _adj_list;
+        const std::unique_ptr<AdjList[]>* _adj_list{};
+        uint64_t _adj_list_size{};
         ulong _exec_call_counter{};
     };
 }; // namespace VFEngine

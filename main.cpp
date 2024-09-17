@@ -10,20 +10,11 @@
 
 std::shared_ptr<VFEngine::Operator> create_operator_plan1() {
 
-    const std::vector<std::string> columns = {"a", "b", "c"};
-    const std::unordered_map<std::string, VFEngine::SchemaType> schema{
-            {"a", VFEngine::FLAT}, {"b", VFEngine::UNFLAT}, {"c", VFEngine::UNFLAT}};
+    const std::vector<std::string> columns = {"a", "b"};
+    const std::unordered_map<std::string, VFEngine::SchemaType> schema{{"a", VFEngine::FLAT}, {"b", VFEngine::UNFLAT}};
 
     // Sink
     auto sink = std::static_pointer_cast<VFEngine::Operator>(std::make_shared<VFEngine::Sink>(schema));
-
-    // Join2
-    const std::string ip_attribute2 = "a";
-    const std::string op_attribute2 = "c";
-    bool is_join_index_fwd2 = true;
-    VFEngine::RelationType relation_type2 = VFEngine::MANY_TO_MANY;
-    auto extend2 = std::static_pointer_cast<VFEngine::Operator>(std::make_shared<VFEngine::IndexNestedLoopJoin>(
-            ip_attribute2, op_attribute2, is_join_index_fwd2, relation_type2, sink));
 
 
     // Join1
@@ -32,7 +23,7 @@ std::shared_ptr<VFEngine::Operator> create_operator_plan1() {
     bool is_join_index_fwd1 = true;
     VFEngine::RelationType relation_type1 = VFEngine::MANY_TO_MANY;
     auto extend1 = std::static_pointer_cast<VFEngine::Operator>(std::make_shared<VFEngine::IndexNestedLoopJoin>(
-            ip_attribute1, op_attribute1, is_join_index_fwd1, relation_type1, extend2));
+            ip_attribute1, op_attribute1, is_join_index_fwd1, relation_type1, sink));
 
     // Scan
     const std::string scan_attribute = "a";
@@ -44,8 +35,8 @@ std::shared_ptr<VFEngine::Operator> create_operator_plan1() {
 void pipeline_example1() {
     std::vector<std::string> column_names{"src", "dest"};
     std::unordered_map<std::string, std::vector<std::string>> table_to_column_map{{"R", {"src", "dest"}}};
-    const std::string datalog = "Q = R(a, b), R(a, c)";
-    const std::unordered_map<std::string, std::string> column_alias_map{{"a", "src"}, {"b", "dest"}, {"c", "dest"}};
+    const std::string datalog = "Q = R(a, b)";
+    const std::unordered_map<std::string, std::string> column_alias_map{{"a", "src"}, {"b", "dest"}};
 
     auto pipeline = std::make_shared<VFEngine::Pipeline>(column_names, column_alias_map);
 
@@ -61,7 +52,7 @@ void pipeline_example1() {
     std::cout << "Begin execute.............\n";
     pipeline->execute();
 
-    std::cout << "count (*) R(a, b), R(a, c) = " << VFEngine::Sink::get_total_row_size_if_materialized() << std::endl;
+    std::cout << "count (*) R(a, b) = " << VFEngine::Sink::get_total_row_size_if_materialized() << std::endl;
 }
 
 int main() {

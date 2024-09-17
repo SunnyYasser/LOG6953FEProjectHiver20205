@@ -36,7 +36,6 @@ namespace VFEngine {
         std::unordered_map<std::string, SchemaType> _schema;
         std::vector<State *> _unique_states;
         static ulong total_row_size_if_materialized;
-        static ulong total_column_size_if_materialized;
         ulong _exec_call_counter{};
     };
 }; // namespace VFEngine

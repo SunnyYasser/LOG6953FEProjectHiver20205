@@ -9,55 +9,46 @@
 #define VFENGINE_DATASOURCE_H
 
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include "adjlist.hh"
 
 
 namespace VFEngine {
     class DataSourceTable {
     public:
         explicit DataSourceTable(const std::string &name, const std::vector<std::string> &columns);
-
-        DataSourceTable(const DataSourceTable &) = default;
-
-        int32_t rows_size() const;
-
-        int32_t columns_size() const;
-
-        void write_table_as_data_on_disk(const std::string &filepath) const;
-        void read_table_from_data_on_disk(const std::string &filepath);
-
-        const std::vector<std::vector<uint64_t>> &get_fwd_adj_list() const;
-
-        const std::vector<std::vector<uint64_t>> &get_bwd_adj_list() const;
-
+        DataSourceTable(const DataSourceTable &) = delete;
+        uint64_t get_rows_size() const;
+        void populate_datasource();
+        void write_table_as_data_on_disk() const;
+        void read_table_from_data_on_disk();
         uint64_t get_max_id_value() const;
+
+        const std::unique_ptr<AdjList[]> &get_fwd_adj_list() const;
+        const std::unique_ptr<AdjList[]> &get_bwd_adj_list() const;
 
         /*name*/
         std::string _name;
-
-        /*raw data table, will be deprecated later*/
-        std::vector<std::vector<uint64_t>> _table;
-
-        /*simple adj_lists*/
-        std::vector<std::vector<uint64_t>> _fwd_adj_list;
-        std::vector<std::vector<uint64_t>> _bwd_adj_list;
-
+        // std::vector<std::vector<uint64_t>> _table;
+        std::unique_ptr<AdjList[]> _fwd_adj_list;
+        std::unique_ptr<AdjList[]> _bwd_adj_list;
         /*"a" -> 0th, "b" -> 1st etc..*/
         std::unordered_map<std::string, uint32_t> _column_name_to_index_map;
 
     private:
-        // TODO- this is just a testing API, and will be removed
         void populate_store_with_temporary_data();
 
-        void populate_store();
-        void populate_adj_list();
-        void populate_fwd_adj_list();
-        void populate_bwd_adj_list();
+        void populate_csv_store();
+        void populate_fwd_adj_list(const std::vector<std::vector<uint64_t>> &);
+        void populate_bwd_adj_list(const std::vector<std::vector<uint64_t>> &);
+        void populate_max_id_value();
+        void print_adj_list(std::vector<std::vector<uint64_t>> &adj_list, bool reverse = false) const;
+        void print_adj_list(const std::unique_ptr<AdjList[]> &adj_list, bool reverse = false) const;
 
-        int32_t _rows{};
-        int32_t _columns{};
+        uint64_t _max_id_value{};
     };
 } // namespace VFEngine
 

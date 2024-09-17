@@ -15,11 +15,10 @@ namespace VFEngine
         Scan(const std::vector<std::string> &) = delete;
         Scan(const std::string &scan_attribute, const std::shared_ptr<Operator> &next_operator);
 
-
         void execute() override;
         void debug() override;
         void init(const std::shared_ptr<ContextMemory> &, const std::shared_ptr<DataStore> &) override;
-        ulong get_exec_call_counter() const;
+        [[nodiscard]] ulong get_exec_call_counter() const;
 
 
     private:

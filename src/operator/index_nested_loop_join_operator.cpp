@@ -1,6 +1,5 @@
 #include "include/index_nested_loop_join_operator.hh"
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <iostream>
 #include "include/operator_utils.hh"
@@ -10,9 +9,8 @@ namespace VFEngine {
     IndexNestedLoopJoin::IndexNestedLoopJoin(const std::string &input_attribute, const std::string &output_attribute,
                                              const bool &is_join_index_fwd, const RelationType &relation_type,
                                              const std::shared_ptr<Operator> &next_operator) :
-        Operator(next_operator), _is_join_index_fwd(is_join_index_fwd), _relation_type(relation_type),
-        _input_vector(nullptr), _output_vector(nullptr), _input_attribute(input_attribute),
-        _output_attribute(output_attribute) {}
+        Operator(next_operator), _input_vector(nullptr), _output_vector(nullptr), _is_join_index_fwd(is_join_index_fwd),
+        _relation_type(relation_type), _input_attribute(input_attribute), _output_attribute(output_attribute) {}
 
     operator_type_t IndexNestedLoopJoin::get_operator_type() const { return OP_INLJ; }
 
@@ -37,12 +35,15 @@ namespace VFEngine {
     void IndexNestedLoopJoin::execute_internal(const std::string &fn_name, const std::string &operator_name) {
         const auto &_data_idx = _input_vector->_state->_pos;
         const auto &data = _input_vector->_values;
-        const auto &newdata_values = _adj_list[data[_data_idx]];
-        const auto newdata_values_size = static_cast<int32_t>(newdata_values.size());
+        // first de-ref to get the actual unique_ptr, then get Adjlist[] type for particular element, then get access to
+        // underlying raw uint64_t array
+        const auto &newdata_values_adj_list = (*_adj_list)[data[_data_idx]];
+        const auto &newdata_values = newdata_values_adj_list._values;
+        const auto &newdata_values_size = newdata_values_adj_list._size;
         constexpr auto chunk_size = State::MAX_VECTOR_SIZE;
 
         const int32_t number_chunks = std::ceil(static_cast<double>(newdata_values_size) / chunk_size);
-        int32_t start = 0, end = 0;
+        std::size_t start = 0, end = 0;
 
         for (int32_t chunk = 1; chunk <= number_chunks; ++chunk) {
             start = (chunk - 1) * chunk_size;
@@ -54,16 +55,13 @@ namespace VFEngine {
             end = start + chunk_size * ((newdata_values_size - start) >= chunk_size) +
                   (newdata_values_size - start) * ((newdata_values_size - start) < chunk_size);
 
-            auto start_itr = newdata_values.begin();
-            std::advance(start_itr, start);
-            auto end_itr = newdata_values.begin();
-            std::advance(end_itr, end);
-
             size_t idx = 0;
-            for (; start_itr != end_itr; ++start_itr) {
-                _output_vector->_values[idx++] = *start_itr;
+            size_t op_vector_size = end - start;
+            for (; idx != op_vector_size; idx++) {
+                _output_vector->_values[idx] = newdata_values[start + idx];
             }
-            _output_vector->_state->_size = end - start;
+
+            _output_vector->_state->_size = static_cast<int32_t>(op_vector_size);
             _output_vector->_state->_pos = -1;
 
             // log updated output vector
@@ -107,9 +105,11 @@ namespace VFEngine {
         }
 
         if (_is_join_index_fwd)
-            _adj_list = datastore->get_fwd_adj_list();
+            _adj_list = &(datastore->get_fwd_adj_list());
         else
-            _adj_list = datastore->get_bwd_adj_list();
+            _adj_list = &(datastore->get_bwd_adj_list());
+
+        _adj_list_size = datastore->get_table_rows_size();
 
         get_next_operator()->init(context, datastore);
     }
