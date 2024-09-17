@@ -4,6 +4,8 @@
 
 #include <iostream>
 #include <memory>
+#include <testpaths.hh>
+
 #include "../src/engine/include/pipeline.hh"
 #include "../src/operator/include/index_nested_loop_join_operator.hh"
 #include "../src/operator/include/relation_types.hh"
@@ -50,14 +52,20 @@ long pipeline_example() {
     return VFEngine::Sink::get_total_row_size_if_materialized();
 }
 
-
 long test_3() { return pipeline_example(); }
+
+long get_expected_value() {
+    if (get_amazon0601_csv_path()) {
+        return 3387388;
+    }
+    return 6;
+}
 
 int main() {
     const std::string datalog3 = "Q = R(a, b)";
     std::cout << "Test 3: " << datalog3 << std::endl;
 
-    long expected_result_test_3 = 6;
+    long expected_result_test_3 = get_expected_value();
     long actual_result_test_3 = test_3();
 
     if (actual_result_test_3 != expected_result_test_3) {

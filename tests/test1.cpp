@@ -4,6 +4,8 @@
 
 #include <iostream>
 #include <memory>
+#include <testpaths.hh>
+
 #include "../src/engine/include/pipeline.hh"
 #include "../src/operator/include/index_nested_loop_join_operator.hh"
 #include "../src/operator/include/relation_types.hh"
@@ -62,10 +64,17 @@ long pipeline_example() {
 
 long test_1() { return pipeline_example(); }
 
+long get_expected_value () {
+    if (get_amazon0601_csv_path ()) {
+        return 31583974;
+    }
+    return 14;
+}
+
 int main() {
     const std::string datalog1 = "Q = R(a, b), R(a, c)";
     std::cout << "Test 1: " << datalog1 << std::endl;
-    long expected_result_test_1 = 14;
+    long expected_result_test_1 = get_expected_value ();
     long actual_result_test_1 = test_1();
 
     if (actual_result_test_1 != expected_result_test_1) {

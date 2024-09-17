@@ -203,8 +203,10 @@ namespace VFEngine {
         const SerializeDeserialize<uint64_t> engine{filepath, this};
         engine.deserialize();
 
-        print_adj_list(_fwd_adj_list);
-        print_adj_list(_bwd_adj_list, true);
+        if (is_debug_enabled()) {
+            print_adj_list(_fwd_adj_list);
+            print_adj_list(_bwd_adj_list, true);
+        }
     }
 
     void DataSourceTable::print_adj_list(const std::unique_ptr<AdjList[]> &adj_list, bool reverse) const {
