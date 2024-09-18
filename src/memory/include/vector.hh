@@ -11,8 +11,9 @@ namespace VFEngine {
     public:
         Vector();
         explicit Vector(const int32_t &size);
-        Vector (const Vector &other) = delete;
-        Vector operator= (const Vector &other) = delete;
+        explicit Vector(const std::shared_ptr<State> &state);
+        Vector(const Vector &other) = delete;
+        Vector operator=(const Vector &other) = delete;
         void print_debug_info() const;
         std::shared_ptr<State> _state;
         uint64_t *_values;

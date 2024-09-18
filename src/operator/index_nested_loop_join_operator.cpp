@@ -57,7 +57,7 @@ namespace VFEngine {
 
             size_t idx = 0;
             size_t op_vector_size = end - start;
-            for (; idx != op_vector_size; idx++) {
+            for (; idx <= op_vector_size; idx++) {
                 _output_vector->_values[idx] = newdata_values[start + idx];
             }
 
@@ -86,12 +86,6 @@ namespace VFEngine {
         get_next_operator()->debug();
     }
 
-    bool IndexNestedLoopJoin::should_enable_state_sharing() const {
-        return _relation_type == RelationType::ONE_TO_ONE or
-               (_relation_type == RelationType::MANY_TO_ONE and _is_join_index_fwd) or
-               (_relation_type == RelationType::ONE_TO_MANY and !_is_join_index_fwd);
-    }
-
     void IndexNestedLoopJoin::init(const std::shared_ptr<ContextMemory> &context,
                                    const std::shared_ptr<DataStore> &datastore) {
 
@@ -100,14 +94,10 @@ namespace VFEngine {
         _input_vector = context->read_vector_for_column(_input_attribute);
         _output_vector = context->read_vector_for_column(_output_attribute);
 
-        if (should_enable_state_sharing()) {
-            _output_vector->_state = _input_vector->_state;
-        }
-
         if (_is_join_index_fwd)
-            _adj_list = &(datastore->get_fwd_adj_list());
+            _adj_list = &(datastore->get_fwd_adj_lists());
         else
-            _adj_list = &(datastore->get_bwd_adj_list());
+            _adj_list = &(datastore->get_bwd_adj_lists());
 
         _adj_list_size = datastore->get_table_rows_size();
 

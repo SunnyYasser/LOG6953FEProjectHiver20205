@@ -14,9 +14,9 @@ namespace VFEngine {
 
     uint64_t DataStore::get_table_rows_size() const { return _table->get_rows_size(); }
 
-    const std::unique_ptr<AdjList[]> &DataStore::get_fwd_adj_list() const { return _table->get_fwd_adj_list(); }
+    const std::unique_ptr<AdjList[]> &DataStore::get_fwd_adj_lists() const { return _table->get_fwd_adj_list(); }
 
-    const std::unique_ptr<AdjList[]> &DataStore::get_bwd_adj_list() const { return _table->get_bwd_adj_list(); }
+    const std::unique_ptr<AdjList[]> &DataStore::get_bwd_adj_lists() const { return _table->get_bwd_adj_list(); }
 
     uint64_t DataStore::get_max_id_value() const { return _table->get_max_id_value(); }
 

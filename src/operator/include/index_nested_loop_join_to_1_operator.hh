@@ -1,23 +1,26 @@
-//
-// Created by Sunny on 16-06-2024.
-//
-
-#ifndef VFENGINE_INDEX_NESTED_LOOP_JOIN_OPERATOR_HH
-#define VFENGINE_INDEX_NESTED_LOOP_JOIN_OPERATOR_HH
+#ifndef VFENGINE_INDEX_NESTED_LOOP_JOIN_1_TO_1_HH
+#define VFENGINE_INDEX_NESTED_LOOP_JOIN_1_TO_1_HH
 
 #include "operator_definition.hh"
 #include "operator_types.hh"
-
 #include <relation_types.hh>
 
+/*
+* Idea is we know that entire table we are working on is 1 to 1 relation, ie,
+* each element has a fwd and bwd adjlist of size 1
+* we override the execute() such that we do not change input vector's pos
+* from -1 while fillng the output vector, and the states are shared between
+* the two vectors
+*/
+
 namespace VFEngine {
-    class IndexNestedLoopJoin final : public Operator {
+    class IndexNestedLoopJointo1 final : public Operator {
     public:
-        IndexNestedLoopJoin() = delete;
+        IndexNestedLoopJointo1() = delete;
 
-        IndexNestedLoopJoin(const IndexNestedLoopJoin &) = delete;
+        IndexNestedLoopJointo1(const IndexNestedLoopJointo1 &) = delete;
 
-        IndexNestedLoopJoin(const std::string &input_attribute, const std::string &output_attribute,
+        IndexNestedLoopJointo1(const std::string &input_attribute, const std::string &output_attribute,
                             const bool &is_join_index_fwd, const RelationType &relation_type,
                             const std::shared_ptr<Operator> &next_operator);
 
@@ -28,8 +31,6 @@ namespace VFEngine {
 
 
     private:
-        void execute_in_chunks_non_incremental();
-        void execute_in_chunks_incremental();
         [[nodiscard]] operator_type_t get_operator_type() const override;
         void execute_internal(const std::string &fn_name, const std::string &operator_name);
 
@@ -38,8 +39,7 @@ namespace VFEngine {
         bool _is_join_index_fwd;
         const RelationType _relation_type;
         const std::string _input_attribute, _output_attribute;
-        const std::unique_ptr<AdjList[]> *_adj_list{};
-        uint64_t _adj_list_size{};
+        const std::unique_ptr<AdjList[]>* _adj_list{};
         ulong _exec_call_counter{};
     };
 }; // namespace VFEngine

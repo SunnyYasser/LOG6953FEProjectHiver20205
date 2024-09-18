@@ -12,7 +12,9 @@ namespace VFEngine {
         ContextMemory(ContextMemory &&) = delete;
         ContextMemory(const ContextMemory &) = delete;
         void allocate_memory_for_column(const std::string &column);
-        Vector* read_vector_for_column(const std::string &column);
+        void allocate_memory_for_column(const std::string &column, const std::string &parent_column,
+                                        const bool &share_state);
+        Vector *read_vector_for_column(const std::string &column);
 
     private:
         // <table_name : <column : vector>>

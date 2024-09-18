@@ -30,9 +30,9 @@ namespace VFEngine {
 
         [[nodiscard]] uint64_t get_table_rows_size() const;
 
-        [[nodiscard]] const std::unique_ptr<AdjList[]> &get_fwd_adj_list() const;
+        [[nodiscard]] const std::unique_ptr<AdjList[]> &get_fwd_adj_lists() const;
 
-        [[nodiscard]] const std::unique_ptr<AdjList[]> &get_bwd_adj_list() const;
+        [[nodiscard]] const std::unique_ptr<AdjList[]> &get_bwd_adj_lists() const;
 
         [[nodiscard]] uint64_t get_max_id_value() const;
 

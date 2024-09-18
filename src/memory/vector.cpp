@@ -14,6 +14,12 @@ namespace VFEngine {
         _values = _values_uptr.get();
     }
 
+    Vector::Vector(const std::shared_ptr<State> &state) :
+        _state(state), _values_uptr(std::make_unique<uint64_t[]>(State::MAX_VECTOR_SIZE)) {
+        _values = _values_uptr.get();
+    }
+
+
     void Vector::print_debug_info() const {
         std::cout << "VECTOR DEBUG INFO BEGINS:\n";
         _state->print_debug_info();
