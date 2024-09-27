@@ -6,7 +6,11 @@
 #define VFENGINE_SERIALIZE_DESERIALIZE_HH
 
 #include <string>
+#include <memory>
 namespace VFEngine {
+    class DataSourceTable;
+    class AdjList;
+    
     template<typename T>
     class SerializeDeserialize {
     public:

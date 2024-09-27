@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include <memory>
-
 namespace VFEngine {
     class State {
     public:
@@ -11,12 +10,12 @@ namespace VFEngine {
 
         explicit State(const int32_t &size);
 
-        void print_debug_info() const;
+        void print_debug_info(std::ofstream &logfile);
 
         static constexpr int32_t MAX_VECTOR_SIZE = 1024;
 
         int32_t _pos;
         int32_t _size;
     };
-} // namespace SampleDB
+} // namespace VFEngine
 #endif

@@ -16,7 +16,6 @@ namespace VFEngine
         Scan(const std::string &scan_attribute, const std::shared_ptr<Operator> &next_operator);
 
         void execute() override;
-        void debug() override;
         void init(const std::shared_ptr<ContextMemory> &, const std::shared_ptr<DataStore> &) override;
         [[nodiscard]] ulong get_exec_call_counter() const;
 
@@ -27,6 +26,9 @@ namespace VFEngine
         uint64_t _max_id_value;
         const std::string _attribute;
         ulong _exec_call_counter{};
+#ifdef DEBUG
+        std::unique_ptr<OperatorDebugUtility> _debug;
+#endif
     };
 }; // namespace VFEngine
 

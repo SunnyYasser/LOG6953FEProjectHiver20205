@@ -22,7 +22,6 @@ namespace VFEngine {
                             const std::shared_ptr<Operator> &next_operator);
 
         void execute() override;
-        void debug() override;
         void init(const std::shared_ptr<ContextMemory> &, const std::shared_ptr<DataStore> &) override;
         ulong get_exec_call_counter() const;
 
@@ -31,7 +30,7 @@ namespace VFEngine {
         void execute_in_chunks_non_incremental();
         void execute_in_chunks_incremental();
         [[nodiscard]] operator_type_t get_operator_type() const override;
-        void execute_internal(const std::string &fn_name, const std::string &operator_name);
+        void execute_internal(const std::string &fn_name);
 
         Vector *_input_vector;
         Vector *_output_vector;
@@ -41,6 +40,9 @@ namespace VFEngine {
         const std::unique_ptr<AdjList[]> *_adj_list{};
         uint64_t _adj_list_size{};
         ulong _exec_call_counter{};
+#ifdef DEBUG
+        std::unique_ptr<OperatorDebugUtility> _debug;
+#endif
     };
 }; // namespace VFEngine
 

@@ -2,7 +2,7 @@
 #define VFENGINE_DATASTORE_HH
 
 #include <cstdint>
-#include <datasource.hh>
+#include "datasource.hh"
 #include <memory>
 #include <unordered_map>
 #include <vector>

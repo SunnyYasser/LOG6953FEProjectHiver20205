@@ -21,3 +21,11 @@ const char *get_amazon0601_serialized_data_writing_path() {
     const char *ev_val = getenv("VFENGINE_AMAZON0601_SERIALIZED_WRITE_PATH");
     return ev_val;
 }
+
+const char* get_memory_debug_path() {
+    return "operator_debug_logs";
+}
+
+const char* get_operator_debug_path() {
+    return "operator_debug_logs";
+}

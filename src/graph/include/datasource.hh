@@ -45,9 +45,6 @@ namespace VFEngine {
         void populate_fwd_adj_list(const std::vector<std::vector<uint64_t>> &);
         void populate_bwd_adj_list(const std::vector<std::vector<uint64_t>> &);
         void populate_max_id_value();
-        void print_adj_list(std::vector<std::vector<uint64_t>> &adj_list, bool reverse = false) const;
-        void print_adj_list(const std::unique_ptr<AdjList[]> &adj_list, bool reverse = false) const;
-
         uint64_t _max_id_value{};
     };
 } // namespace VFEngine

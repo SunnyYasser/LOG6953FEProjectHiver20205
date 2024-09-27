@@ -22,7 +22,6 @@ namespace VFEngine {
 
     public:
         void execute() override;
-        void debug() override;
         void init(const std::shared_ptr<ContextMemory> &, const std::shared_ptr<DataStore> &) override;
         static ulong get_total_row_size_if_materialized();
         ulong get_exec_call_counter() const;
@@ -37,6 +36,9 @@ namespace VFEngine {
         std::vector<State *> _unique_states;
         static ulong total_row_size_if_materialized;
         ulong _exec_call_counter{};
+#ifdef DEBUG
+        std::unique_ptr<OperatorDebugUtility> _debug;
+#endif
     };
 }; // namespace VFEngine
 

@@ -1,5 +1,4 @@
 #include "include/vector.hh"
-#include <algorithm>
 #include <iostream>
 
 namespace VFEngine {
@@ -20,17 +19,17 @@ namespace VFEngine {
     }
 
 
-    void Vector::print_debug_info() const {
-        std::cout << "VECTOR DEBUG INFO BEGINS:\n";
-        _state->print_debug_info();
+    void Vector::print_debug_info(std::ofstream& logfile) const{
+        logfile << "VECTOR DEBUG INFO BEGINS:\n";
+        _state->print_debug_info(logfile);
 
-        std::cout << "VECTOR DATA VALUES:\n";
+        logfile << "VECTOR DATA VALUES:\n";
 
         for (int32_t idx = 0; idx < _state->_size; idx++) {
-            std::cout << _values[idx] << "\n";
+            logfile << _values[idx] << "\n";
         }
 
-        std::cout << "VECTOR DEBUG INFO ENDS:\n";
+        logfile << "VECTOR DEBUG INFO ENDS:\n";
     }
 
 } // namespace VFEngine

@@ -8,7 +8,11 @@ namespace VFEngine {
     ulong Sink::total_row_size_if_materialized = 0;
 
     Sink::Sink(const std::unordered_map<std::string, SchemaType> &schema) :
-        Operator(), _schema(schema), _unique_states({}) {}
+        Operator(), _schema(schema), _unique_states({}) {
+#ifdef DEBUG
+        _debug = std::make_unique<OperatorDebugUtility>(this);
+#endif
+    }
 
     operator_type_t Sink::get_operator_type() const { return OP_SINK; }
 
@@ -28,8 +32,6 @@ namespace VFEngine {
     }
 
     void Sink::update_total_column_size_if_materialized() {}
-
-    void Sink::debug() { log_operator_debug_msg(this); }
 
     /*
      * We only need to create a read the data of given column (attribute)

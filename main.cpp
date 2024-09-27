@@ -55,6 +55,16 @@ void pipeline_example1() {
     std::cout << "count (*) R(a, b) = " << VFEngine::Sink::get_total_row_size_if_materialized() << std::endl;
 }
 
+void enable_component_debug() {
+    if (std::getenv("GETCHAR_IN_OPERATORS")) {
+        enable_operator_debug();
+    }
+
+    if (std::getenv("GETCHAR_IN_MEMORY")) {
+        enable_memory_debug();
+    }
+}
+
 int main() {
     if (std::getenv("GETCHAR_IN_MAIN")) {
         enable_debug();
@@ -64,6 +74,7 @@ int main() {
         } while (std::cin.get() != '\n');
     }
 
+    enable_component_debug();
     pipeline_example1();
 
     return 0;

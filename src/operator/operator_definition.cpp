@@ -17,8 +17,6 @@ namespace VFEngine {
 
     std::string Operator::get_uuid() const { return _uuid; }
 
-    std::string Operator::get_operator_info() const { return get_operator_name_as_string(_operator_type, _uuid); }
-
     operator_type_t Operator::get_operator_type() const { return OP_GENERIC; }
 
     std::shared_ptr<Operator> Operator::get_next_operator() { return _next_operator; }

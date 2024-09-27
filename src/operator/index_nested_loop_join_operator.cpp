@@ -10,17 +10,20 @@ namespace VFEngine {
                                              const bool &is_join_index_fwd, const RelationType &relation_type,
                                              const std::shared_ptr<Operator> &next_operator) :
         Operator(next_operator), _input_vector(nullptr), _output_vector(nullptr), _is_join_index_fwd(is_join_index_fwd),
-        _relation_type(relation_type), _input_attribute(input_attribute), _output_attribute(output_attribute) {}
+        _relation_type(relation_type), _input_attribute(input_attribute), _output_attribute(output_attribute) {
+#ifdef DEBUG
+        _debug = std::make_unique<OperatorDebugUtility>(this);
+#endif
+    }
 
     operator_type_t IndexNestedLoopJoin::get_operator_type() const { return OP_INLJ; }
 
     void IndexNestedLoopJoin::execute_in_chunks_incremental() {
         const std::string fn_name = "IndexNestedLoopJoin::execute_in_chunks_incremental()";
-        const std::string operator_name = get_operator_name_as_string(get_operator_type(), get_uuid());
         _exec_call_counter++;
         _input_vector->_state->_pos++;
         while (_input_vector->_state->_pos < _input_vector->_state->_size) {
-            execute_internal(fn_name, operator_name);
+            execute_internal(fn_name);
             _input_vector->_state->_pos++;
         }
     }
@@ -28,11 +31,10 @@ namespace VFEngine {
     void IndexNestedLoopJoin::execute_in_chunks_non_incremental() {
         _exec_call_counter++;
         const std::string fn_name = "IndexNestedLoopJoin::execute_in_chunks_non_incremental()";
-        const std::string operator_name = get_operator_name_as_string(get_operator_type(), get_uuid());
-        execute_internal(fn_name, operator_name);
+        execute_internal(fn_name);
     }
 
-    void IndexNestedLoopJoin::execute_internal(const std::string &fn_name, const std::string &operator_name) {
+    void IndexNestedLoopJoin::execute_internal(const std::string &fn_name) {
         const auto &_data_idx = _input_vector->_state->_pos;
         const auto &data = _input_vector->_values;
         // first de-ref to get the actual unique_ptr, then get Adjlist[] type for particular element, then get access to
@@ -64,9 +66,10 @@ namespace VFEngine {
             _output_vector->_state->_size = static_cast<int32_t>(op_vector_size);
             _output_vector->_state->_pos = -1;
 
+#ifdef DEBUG
             // log updated output vector
-            log_vector(_input_vector, _output_vector, operator_name, fn_name);
-
+            _debug->log_vector(_input_vector, _output_vector, fn_name);
+#endif
             // call next operator
             get_next_operator()->execute();
         }
@@ -80,17 +83,12 @@ namespace VFEngine {
             execute_in_chunks_non_incremental();
     }
 
-
-    void IndexNestedLoopJoin::debug() {
-        log_operator_debug_msg(this);
-        get_next_operator()->debug();
-    }
-
     void IndexNestedLoopJoin::init(const std::shared_ptr<ContextMemory> &context,
                                    const std::shared_ptr<DataStore> &datastore) {
-
+#ifdef DEBUG
+        _debug->log_operator_debug_msg();
+#endif
         context->allocate_memory_for_column(_output_attribute);
-
         _input_vector = context->read_vector_for_column(_input_attribute);
         _output_vector = context->read_vector_for_column(_output_attribute);
 
@@ -100,7 +98,6 @@ namespace VFEngine {
             _adj_list = &(datastore->get_bwd_adj_lists());
 
         _adj_list_size = datastore->get_table_rows_size();
-
         get_next_operator()->init(context, datastore);
     }
 

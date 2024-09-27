@@ -6,6 +6,7 @@
 #include <iostream>
 #include <thread>
 #include "../graph/include/datasource.hh"
+#include "../graph/include/adjlist.hh"
 #include "../utils/include/testpaths.hh"
 #include "include/serialize_deserialize.hh"
 

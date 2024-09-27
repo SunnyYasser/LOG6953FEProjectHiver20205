@@ -8,7 +8,7 @@ namespace VFEngine {
         _datastore = std::make_shared<DataStore>(columns, column_alias_map);
     }
 
-    void Pipeline::debug() const { _first_operator->debug(); }
+    void Pipeline::debug() const { return; }
 
     void Pipeline::execute() const { _first_operator->execute(); }
 
