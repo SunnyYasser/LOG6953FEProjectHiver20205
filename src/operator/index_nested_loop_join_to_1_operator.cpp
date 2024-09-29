@@ -23,7 +23,11 @@ namespace VFEngine {
 
         for (size_t idx = 0; idx < State::MAX_VECTOR_SIZE; idx++) {
             _output_vector->_values[idx] = ((*_adj_list)[_input_vector->_values[idx]]._size > 0) *
+                                           _input_vector->_filter[idx] *
                                            (*_adj_list)[_input_vector->_values[idx]]._values[0];
+
+            _output_vector->_filter[idx] =
+                    _input_vector->_filter[idx] * ((*_adj_list)[_output_vector->_values[idx]]._size > 0);
         }
 
 #ifdef DEBUG

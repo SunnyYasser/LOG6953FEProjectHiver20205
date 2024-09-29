@@ -34,17 +34,20 @@ namespace VFEngine {
         execute_internal(fn_name);
     }
 
-    void IndexNestedLoopJoin::execute_internal(const std::string &fn_name) {
-        const auto &_data_idx = _input_vector->_state->_pos;
-        const auto &data = _input_vector->_values;
+    void IndexNestedLoopJoin::execute_internal(const std::string &fn_name, const std::string &operator_name) {
+        const auto &_ip_vector_pos = _input_vector->_state->_pos;
+        const auto &_ip_vector_values = _input_vector->_values;
+        const auto &_ip_vector_filter = _input_vector->_filter;
+
         // first de-ref to get the actual unique_ptr, then get Adjlist[] type for particular element, then get access to
         // underlying raw uint64_t array
-        const auto &newdata_values_adj_list = (*_adj_list)[data[_data_idx]];
-        const auto &newdata_values = newdata_values_adj_list._values;
-        const auto &newdata_values_size = newdata_values_adj_list._size;
+        const auto &_ip_vector_adj_list = (*_adj_list)[_ip_vector_values[_ip_vector_pos]];
+        const auto &_ip_vector_adj_list_values = _ip_vector_adj_list._values;
+        const auto &_ip_vector_adj_list_size = _ip_vector_adj_list._size;
+
         constexpr auto chunk_size = State::MAX_VECTOR_SIZE;
 
-        const int32_t number_chunks = std::ceil(static_cast<double>(newdata_values_size) / chunk_size);
+        const int32_t number_chunks = std::ceil(static_cast<double>(_ip_vector_adj_list_size) / chunk_size);
         std::size_t start = 0, end = 0;
 
         for (int32_t chunk = 1; chunk <= number_chunks; ++chunk) {
@@ -54,13 +57,16 @@ namespace VFEngine {
             // If (max_id - start) >= chunk_size, then end = start + chunk_size
             // Else, end = max_id (remaining elements are less than chunk size)
 
-            end = start + chunk_size * ((newdata_values_size - start) >= chunk_size) +
-                  (newdata_values_size - start) * ((newdata_values_size - start) < chunk_size);
+            end = start + chunk_size * ((_ip_vector_adj_list_size - start) >= chunk_size) +
+                  (_ip_vector_adj_list_size - start) * ((_ip_vector_adj_list_size - start) < chunk_size);
 
-            size_t idx = 0;
-            size_t op_vector_size = end - start;
-            for (; idx <= op_vector_size; idx++) {
-                _output_vector->_values[idx] = newdata_values[start + idx];
+            const size_t op_vector_size = end - start;
+
+            for (size_t idx = 0; idx < op_vector_size; idx++) {
+                _output_vector->_values[idx] =
+                        _ip_vector_adj_list_values[start + idx] * _ip_vector_filter[_ip_vector_pos];
+                _output_vector->_filter[idx] =
+                        _ip_vector_filter[_ip_vector_pos] * ((*_adj_list)[_output_vector->_values[idx]]._size > 0);
             }
 
             _output_vector->_state->_size = static_cast<int32_t>(op_vector_size);
