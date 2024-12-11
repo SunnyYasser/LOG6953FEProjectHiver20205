@@ -7,9 +7,9 @@
 namespace VFEngine {
     ulong Sink::total_row_size_if_materialized = 0;
 
-    Sink::Sink(const std::unordered_map<std::string, SchemaType> &schema) :
+    Sink::Sink(const std::vector<std::pair<std::string, SchemaType>> &schema) :
         Operator(), _schema(schema), _unique_states({}) {
-#ifdef DEBUG
+#ifdef MY_DEBUG
         _debug = std::make_unique<OperatorDebugUtility>(this);
 #endif
     }
@@ -25,7 +25,7 @@ namespace VFEngine {
 
         long curr{1};
         for (const auto &state: _unique_states) {
-            curr *= state->_size;
+            curr *= state->_state_info._size;
         }
 
         total_row_size_if_materialized += curr;

@@ -1,9 +1,5 @@
-//
-// Created by Sunny on 16-06-2024.
-//
-
-#ifndef VFENGINE_INDEX_NESTED_LOOP_JOIN_OPERATOR_HH
-#define VFENGINE_INDEX_NESTED_LOOP_JOIN_OPERATOR_HH
+#ifndef VFENGINE_INDEX_NESTED_LOOP_JOIN_PACKED_OPERATOR_HH
+#define VFENGINE_INDEX_NESTED_LOOP_JOIN_PACKED_OPERATOR_HH
 
 #include "operator_definition.hh"
 #include "operator_types.hh"
@@ -14,15 +10,15 @@
 
 
 namespace VFEngine {
-    class IndexNestedLoopJoin final : public Operator {
+    class IndexNestedLoopJoinPacked final : public Operator {
     public:
-        IndexNestedLoopJoin() = delete;
+        IndexNestedLoopJoinPacked() = delete;
 
-        IndexNestedLoopJoin(const IndexNestedLoopJoin &) = delete;
+        IndexNestedLoopJoinPacked(const IndexNestedLoopJoinPacked &) = delete;
 
-        IndexNestedLoopJoin(const std::string &input_attribute, const std::string &output_attribute,
-                            const bool &is_join_index_fwd, const RelationType &relation_type,
-                            const std::shared_ptr<Operator> &next_operator);
+        IndexNestedLoopJoinPacked(const std::string &input_attribute, const std::string &output_attribute,
+                                  const bool &is_join_index_fwd, const RelationType &relation_type,
+                                  const std::shared_ptr<Operator> &next_operator);
 
         void execute() override;
         void init(const std::shared_ptr<ContextMemory> &, const std::shared_ptr<DataStore> &) override;
@@ -30,10 +26,9 @@ namespace VFEngine {
 
 
     private:
-        void execute_in_chunks_non_incremental();
-        void execute_in_chunks_incremental();
+        void execute_internal();
         [[nodiscard]] operator_type_t get_operator_type() const override;
-        void execute_internal(const std::string &fn_name);
+
 
         Vector *_input_vector;
         Vector *_output_vector;
@@ -43,6 +38,7 @@ namespace VFEngine {
         const std::unique_ptr<AdjList[]> *_adj_list{};
         uint64_t _adj_list_size{};
         unsigned long _exec_call_counter{};
+
 #ifdef MY_DEBUG
         std::unique_ptr<OperatorDebugUtility> _debug;
 #endif

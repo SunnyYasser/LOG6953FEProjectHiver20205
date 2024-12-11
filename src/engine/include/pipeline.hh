@@ -24,6 +24,7 @@ namespace VFEngine {
         std::shared_ptr<ContextMemory> get_context_memory();
         std::shared_ptr<DataStore> get_datastore();
         void set_first_operator(const std::shared_ptr<Operator> &);
+        const std::shared_ptr<Operator> &get_first_operator();
 
     private:
         const std::vector<std::string> _columns;

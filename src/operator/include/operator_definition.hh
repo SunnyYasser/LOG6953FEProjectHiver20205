@@ -3,7 +3,6 @@
 
 #include <memory>
 #include <string>
-#include "../../debug/include/operator_debug.hh"
 #include "../../graph/include/datastore.hh"
 #include "../../memory/include/context.hh"
 #include "operator_types.hh"
@@ -20,7 +19,7 @@ namespace VFEngine {
         [[nodiscard]] virtual operator_type_t get_operator_type() const;
         virtual void execute() = 0;
         virtual void init(const std::shared_ptr<ContextMemory> &, const std::shared_ptr<DataStore> &) = 0;
-
+        virtual unsigned long get_exec_call_counter() const = 0;
     private:
         static std::string create_uuid();
         std::string _uuid;

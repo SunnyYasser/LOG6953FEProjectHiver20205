@@ -21,4 +21,7 @@ namespace VFEngine {
     void Pipeline::set_first_operator(const std::shared_ptr<Operator> &first_operator) {
         _first_operator = first_operator;
     }
+
+    const std::shared_ptr<Operator> &Pipeline::get_first_operator() { return _first_operator; }
+
 } // namespace VFEngine

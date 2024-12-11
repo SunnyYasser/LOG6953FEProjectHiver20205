@@ -13,7 +13,7 @@ namespace VFEngine {
     }
 
     OperatorDebugUtility::~OperatorDebugUtility() {
-        if (_logfile.is_open()) {
+        if (_logfile and _logfile.is_open()) {
             _logfile.close();
         }
     }
@@ -35,7 +35,7 @@ namespace VFEngine {
         _logfile.open(folder);
     }
 
-    std::string OperatorDebugUtility::get_operator_type_as_string(operator_type_t type) const {
+    std::string OperatorDebugUtility::get_operator_type_as_string(operator_type_t type) {
         switch (type) {
             case OP_GENERIC:
                 return "GENERIC_OPERATOR";
@@ -45,6 +45,10 @@ namespace VFEngine {
                 return "INLJ_OPERATOR";
             case OP_SINK:
                 return "SINK_OPERATOR";
+            case OP_INLJ_PACKED:
+                return "INLJ_OPERATOR_PACKED";
+            case OP_INLJ_NTO1:
+                return "INLJ_OPERATOR_NTO1";
             case OP_SIZE:
                 return "UNKNOWN_OPERATOR";
         }
@@ -52,7 +56,7 @@ namespace VFEngine {
         return "UNKNOWN_OPERATOR";
     }
 
-    std::string OperatorDebugUtility::get_operator_name_as_string(operator_type_t type, const std::string &uuid) const {
+    std::string OperatorDebugUtility::get_operator_name_as_string(operator_type_t type, const std::string &uuid) {
         return get_operator_type_as_string(type) + "_" + uuid;
     }
 

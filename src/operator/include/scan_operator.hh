@@ -3,6 +3,10 @@
 
 #include "operator_definition.hh"
 #include "operator_types.hh"
+#ifdef MY_DEBUG
+#include "../../debug/include/operator_debug.hh"
+#endif
+
 
 namespace VFEngine
 
@@ -17,7 +21,7 @@ namespace VFEngine
 
         void execute() override;
         void init(const std::shared_ptr<ContextMemory> &, const std::shared_ptr<DataStore> &) override;
-        [[nodiscard]] ulong get_exec_call_counter() const;
+        [[nodiscard]] unsigned long get_exec_call_counter() const override;
 
 
     private:
@@ -25,8 +29,8 @@ namespace VFEngine
         Vector *_output_vector;
         uint64_t _max_id_value;
         const std::string _attribute;
-        ulong _exec_call_counter{};
-#ifdef DEBUG
+        unsigned long _exec_call_counter{};
+#ifdef MY_DEBUG
         std::unique_ptr<OperatorDebugUtility> _debug;
 #endif
     };

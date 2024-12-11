@@ -1,5 +1,5 @@
-#ifndef VFENGINE_SINK_OPERATOR_HH
-#define VFENGINE_SINK_OPERATOR_HH
+#ifndef VFENGINE_SINK_PACKED_OPERATOR_HH
+#define VFENGINE_SINK_PACKED_OPERATOR_HH
 
 /*
  * Will always be one per logical plan
@@ -7,22 +7,22 @@
  * of the query
  */
 
+#include "../../parser/include/factorized_tree.hh"
 #include "operator_definition.hh"
 #include "operator_types.hh"
-#include "schema.hh"
+
 #ifdef MY_DEBUG
 #include "../../debug/include/operator_debug.hh"
 #endif
 
-
 namespace VFEngine {
-    class Sink final : public Operator {
+    class SinkPacked final : public Operator {
     public:
-        Sink() = delete;
+        SinkPacked() = delete;
 
-        Sink(const Sink &) = delete;
+        SinkPacked(const SinkPacked &) = delete;
 
-        explicit Sink(const std::vector<std::pair<std::string, SchemaType>> &schema);
+        explicit SinkPacked(const std::shared_ptr<FactorizedTreeElement> &ftree);
 
         void execute() override;
         void init(const std::shared_ptr<ContextMemory> &, const std::shared_ptr<DataStore> &) override;
@@ -31,14 +31,15 @@ namespace VFEngine {
 
 
     private:
-        void update_total_row_size_if_materialized() const;
+        void update_total_row_size_if_materialized();
         void update_total_column_size_if_materialized();
+        void fill_vectors_in_ftree() const;
 
         [[nodiscard]] operator_type_t get_operator_type() const override;
-        std::vector<std::pair<std::string, SchemaType>> _schema;
-        std::vector<State *> _unique_states;
+        std::shared_ptr<FactorizedTreeElement> _ftree;
         static unsigned long total_row_size_if_materialized;
         unsigned long _exec_call_counter{};
+        std::shared_ptr<ContextMemory> _context;
 #ifdef MY_DEBUG
         std::unique_ptr<OperatorDebugUtility> _debug;
 #endif

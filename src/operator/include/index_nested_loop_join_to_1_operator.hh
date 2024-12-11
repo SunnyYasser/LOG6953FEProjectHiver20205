@@ -4,6 +4,10 @@
 #include <relation_types.hh>
 #include "operator_definition.hh"
 #include "operator_types.hh"
+#ifdef MY_DEBUG
+#include "../../debug/include/operator_debug.hh"
+#endif
+
 
 /*
  * Idea is we know that entire table we are working on is 1 to 1 relation, ie,
@@ -26,7 +30,7 @@ namespace VFEngine {
 
         void execute() override;
         void init(const std::shared_ptr<ContextMemory> &, const std::shared_ptr<DataStore> &) override;
-        ulong get_exec_call_counter() const;
+        [[nodiscard]] unsigned long get_exec_call_counter() const override;
 
 
     private:
@@ -39,8 +43,8 @@ namespace VFEngine {
         const RelationType _relation_type;
         const std::string _input_attribute, _output_attribute;
         const std::unique_ptr<AdjList[]> *_adj_list{};
-        ulong _exec_call_counter{};
-#ifdef DEBUG
+        unsigned long _exec_call_counter{};
+#ifdef MY_DEBUG
         std::unique_ptr<OperatorDebugUtility> _debug;
 #endif
     };

@@ -1,7 +1,5 @@
 #include "include/index_nested_loop_join_to_1_operator.hh"
-#include <cmath>
 #include "include/operator_utils.hh"
-
 
 namespace VFEngine {
     IndexNestedLoopJointo1::IndexNestedLoopJointo1(const std::string &input_attribute,
@@ -10,12 +8,12 @@ namespace VFEngine {
                                                    const std::shared_ptr<Operator> &next_operator) :
         Operator(next_operator), _input_vector(nullptr), _output_vector(nullptr), _is_join_index_fwd(is_join_index_fwd),
         _relation_type(relation_type), _input_attribute(input_attribute), _output_attribute(output_attribute) {
-#ifdef DEBUG
+#ifdef MY_DEBUG
         _debug = std::make_unique<OperatorDebugUtility>(this);
 #endif
     }
 
-    operator_type_t IndexNestedLoopJointo1::get_operator_type() const { return OP_INLJ; }
+    operator_type_t IndexNestedLoopJointo1::get_operator_type() const { return OP_INLJ_NTO1; }
 
     void IndexNestedLoopJointo1::execute() {
         const std::string fn_name = "IndexNestedLoopJointo1::execute";
@@ -23,14 +21,10 @@ namespace VFEngine {
 
         for (size_t idx = 0; idx < State::MAX_VECTOR_SIZE; idx++) {
             _output_vector->_values[idx] = ((*_adj_list)[_input_vector->_values[idx]]._size > 0) *
-                                           _input_vector->_filter[idx] *
                                            (*_adj_list)[_input_vector->_values[idx]]._values[0];
-
-            _output_vector->_filter[idx] =
-                    _input_vector->_filter[idx] * ((*_adj_list)[_output_vector->_values[idx]]._size > 0);
         }
 
-#ifdef DEBUG
+#ifdef MY_DEBUG
         // log updated output vector
         _debug->log_vector(_input_vector, _output_vector, fn_name);
 #endif
@@ -41,7 +35,7 @@ namespace VFEngine {
 
     void IndexNestedLoopJointo1::init(const std::shared_ptr<ContextMemory> &context,
                                       const std::shared_ptr<DataStore> &datastore) {
-#ifdef DEBUG
+#ifdef MY_DEBUG
         _debug->log_operator_debug_msg();
 #endif
         // enable state sharing
@@ -58,6 +52,6 @@ namespace VFEngine {
         get_next_operator()->init(context, datastore);
     }
 
-    ulong IndexNestedLoopJointo1::get_exec_call_counter() const { return _exec_call_counter; }
+    unsigned long IndexNestedLoopJointo1::get_exec_call_counter() const { return _exec_call_counter; }
 
 } // namespace VFEngine

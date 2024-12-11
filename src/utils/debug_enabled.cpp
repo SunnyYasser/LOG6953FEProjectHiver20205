@@ -6,6 +6,7 @@
 static bool _is_debug_enabled = false;
 static bool _is_memory_debug_enabled = false;
 static bool _is_operator_debug_enabled = false;
+static bool _is_parser_debug_enabled = false;
 
 
 bool is_debug_enabled() { return _is_debug_enabled; }
@@ -25,3 +26,7 @@ void disable_operator_debug() { _is_operator_debug_enabled = false; }
 bool is_operator_debug_enabled() { return _is_operator_debug_enabled; }
 
 bool is_memory_debug_enabled() { return _is_memory_debug_enabled; }
+
+void enable_parser_debug() { _is_parser_debug_enabled = true; }
+
+bool is_parser_debug_enabled() { return _is_parser_debug_enabled; }

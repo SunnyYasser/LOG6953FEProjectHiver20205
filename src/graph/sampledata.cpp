@@ -26,7 +26,7 @@ namespace VFEngine {
         _bwd_adj_list[0] = AdjList(0); // Empty list
         _bwd_adj_list[1] = AdjList(0); // Empty list
         _bwd_adj_list[2] = AdjList(1); // List with 1 value
-        _bwd_adj_list[2]._values[0] = 2;
+        _bwd_adj_list[2]._values[0] = 1;
         _bwd_adj_list[3] = AdjList(2); // List with 2 values
         _bwd_adj_list[3]._values[0] = 1;
         _bwd_adj_list[3]._values[1] = 2;

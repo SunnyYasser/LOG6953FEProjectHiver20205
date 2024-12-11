@@ -1,7 +1,6 @@
 #include "include/index_nested_loop_join_operator.hh"
 #include <algorithm>
 #include <cmath>
-#include <iostream>
 #include "include/operator_utils.hh"
 
 
@@ -11,7 +10,7 @@ namespace VFEngine {
                                              const std::shared_ptr<Operator> &next_operator) :
         Operator(next_operator), _input_vector(nullptr), _output_vector(nullptr), _is_join_index_fwd(is_join_index_fwd),
         _relation_type(relation_type), _input_attribute(input_attribute), _output_attribute(output_attribute) {
-#ifdef DEBUG
+#ifdef MY_DEBUG
         _debug = std::make_unique<OperatorDebugUtility>(this);
 #endif
     }
@@ -21,11 +20,13 @@ namespace VFEngine {
     void IndexNestedLoopJoin::execute_in_chunks_incremental() {
         const std::string fn_name = "IndexNestedLoopJoin::execute_in_chunks_incremental()";
         _exec_call_counter++;
-        _input_vector->_state->_pos++;
-        while (_input_vector->_state->_pos < _input_vector->_state->_size) {
+        const auto _initial_in_vector_pos = _input_vector->_state->_state_info._pos;
+        _input_vector->_state->_state_info._pos++;
+        while (_input_vector->_state->_state_info._pos < _input_vector->_state->_state_info._size) {
             execute_internal(fn_name);
-            _input_vector->_state->_pos++;
+            _input_vector->_state->_state_info._pos++;
         }
+        _input_vector->_state->_state_info._pos = _initial_in_vector_pos;
     }
 
     void IndexNestedLoopJoin::execute_in_chunks_non_incremental() {
@@ -34,10 +35,9 @@ namespace VFEngine {
         execute_internal(fn_name);
     }
 
-    void IndexNestedLoopJoin::execute_internal(const std::string &fn_name, const std::string &operator_name) {
-        const auto &_ip_vector_pos = _input_vector->_state->_pos;
+    void IndexNestedLoopJoin::execute_internal(const std::string &fn_name) {
+        const auto &_ip_vector_pos = _input_vector->_state->_state_info._pos;
         const auto &_ip_vector_values = _input_vector->_values;
-        const auto &_ip_vector_filter = _input_vector->_filter;
 
         // first de-ref to get the actual unique_ptr, then get Adjlist[] type for particular element, then get access to
         // underlying raw uint64_t array
@@ -63,16 +63,13 @@ namespace VFEngine {
             const size_t op_vector_size = end - start;
 
             for (size_t idx = 0; idx < op_vector_size; idx++) {
-                _output_vector->_values[idx] =
-                        _ip_vector_adj_list_values[start + idx] * _ip_vector_filter[_ip_vector_pos];
-                _output_vector->_filter[idx] =
-                        _ip_vector_filter[_ip_vector_pos] * ((*_adj_list)[_output_vector->_values[idx]]._size > 0);
+                _output_vector->_values[idx] = _ip_vector_adj_list_values[start + idx];
             }
 
-            _output_vector->_state->_size = static_cast<int32_t>(op_vector_size);
-            _output_vector->_state->_pos = -1;
+            _output_vector->_state->_state_info._size = static_cast<int32_t>(op_vector_size);
+            _output_vector->_state->_state_info._pos = -1;
 
-#ifdef DEBUG
+#ifdef MY_DEBUG
             // log updated output vector
             _debug->log_vector(_input_vector, _output_vector, fn_name);
 #endif
@@ -83,7 +80,7 @@ namespace VFEngine {
 
 
     void IndexNestedLoopJoin::execute() {
-        if (_input_vector->_state->_pos == -1)
+        if (_input_vector->_state->_state_info._pos == -1)
             execute_in_chunks_incremental();
         else
             execute_in_chunks_non_incremental();
@@ -91,7 +88,7 @@ namespace VFEngine {
 
     void IndexNestedLoopJoin::init(const std::shared_ptr<ContextMemory> &context,
                                    const std::shared_ptr<DataStore> &datastore) {
-#ifdef DEBUG
+#ifdef MY_DEBUG
         _debug->log_operator_debug_msg();
 #endif
         context->allocate_memory_for_column(_output_attribute);
@@ -107,6 +104,6 @@ namespace VFEngine {
         get_next_operator()->init(context, datastore);
     }
 
-    ulong IndexNestedLoopJoin::get_exec_call_counter() const { return _exec_call_counter; }
+    unsigned long IndexNestedLoopJoin::get_exec_call_counter() const { return _exec_call_counter; }
 
 } // namespace VFEngine
