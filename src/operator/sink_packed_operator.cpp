@@ -45,6 +45,10 @@ namespace VFEngine {
         const auto &size = vec->_state->_state_info._size;
         const auto &rle = vec->_state->_rle; // should have _rle[0] = 1
 
+        if (children.size() == 0) {
+            return rle[parent_idx + 1] - rle[parent_idx];
+        }
+
         // for each set of a's, when we reach sink, not all c's would be produced, only a slice of the subarray of the
         // 'a' vector is producing c's right now. We need to find the correct slice limits
         const auto start = std::max(rle[parent_idx], static_cast<uint32_t>(start_pos));
