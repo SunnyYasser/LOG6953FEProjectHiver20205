@@ -27,7 +27,7 @@ namespace VFEngine {
 
     void DataSourceTable::populate_max_id_value() {
 
-        if (!is_cold_run_mode_enabled()) {
+        if (!is_cold_run_mode_enabled() && !is_hot_run_mode_enabled()) {
             _max_id_value = DEFAULT_MAX_ID_VALUE;
             return;
         }
