@@ -23,7 +23,8 @@ ulong pipeline_example(const std::string &query) {
 
     auto first_op = pipeline->get_first_operator();
 
-    const std::vector<std::string> operator_names{"SCAN", "INLJ_PACKED1", "INLJ_PACKED2", "INLJ_PACKED3", "SINK"};
+    const std::vector<std::string> operator_names{"SCAN", "INLJ_PACKED1", "INLJ_PACKED2", "INLJ_PACKED3",
+                                                  "SINK_PACKED"};
     int idx = 0;
 
     while (first_op) {
