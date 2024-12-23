@@ -33,7 +33,15 @@ namespace VFEngine {
                              const std::vector<std::string> &column_names,
                              const std::unordered_map<std::string, std::string> &column_alias_map) :
         _query(query), _column_ordering(column_ordering), _is_packed(is_packed), _delimiter("->"),
-        _column_names(column_names), _column_alias_map(column_alias_map) {}
+        _column_names(column_names), _column_alias_map(column_alias_map), _ftree(nullptr) {}
+
+    QueryParser::QueryParser(const std::string &query, const std::vector<std::string> &column_ordering, bool is_packed,
+                             const std::vector<std::string> &column_names,
+                             const std::unordered_map<std::string, std::string> &column_alias_map,
+                             const std::shared_ptr<FactorizedTreeElement> &ftree) :
+        _query(query), _column_ordering(column_ordering), _is_packed(is_packed), _delimiter("->"),
+        _column_names(column_names), _column_alias_map(column_alias_map), _ftree(ftree) {}
+
 
     static std::vector<std::string> split(const std::string &str, char delimiter) {
         std::vector<std::string> tokens;
@@ -134,12 +142,12 @@ namespace VFEngine {
         build_logical_pipeline();
         std::vector<std::shared_ptr<Operator>> physical_pipeline;
         for (auto it = _logical_pipeline.rbegin(); it != _logical_pipeline.rend(); it++) {
-            const auto &ele = *it;
+            const auto &[operator_type, first_col, second_col, join_direction, relation_type] = *it;
 
-            switch (ele.operator_type) {
+            switch (operator_type) {
                 case OP_SCAN: {
                     auto next_op = !physical_pipeline.empty() ? physical_pipeline.back() : nullptr;
-                    auto scan = std::static_pointer_cast<Operator>(std::make_shared<Scan>(ele.first_col, next_op));
+                    auto scan = std::static_pointer_cast<Operator>(std::make_shared<Scan>(first_col, next_op));
                     physical_pipeline.push_back(scan);
                 } break;
 
@@ -150,25 +158,27 @@ namespace VFEngine {
                 } break;
 
                 case OP_SINK_PACKED: {
-                    const auto &ftree = create_factorized_tree();
-                    auto sink_packed = std::static_pointer_cast<Operator>(std::make_shared<SinkPacked>(ftree));
+                    if (!_ftree) {
+                        _ftree = create_factorized_tree();
+                    }
+                    auto sink_packed = std::static_pointer_cast<Operator>(std::make_shared<SinkPacked>(_ftree));
                     physical_pipeline.push_back(sink_packed);
                 } break;
 
                 case OP_INLJ: {
                     auto next_op = !physical_pipeline.empty() ? physical_pipeline.back() : nullptr;
-                    auto is_join_index_fwd = ele.join_direction == FORWARD;
+                    auto is_join_index_fwd = join_direction == FORWARD;
                     auto extend = std::static_pointer_cast<Operator>(std::make_shared<IndexNestedLoopJoin>(
-                            ele.first_col, ele.second_col, is_join_index_fwd, ele.relation_type, next_op));
+                            first_col, second_col, is_join_index_fwd, relation_type, next_op));
                     physical_pipeline.push_back(extend);
                 } break;
 
                 case OP_INLJ_PACKED: {
                     auto next_op = !physical_pipeline.empty() ? physical_pipeline.back() : nullptr;
-                    auto is_join_index_fwd = ele.join_direction == FORWARD;
+                    auto is_join_index_fwd = join_direction == FORWARD;
                     auto extend = std::static_pointer_cast<VFEngine::Operator>(
                             std::make_shared<VFEngine::IndexNestedLoopJoinPacked>(
-                                    ele.first_col, ele.second_col, is_join_index_fwd, ele.relation_type, next_op));
+                                    first_col, second_col, is_join_index_fwd, relation_type, next_op));
                     physical_pipeline.push_back(extend);
                 }
 
@@ -184,7 +194,7 @@ namespace VFEngine {
 
     std::shared_ptr<FactorizedTreeElement> QueryParser::create_factorized_tree() {
         const auto factorized_tree_creator = std::make_unique<FactorizedTree>(_logical_pipeline);
-        return factorized_tree_creator->build_tree();
+        return factorized_tree_creator->build_tree(_is_packed);
     }
 
     void QueryParser::print_logical_plan() const {

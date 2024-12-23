@@ -84,17 +84,33 @@ void enable_component_debug() {
     }
 }
 
+std::shared_ptr<VFEngine::FactorizedTreeElement> create_ftree() {
+    const auto root_b = std::make_shared<VFEngine::FactorizedTreeElement>("b");
+    const auto node_a = std::make_shared<VFEngine::FactorizedTreeElement>("a");
+    const auto node_c = std::make_shared<VFEngine::FactorizedTreeElement>("c");
+    const auto node_d = std::make_shared<VFEngine::FactorizedTreeElement>("d");
+    const auto node_e = std::make_shared<VFEngine::FactorizedTreeElement>("e");
+
+    root_b->_children.push_back(node_a);
+    root_b->_children.push_back(node_d);
+    node_a->_children.push_back(node_c);
+    node_c->_children.push_back(node_e);
+
+    root_b->print_tree();
+    return root_b;
+}
+
 void parser_example() {
     const std::string datalog = "a->b,a->c,b->d,c->e";
-    const std::vector<std::string> column_ordering = {"a", "b", "c", "d", "e"};
+    const std::vector<std::string> column_ordering = {"b", "a", "c", "d", "e"};
     const std::unordered_map<std::string, std::string> column_alias_map{
             {"a", "src"}, {"b", "src"}, {"c", "src"}, {"d", "dest"}, {"e", "dest"}};
 
 
     const std::vector<std::string> column_names{"src", "dest"};
-
-    const auto parser =
-            std::make_unique<VFEngine::QueryParser>(datalog, column_ordering, true, column_names, column_alias_map);
+    const auto ftree = create_ftree();
+    const auto parser = std::make_unique<VFEngine::QueryParser>(datalog, column_ordering, true, column_names,
+                                                                column_alias_map, ftree);
 
     const auto pipeline = parser->build_physical_pipeline();
     pipeline->init();
@@ -104,18 +120,18 @@ void parser_example() {
               << std::endl;
 
     const auto parser2 =
-        std::make_unique<VFEngine::QueryParser>(datalog, column_ordering, false, column_names, column_alias_map);
+            std::make_unique<VFEngine::QueryParser>(datalog, column_ordering, false, column_names, column_alias_map);
 
     const auto pipeline2 = parser2->build_physical_pipeline();
     pipeline2->init();
     pipeline2->execute();
 
-    std::cout << "count (*) " << datalog << " = " << VFEngine::Sink::get_total_row_size_if_materialized()
-              << std::endl;
+    std::cout << "count (*) " << datalog << " = " << VFEngine::Sink::get_total_row_size_if_materialized() << std::endl;
 
 
-    const auto& ftree = parser->create_factorized_tree();
-    ftree->print_tree();
+    //const auto &auto_gen_ftree = parser->create_factorized_tree();
+    //ftree->print_tree();
+    //auto_gen_ftree->print_tree();
 }
 
 int main() {

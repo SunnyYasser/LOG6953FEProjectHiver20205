@@ -37,7 +37,6 @@ namespace VFEngine {
         int32_t _op_filled_idx = 0; // idx to see how many of the output elements are filled
         int32_t _ip_values_idx = 0; // idx to see how many of adj list elements of curr ip_vector value are filled
         auto prev_ip_vector_pos = _ip_vector_pos;
-        auto curr_ip_vector_pos = _ip_vector_pos;
 
 
         // when this function is called for the first time, we need to ensure that the first rle generated is also
@@ -47,68 +46,64 @@ namespace VFEngine {
 
 
         for (auto idx = 0; idx < _ip_vector_size;) {
-            curr_ip_vector_pos = _ip_vector_pos + idx;
-            const auto &new_values_to_be_filled = (*_adj_list)[_ip_vector_values[curr_ip_vector_pos]]._values;
-            const auto &new_values_size = (*_adj_list)[_ip_vector_values[curr_ip_vector_pos]]._size;
+            const auto curr_ip_vector_pos = _ip_vector_pos + idx;
+            const auto &current_adj_node = (*_adj_list)[_ip_vector_values[curr_ip_vector_pos]];
+            const auto &new_values_to_be_filled = current_adj_node._values;
+            const auto new_values_size = current_adj_node._size;
+            const auto remaining_space = State::MAX_VECTOR_SIZE - _op_filled_idx;
+            const auto remaining_values = new_values_size - _ip_values_idx;
+            const auto elements_to_copy = std::min(remaining_space, static_cast<int32_t>(remaining_values));
 
-            const auto prev_op_filled_idx = _op_filled_idx;
+            // Use memcpy to copy elements
+            std::memcpy(&_op_vector_values[_op_filled_idx], &new_values_to_be_filled[_ip_values_idx],
+                        elements_to_copy * sizeof(_op_vector_values[0]));
 
-            for (; _op_filled_idx < State::MAX_VECTOR_SIZE and _ip_values_idx < new_values_size;
-                 _ip_values_idx++, _op_filled_idx++) {
-                _op_vector_values[_op_filled_idx] = new_values_to_be_filled[_ip_values_idx];
-            }
+            _op_filled_idx += elements_to_copy;
+            _ip_values_idx += elements_to_copy;
 
-            const int32_t op_elems_filled_size =
-                    _op_filled_idx - prev_op_filled_idx; // we don't add 1 here since _op_filled_idx is already 1 ahead
-                                                         // of actual value, because of the for loop
-
-            _op_vector_rle[_op_vector_rle_size] = _op_vector_rle[_op_vector_rle_size - 1] + op_elems_filled_size;
+            // Update RLE information
+            _op_vector_rle[_op_vector_rle_size] = _op_vector_rle[_op_vector_rle_size - 1] + elements_to_copy;
             _op_vector_rle_size++;
-            _op_vector_size += op_elems_filled_size;
+            _op_vector_size += elements_to_copy;
 
-            if (_ip_values_idx >= new_values_size) {
-                // we have completed processing current ip_vector value, now increment ip_vector_pos and start from 0
-                _ip_values_idx = 0;
-                idx++;
-            }
+            // Branchless updates using arithmetic
+            const bool is_chunk_complete = (_ip_values_idx >= new_values_size);
+            idx += is_chunk_complete;
+            _ip_values_idx *= !is_chunk_complete; // Reset to 0 if chunk is complete
 
-            if (_op_filled_idx >= State::MAX_VECTOR_SIZE or
-                idx >= _ip_vector_size) { // Either we have completely filled output vector or we have
-                                          // finished iterating input vector
+            const bool should_process = (_op_filled_idx >= State::MAX_VECTOR_SIZE) | (idx >= _ip_vector_size);
 
-                // We set the window starting index (_curr_start_pos) and size (_size) for packed implementation.
-                // We need to store the previous _curr_start_pos and _size, so when control flow returns after
-                // recursion, we have the exactly correct previous values.  It should be kept in mind that the window
-                // information will be modified by each join operator when it produces its own output tuples after
-                // consuming a set of input tuples. However, the stack ensures each operator will have the correct value
+            // Use multiplication instead of if for conditional execution
+            if (should_process) {
+                // Save state
+                const auto window_start = prev_ip_vector_pos;
+                const auto window_size = curr_ip_vector_pos - prev_ip_vector_pos + 1;
 
-                _input_vector->_state->_state_info._curr_start_pos = prev_ip_vector_pos;
-                _input_vector->_state->_state_info._size = curr_ip_vector_pos - prev_ip_vector_pos + 1;
+                _input_vector->_state->_state_info._curr_start_pos = window_start;
+                _input_vector->_state->_state_info._size = window_size;
 
 #ifdef MY_DEBUG
-                // log updated output vector
                 _debug->log_vector(_input_vector, _output_vector, fn_name);
 #endif
 
                 get_next_operator()->execute();
 
-                // reset output vector
+                // Reset output vector state
                 _output_vector->_state->_state_info._size = 0;
                 _output_vector->_state->_rle_size = 1;
                 _output_vector->_state->_state_info._curr_start_pos = 0;
-
-                // output vector will be filled again from start
                 _op_filled_idx = 0;
 
-                // reset input_vector rle information
+                // Reset input vector state
                 _input_vector->_state->_state_info._curr_start_pos = _ip_vector_pos;
                 _input_vector->_state->_state_info._size = _ip_vector_size;
 
-                // update start of new slice, if older slice is complete, then increment by 1
+                // Update slice position using arithmetic instead of conditional
                 prev_ip_vector_pos = curr_ip_vector_pos + (_ip_values_idx == 0);
 
-                // align rle each time to correctly slide across the parent vector chunk start and size
-                memset(&_op_vector_rle[1], 0, (_ip_vector_pos + idx) * sizeof(_op_vector_rle[0]));
+                // Reset RLE alignment
+                const auto rle_reset_size = (_ip_vector_pos + idx) * sizeof(_op_vector_rle[0]);
+                std::memset(&_op_vector_rle[1], 0, rle_reset_size);
                 _op_vector_rle_size += (_ip_vector_pos + idx);
             }
         }

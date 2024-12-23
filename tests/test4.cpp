@@ -6,11 +6,23 @@
 #include "../src/operator/include/sink_operator.hh"
 #include "../src/parser/include/query_parser.hh"
 
+void print_column_ordering(const std::vector<std::string> &column_ordering) {
+    std::cout << "COLUMN ORDERING: ";
+    for (int i = 0; i < column_ordering.size(); i++) {
+        std::cout << column_ordering[i];
+        if (i != column_ordering.size() - 1) {
+            std::cout << ", ";
+        }
+    }
+    std::cout << std::endl;
+}
+
 ulong pipeline_example(const std::string &query) {
     std::vector<std::string> column_names{"src", "dest"};
     std::unordered_map<std::string, std::vector<std::string>> table_to_column_map{{"R", {"src", "dest"}}};
     const std::unordered_map<std::string, std::string> column_alias_map{{"a", "src"}, {"b", "dest"}, {"c", "src"}};
     const std::vector<std::string> column_ordering = {"b", "a", "c"};
+    print_column_ordering(column_ordering);
 
     const auto parser =
             std::make_unique<VFEngine::QueryParser>(query, column_ordering, false, column_names, column_alias_map);

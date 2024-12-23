@@ -2,6 +2,7 @@
 #include <memory>
 #include <sink_packed_operator.hh>
 #include <testpaths.hh>
+
 #include "../src/engine/include/pipeline.hh"
 #include "../src/parser/include/query_parser.hh"
 
@@ -19,8 +20,10 @@ void print_column_ordering(const std::vector<std::string> &column_ordering) {
 ulong pipeline_example(const std::string &query) {
     std::vector<std::string> column_names{"src", "dest"};
     std::unordered_map<std::string, std::vector<std::string>> table_to_column_map{{"R", {"src", "dest"}}};
-    const std::unordered_map<std::string, std::string> column_alias_map{{"a", "src"}, {"b", "src,dest"}, {"c", "dest"}};
-    const std::vector<std::string> column_ordering = {"a", "b", "c"};
+    const std::unordered_map<std::string, std::string> column_alias_map{
+            {"a", "src"}, {"b", "src"}, {"c", "src"}, {"d", "dest"}, {"e", "dest"}};
+
+    const std::vector<std::string> column_ordering = {"c", "a", "b", "e", "d"};
     print_column_ordering(column_ordering);
 
     const auto parser =
@@ -32,7 +35,8 @@ ulong pipeline_example(const std::string &query) {
 
     auto first_op = pipeline->get_first_operator();
 
-    const std::vector<std::string> operator_names{"SCAN", "INLJ_PACKED1", "INLJ_PACKED2", "SINK_PACKED"};
+    const std::vector<std::string> operator_names{"SCAN",         "INLJ_PACKED1", "INLJ_PACKED2",
+                                                  "INLJ_PACKED3", "INLJ_PACKED4", "SINK_PACKED"};
     int idx = 0;
 
     while (first_op) {
@@ -44,23 +48,24 @@ ulong pipeline_example(const std::string &query) {
     return VFEngine::SinkPacked::get_total_row_size_if_materialized();
 }
 
-ulong test_6(const std::string &query) { return pipeline_example(query); }
 
-ulong get_expected_value() {
+long test_14(const std::string &query) { return pipeline_example(query); }
+
+long get_expected_value() {
     if (get_amazon0601_csv_path()) {
-        return 32373599;
+        return 2939553539;
     }
-    return 4;
+    return 10;
 }
 
 int main() {
-    const std::string query = "a->b,b->c";
-    std::cout << "Test 6: " << query << std::endl;
-    const auto expected_result_test_6 = get_expected_value();
-    const auto actual_result_test_6 = test_6(query);
+    const std::string query = "a->b,a->c,b->d,c->e";
+    std::cout << "Test 14: " << query << std::endl;
+    const auto expected_result_test_14 = get_expected_value();
+    const auto actual_result_test_14 = test_14(query);
 
-    if (actual_result_test_6 != expected_result_test_6) {
-        std::cerr << "Test 6 failed: Expected " << expected_result_test_6 << " but got " << actual_result_test_6
+    if (actual_result_test_14 != expected_result_test_14) {
+        std::cerr << "Test 14 failed: Expected " << expected_result_test_14 << " but got " << actual_result_test_14
                   << std::endl;
         return 1;
     }

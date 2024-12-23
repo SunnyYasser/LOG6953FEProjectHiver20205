@@ -21,6 +21,12 @@ namespace VFEngine {
         QueryParser(const std::string &query, const std::vector<std::string> &column_ordering, bool is_packed,
                     const std::vector<std::string> &column_names,
                     const std::unordered_map<std::string, std::string> &column_alias_map);
+
+        QueryParser(const std::string &query, const std::vector<std::string> &column_ordering, bool is_packed,
+                    const std::vector<std::string> &column_names,
+                    const std::unordered_map<std::string, std::string> &column_alias_map,
+                    const std::shared_ptr<FactorizedTreeElement> &ftree);
+
         std::shared_ptr<Pipeline> build_physical_pipeline();
         std::shared_ptr<FactorizedTreeElement> create_factorized_tree();
         void print_logical_plan() const;
@@ -36,6 +42,7 @@ namespace VFEngine {
         std::unordered_map<std::string, std::string> _column_alias_map;
         std::vector<LogicalPipelineElement> _logical_pipeline;
         std::unordered_map<std::string, std::vector<std::pair<std::string, JoinDirection>>> _direction_map;
+        std::shared_ptr<FactorizedTreeElement> _ftree;
         void build_direction_map();
         void build_logical_pipeline();
         std::vector<std::pair<std::string, SchemaType>> create_schema();

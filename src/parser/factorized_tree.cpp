@@ -6,11 +6,11 @@ namespace VFEngine {
     FactorizedTree::FactorizedTree(const std::vector<LogicalPipelineElement> &logical_plan) :
         _logical_plan(logical_plan) {}
 
-    size_t FactorizedTree::get_max_depth(const std::shared_ptr<FactorizedTreeElement> &node) const {
+    int32_t FactorizedTree::get_max_depth(const std::shared_ptr<FactorizedTreeElement> &node) const {
         if (!node || node->_children.empty())
             return 0;
 
-        size_t maxDepth = 0;
+        auto maxDepth = 0;
         for (auto &child: node->_children) {
             maxDepth = std::max(maxDepth, get_max_depth(child));
         }
@@ -69,7 +69,23 @@ namespace VFEngine {
 
         return nullptr;
     }
-    std::shared_ptr<FactorizedTreeElement> FactorizedTree::build_tree() {
+
+    std::shared_ptr<FactorizedTreeElement>
+    FactorizedTree::insert_packed(const std::shared_ptr<FactorizedTreeElement> &root,
+                                  const LogicalPipelineElement &elem) const {
+        /* Simply add the node to the root*/
+        if (!root)
+            return nullptr;
+
+        auto new_node = create_node(elem, false);
+        root->_children.push_back(new_node);
+        new_node->_parent = root;
+
+        return new_node;
+    }
+
+
+    std::shared_ptr<FactorizedTreeElement> FactorizedTree::build_tree(const bool is_packed) const {
         /*
          * create a simple tree while traversing the logical plan
          * N ary tree to be created
@@ -97,7 +113,11 @@ namespace VFEngine {
             const auto &parent_node = cache[parent];
 
             // Insert the child into the tree
-            cache[child] = insert(parent_node, elem);
+            if (is_packed) {
+                cache[child] = insert_packed(parent_node, elem);
+            } else {
+                cache[child] = insert(parent_node, elem);
+            }
         }
 
         cache.clear();
