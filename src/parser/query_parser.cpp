@@ -9,7 +9,9 @@
 #include "../operator/include/index_nested_loop_join_packed_operator.hh"
 #include "../operator/include/operator_types.hh"
 #include "../operator/include/scan_operator.hh"
+#include "../operator/include/sink_no_op.hh"
 #include "../operator/include/sink_operator.hh"
+#include "../operator/include/sink_packed_operator.hh"
 
 #ifndef NDEBUG
 #define M_Assert(Expr, Msg) __M_Assert(#Expr, Expr, __FILE__, __LINE__, Msg)
@@ -29,18 +31,22 @@ void __M_Assert(const char *expr_str, bool expr, const char *file, int line, con
 
 namespace VFEngine {
 
-    QueryParser::QueryParser(const std::string &query, const std::vector<std::string> &column_ordering, bool is_packed,
-                             const std::vector<std::string> &column_names,
+    QueryParser::QueryParser(const std::string &query, const std::vector<std::string> &column_ordering,
+                             SinkType sink_type, const std::vector<std::string> &column_names,
                              const std::unordered_map<std::string, std::string> &column_alias_map) :
-        _query(query), _column_ordering(column_ordering), _is_packed(is_packed), _delimiter("->"),
-        _column_names(column_names), _column_alias_map(column_alias_map), _ftree(nullptr) {}
+        _query(query), _column_ordering(column_ordering), _sink_type(sink_type), _delimiter("->"),
+        _column_names(column_names), _column_alias_map(column_alias_map), _ftree(nullptr) {
+        _is_packed = sink_type == SinkType::PACKED;
+    }
 
-    QueryParser::QueryParser(const std::string &query, const std::vector<std::string> &column_ordering, bool is_packed,
-                             const std::vector<std::string> &column_names,
+    QueryParser::QueryParser(const std::string &query, const std::vector<std::string> &column_ordering,
+                             SinkType sink_type, const std::vector<std::string> &column_names,
                              const std::unordered_map<std::string, std::string> &column_alias_map,
                              const std::shared_ptr<FactorizedTreeElement> &ftree) :
-        _query(query), _column_ordering(column_ordering), _is_packed(is_packed), _delimiter("->"),
-        _column_names(column_names), _column_alias_map(column_alias_map), _ftree(ftree) {}
+        _query(query), _column_ordering(column_ordering), _sink_type(sink_type), _delimiter("->"),
+        _column_names(column_names), _column_alias_map(column_alias_map), _ftree(ftree) {
+        _is_packed = sink_type == SinkType::PACKED;
+    }
 
 
     static std::vector<std::string> split(const std::string &str, char delimiter) {
@@ -112,7 +118,7 @@ namespace VFEngine {
                 bool found = false;
                 for (size_t j = 0; j < i; j++) {
                     auto parent = _column_ordering[j];
-                    for (auto &nbrs: _direction_map[parent]) {
+                    for (const auto &nbrs: _direction_map[parent]) {
                         if (nbrs.first == column) {
                             const auto operator_type = _is_packed ? OP_INLJ_PACKED : OP_INLJ;
                             const auto &first_col = parent;
@@ -131,10 +137,17 @@ namespace VFEngine {
                 M_Assert(found, err_msg.c_str());
             }
         }
-        if (_is_packed) {
-            _logical_pipeline.push_back({OP_SINK_PACKED, "", "", ANY});
-        } else {
-            _logical_pipeline.push_back({OP_SINK, "", "", ANY});
+
+        switch (_sink_type) {
+            case SinkType::PACKED:
+                _logical_pipeline.push_back({OP_SINK_PACKED, "", "", ANY});
+                break;
+            case SinkType::UNPACKED:
+                _logical_pipeline.push_back({OP_SINK, "", "", ANY});
+                break;
+            case SinkType::NO_OP:
+                _logical_pipeline.push_back({OP_SINK_NO_OP, "", "", ANY});
+                break;
         }
     }
 
@@ -155,6 +168,11 @@ namespace VFEngine {
                     auto schema = create_schema();
                     auto sink = std::static_pointer_cast<Operator>(std::make_shared<Sink>(schema));
                     physical_pipeline.push_back(sink);
+                } break;
+
+                case OP_SINK_NO_OP: {
+                    auto sink_no_op = std::static_pointer_cast<Operator>(std::make_shared<SinkNoOp>());
+                    physical_pipeline.push_back(sink_no_op);
                 } break;
 
                 case OP_SINK_PACKED: {

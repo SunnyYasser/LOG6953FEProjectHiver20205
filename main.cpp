@@ -1,16 +1,19 @@
+#include <cstring>
 #include <iostream>
 #include <memory>
+#include <sink_no_op.hh>
 #include <sink_packed_operator.hh>
+#include <sys/resource.h>
 #include <unistd.h>
 #include "src/engine/include/pipeline.hh"
 #include "src/operator/include/index_nested_loop_join_operator.hh"
 #include "src/operator/include/relation_types.hh"
 #include "src/operator/include/scan_operator.hh"
 #include "src/operator/include/sink_operator.hh"
-#include "src/parser/include/factorized_tree.hh"
 #include "src/parser/include/factorized_tree_element.hh"
 #include "src/parser/include/query_parser.hh"
 #include "src/utils/include/debug_enabled.hh"
+
 
 std::shared_ptr<VFEngine::Operator> create_operator_plan1() {
 
@@ -101,16 +104,15 @@ std::shared_ptr<VFEngine::FactorizedTreeElement> create_ftree() {
 }
 
 void parser_example() {
-    const std::string datalog = "a->b,a->c,b->d,c->e";
-    const std::vector<std::string> column_ordering = {"b", "a", "c", "d", "e"};
+    const std::string datalog = "a->b,b->c,c->d,d->e";
+    const std::vector<std::string> column_ordering = {"c", "b", "a", "d", "e"};
     const std::unordered_map<std::string, std::string> column_alias_map{
-            {"a", "src"}, {"b", "src"}, {"c", "src"}, {"d", "dest"}, {"e", "dest"}};
+            {"a", "src"}, {"b", "src"}, {"c", "src"}, {"d", "src"}, {"e", "dest"}};
 
 
     const std::vector<std::string> column_names{"src", "dest"};
-    const auto ftree = create_ftree();
-    const auto parser = std::make_unique<VFEngine::QueryParser>(datalog, column_ordering, true, column_names,
-                                                                column_alias_map, ftree);
+    const auto parser = std::make_unique<VFEngine::QueryParser>(datalog, column_ordering, VFEngine::SinkType::PACKED,
+                                                                column_names, column_alias_map);
 
     const auto pipeline = parser->build_physical_pipeline();
     pipeline->init();
@@ -119,8 +121,8 @@ void parser_example() {
     std::cout << "count (*) " << datalog << " = " << VFEngine::SinkPacked::get_total_row_size_if_materialized()
               << std::endl;
 
-    const auto parser2 =
-            std::make_unique<VFEngine::QueryParser>(datalog, column_ordering, false, column_names, column_alias_map);
+    const auto parser2 = std::make_unique<VFEngine::QueryParser>(datalog, column_ordering, VFEngine::SinkType::UNPACKED,
+                                                                 column_names, column_alias_map);
 
     const auto pipeline2 = parser2->build_physical_pipeline();
     pipeline2->init();
@@ -128,10 +130,25 @@ void parser_example() {
 
     std::cout << "count (*) " << datalog << " = " << VFEngine::Sink::get_total_row_size_if_materialized() << std::endl;
 
+    const auto parser3 = std::make_unique<VFEngine::QueryParser>(datalog, column_ordering, VFEngine::SinkType::NO_OP,
+                                                                 column_names, column_alias_map);
 
-    //const auto &auto_gen_ftree = parser->create_factorized_tree();
-    //ftree->print_tree();
-    //auto_gen_ftree->print_tree();
+    const auto pipeline3 = parser3->build_physical_pipeline();
+    pipeline3->init();
+    pipeline3->execute();
+
+    std::cout << "count (*) " << datalog << " = " << VFEngine::SinkNoOp::get_total_row_size_if_materialized()
+              << std::endl;
+
+
+    const auto &auto_gen_ftree1 = parser->create_factorized_tree();
+    const auto &auto_gen_ftree2 = parser2->create_factorized_tree();
+    const auto &auto_gen_ftree3 = parser3->create_factorized_tree();
+
+    // ftree->print_tree();
+    auto_gen_ftree1->print_tree();
+    auto_gen_ftree2->print_tree();
+    auto_gen_ftree3->print_tree();
 }
 
 int main() {
@@ -145,5 +162,16 @@ int main() {
 
     enable_component_debug();
     parser_example();
+
+
+    struct rusage usage;
+    // Get resource usage
+    if (getrusage(RUSAGE_SELF, &usage) == 0) {
+        double peak_memory_mb = usage.ru_maxrss / 1024.0;
+        printf("Peak Memory Usage: %.2f MB\n", peak_memory_mb);
+    } else {
+        perror("getrusage failed");
+    }
+
     return 0;
 }

@@ -13,7 +13,13 @@ function(add_profiling_test name source)
     target_link_libraries(${name} PUBLIC libgraph liboperator libmem libengine libutils libparser)
     target_compile_options(${name} PRIVATE -fsanitize=address -fsanitize=leak)
     target_link_options(${name} PRIVATE -fsanitize=address -fsanitize=leak)
-    add_test(NAME ${name} COMMAND bash ${CMAKE_BINARY_DIR}/run_with_profiling.sh ${CMAKE_BINARY_DIR}/tests/${name})
+
+    # Define the test command with conditional profiling
+    if (RUN_WITH_PROFILING)
+        add_test(NAME ${name} COMMAND bash ${CMAKE_BINARY_DIR}/run_with_profiling.sh ${CMAKE_BINARY_DIR}/tests/${name} 3)
+    else ()
+        add_test(NAME ${name} COMMAND ${CMAKE_BINARY_DIR}/tests/${name})
+    endif ()
 endfunction()
 
 # Add all tests
@@ -39,6 +45,14 @@ add_profiling_test(test19_test9_reorder test19.cpp)
 add_profiling_test(test20_test9_reorder test20.cpp)
 add_profiling_test(test21_test12_reorder test21.cpp)
 add_profiling_test(test22_test12_reorder test22.cpp)
+add_profiling_test(test23_4hop_packed_linear_ordering test23_4hop_packed.cpp)
+add_profiling_test(test24_4hop_unpacked_linear_ordering test24_4hop_unpacked.cpp)
+add_profiling_test(test25_4hop_noop_linear_ordering test25_4hop_noop.cpp)
+add_profiling_test(test26_4hop_packed_non_linear_ordering test26_4hop_packed.cpp)
+add_profiling_test(test27_4hop_unpacked_non_linear_ordering test27_4hop_unpacked.cpp)
+add_profiling_test(test28_4hop_noop_non_linear_ordering test28_4hop_noop.cpp)
+
+
 
 
 # Copy the profiling script to the build directory

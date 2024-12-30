@@ -15,14 +15,15 @@
 #endif
 
 namespace VFEngine {
+    enum class SinkType { UNPACKED = 0, PACKED, NO_OP };
 
     class QueryParser {
     public:
-        QueryParser(const std::string &query, const std::vector<std::string> &column_ordering, bool is_packed,
+        QueryParser(const std::string &query, const std::vector<std::string> &column_ordering, SinkType sink_type,
                     const std::vector<std::string> &column_names,
                     const std::unordered_map<std::string, std::string> &column_alias_map);
 
-        QueryParser(const std::string &query, const std::vector<std::string> &column_ordering, bool is_packed,
+        QueryParser(const std::string &query, const std::vector<std::string> &column_ordering, SinkType sink_type,
                     const std::vector<std::string> &column_names,
                     const std::unordered_map<std::string, std::string> &column_alias_map,
                     const std::shared_ptr<FactorizedTreeElement> &ftree);
@@ -36,6 +37,7 @@ namespace VFEngine {
     private:
         std::string _query;
         std::vector<std::string> _column_ordering;
+        SinkType _sink_type;
         bool _is_packed;
         std::string _delimiter;
         std::vector<std::string> _column_names;

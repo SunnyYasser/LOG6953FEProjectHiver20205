@@ -10,6 +10,7 @@ namespace VFEngine {
         OP_INLJ_NTO1,
         OP_SINK,
         OP_SINK_PACKED,
+        OP_SINK_NO_OP,
         OP_SIZE
     };
 }

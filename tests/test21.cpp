@@ -1,5 +1,7 @@
+#include <chrono>
 #include <iostream>
 #include <memory>
+#include <sys/resource.h>
 #include <testpaths.hh>
 
 #include "../src/engine/include/pipeline.hh"
@@ -26,8 +28,8 @@ ulong pipeline_example(const std::string &query) {
     const std::vector<std::string> column_ordering = {"b", "a", "c", "d"};
     print_column_ordering(column_ordering);
 
-    const auto parser =
-            std::make_unique<VFEngine::QueryParser>(query, column_ordering, false, column_names, column_alias_map);
+    const auto parser = std::make_unique<VFEngine::QueryParser>(query, column_ordering, VFEngine::SinkType::UNPACKED,
+                                                                column_names, column_alias_map);
 
     const auto pipeline = parser->build_physical_pipeline();
     pipeline->init();
@@ -60,9 +62,20 @@ ulong get_expected_value() {
 int main() {
     const std::string query = "a->b,b->c,c->d";
     std::cout << "Test 21: " << query << std::endl;
+    const auto start = std::chrono::high_resolution_clock::now();
     const auto expected_result_test = get_expected_value();
     const auto actual_result_test = test(query);
-
+    const auto end = std::chrono::high_resolution_clock::now();
+    const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    struct rusage usage;
+    // Get resource usage
+    if (getrusage(RUSAGE_SELF, &usage) == 0) {
+        double peak_memory_mb = usage.ru_maxrss / 1024.0;
+        printf("Peak Memory Usage: %.2f MB\n", peak_memory_mb);
+    } else {
+        printf("Peak Memory Usage: %d MB\n", -1);
+    }
+    std::cout << "Execution time: " << duration.count() << " ms" << std::endl;
     if (actual_result_test != expected_result_test) {
         std::cerr << "Test 21 failed: Expected " << expected_result_test << " but got " << actual_result_test
                   << std::endl;
