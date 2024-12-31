@@ -86,26 +86,33 @@ def parse_log_file(content: str, num_runs: int) -> List[TestMetrics]:
 
         current_test.is_packed = 1 if any(('PACKED' in op) for op in current_test.operators.keys()) else 0
 
-        if instr_match := re.search(r'([\d,]+)\s+.*?instructions', section):
+        instr_match = re.search(r'([\d,]+)\s+.*?instructions', section)
+        if instr_match:
             current_test.instructions_atom.append(parse_number(instr_match.group(1)))
 
-        if cycles_match := re.search(r'([\d,]+)\s+.*?cycles', section):
+        cycles_match = re.search(r'([\d,]+)\s+.*?cycles', section)
+        if cycles_match:
             current_test.cycles_atom.append(parse_number(cycles_match.group(1)))
 
-        if faults_match := re.search(r'([\d,]+)\s+.*?page-faults', section):
-            current_test.page_faults.append(parse_number(faults_match.group(1)))
-
-        if branch_misses_match := re.search(r'([\d,]+)\s+.*?branch-misses', section):
+        branch_misses_match = re.search(r'([\d,]+)\s+.*?branch-misses', section)
+        if branch_misses_match:
             current_test.branch_misses_atom.append(parse_number(branch_misses_match.group(1)))
 
-        if cache_misses_match := re.search(r'([\d,]+)\s+.*?cache-misses', section):
+        cache_misses_match = re.search(r'([\d,]+)\s+.*?cache-misses', section)
+        if cache_misses_match:
             current_test.cache_misses_atom.append(parse_number(cache_misses_match.group(1)))
 
-        if time_match := re.findall(r'Execution time: (\d+) ms', section):
+        faults_match = re.search(r'([\d,]+)\s+.*?page-faults', section)
+        if faults_match:
+            current_test.page_faults.append(parse_number(faults_match.group(1)))
+
+        time_match = re.findall(r'Execution time: (\d+) ms', section)
+        if time_match:
             for time in time_match:
                 current_test.elapsed_time.append(float(time))
 
-        if memory_match := re.findall(r'Peak Memory Usage: (\d+\.\d+)', section):
+        memory_match = re.findall(r'Peak Memory Usage: (\d+\.\d+)', section)
+        if memory_match:
             for mem in memory_match:
                 current_test.peak_memory.append(float(mem))
 

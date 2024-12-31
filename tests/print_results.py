@@ -1,9 +1,11 @@
 import re
 from dataclasses import dataclass
-from typing import List, Dict
+from typing import List, Dict, Optional
 import sys
 from prettytable import PrettyTable
 import statistics
+import csv
+from typing import Union
 
 @dataclass
 class TestMetrics:
@@ -19,6 +21,23 @@ class TestMetrics:
     branch_misses_atom: List[int]
     cache_misses_atom: List[int]
     is_packed: int
+    speedup: float = 0.0
+    equivalent_query: str = "N/A"
+
+
+def has_packed_inlj(operators: Union[Dict[str, List[int]], Dict[str, int]]) -> bool:
+    """Check if any INLJ_PACKED operator has non-zero count"""
+    for op, counts in operators.items():
+        if op.startswith('INLJ_PACKED'):
+            # Handle both List[int] and int cases
+            if isinstance(counts, list):
+                if any(count > 0 for count in counts):
+                    return True
+            else:  # counts is an int
+                if counts > 0:
+                    return True
+    return False
+
 
 def parse_number(num_str: str) -> int:
     return int(num_str.replace(',', ''))
@@ -79,28 +98,36 @@ def parse_log_file(content: str, num_runs: int) -> List[TestMetrics]:
         for op_name in current_test.operators:
             current_test.operators[op_name].append(current_operators.get(op_name, 0))
 
-        current_test.is_packed = 1 if any(('PACKED' in op) for op in current_operators.keys()) else 0
+        # Update is_packed definition to check for INLJ_PACKED
+        current_test.is_packed = 1 if has_packed_inlj(current_operators) else 0
 
-        if instr_match := re.search(r'([\d,]+)\s+.*?instructions', section):
+        instr_match = re.search(r'([\d,]+)\s+.*?instructions', section)
+        if instr_match:
             current_test.instructions_atom.append(parse_number(instr_match.group(1)))
 
-        if cycles_match := re.search(r'([\d,]+)\s+.*?cycles', section):
+        cycles_match = re.search(r'([\d,]+)\s+.*?cycles', section)
+        if cycles_match:
             current_test.cycles_atom.append(parse_number(cycles_match.group(1)))
 
-        if branch_misses_match := re.search(r'([\d,]+)\s+.*?branch-misses', section):
+        branch_misses_match = re.search(r'([\d,]+)\s+.*?branch-misses', section)
+        if branch_misses_match:
             current_test.branch_misses_atom.append(parse_number(branch_misses_match.group(1)))
 
-        if cache_misses_match := re.search(r'([\d,]+)\s+.*?cache-misses', section):
+        cache_misses_match = re.search(r'([\d,]+)\s+.*?cache-misses', section)
+        if cache_misses_match:
             current_test.cache_misses_atom.append(parse_number(cache_misses_match.group(1)))
 
-        if faults_match := re.search(r'([\d,]+)\s+.*?page-faults', section):
+        faults_match = re.search(r'([\d,]+)\s+.*?page-faults', section)
+        if faults_match:
             current_test.page_faults.append(parse_number(faults_match.group(1)))
 
-        if time_match := re.findall(r'Execution time: (\d+) ms', section):
+        time_match = re.findall(r'Execution time: (\d+) ms', section)
+        if time_match:
             for time in time_match:
                 current_test.elapsed_time.append(float(time))
 
-        if memory_match := re.findall(r'Peak Memory Usage: (\d+\.\d+)', section):
+        memory_match = re.findall(r'Peak Memory Usage: (\d+\.\d+)', section)
+        if memory_match:
             for mem in memory_match:
                 current_test.peak_memory.append(float(mem))
 
@@ -132,14 +159,15 @@ def create_table(title: str) -> PrettyTable:
         "Cache Misses",
         "Page Faults",
         "Memory",
-        "Time(ms)"
+        "Time(ms)",
+        "Speedup",
+        "Equivalent Query"
     ]
 
     table.padding_width = 1
-    table.hrules = 0  # Remove all horizontal lines
-    table.vrules = 1  # Keep vertical lines
+    table.hrules = 0
+    table.vrules = 1
 
-    # Center align all fields
     for field in table.field_names:
         table.align[field] = "c"
 
@@ -167,6 +195,31 @@ def format_operators(operators: Dict[str, List[int]]) -> str:
     op_values = [sum(counts) // len(counts) for _, counts in sorted_ops]
     return '[' + ' '.join(str(val) for val in op_values) + ']'
 
+def are_queries_equivalent(query1: TestMetrics, query2: TestMetrics) -> bool:
+    """Check if two queries are equivalent (same query and ordering)"""
+    return (query1.query == query2.query and
+            query1.column_ordering == query2.column_ordering)
+
+def calculate_speedups(packed_tests: List[TestMetrics], base_tests: List[TestMetrics]):
+    """Calculate speedup for packed queries compared to their unpacked counterparts."""
+    for packed_test in packed_tests:
+        # Find matching unpacked test with same query and ordering
+        matching_base_tests = [
+            test for test in base_tests
+            if (are_queries_equivalent(test, packed_test) and
+                not has_packed_inlj(test.operators))
+        ]
+
+        if matching_base_tests:
+            # Use the first matching base test
+            base_test = matching_base_tests[0]
+            base_time = statistics.median(base_test.elapsed_time)
+            packed_time = statistics.median(packed_test.elapsed_time)
+
+            if packed_time > 0:
+                packed_test.speedup = base_time / packed_time
+                packed_test.equivalent_query = f"Test {base_test.test_name}"
+
 def add_row_to_table(table: PrettyTable, test: TestMetrics, max_query: int = 30, max_order: int = 20):
     query = test.query[:max_query] + ('...' if len(test.query) > max_query else '')
     column_order = test.column_ordering[:max_order] + ('...' if len(test.column_ordering) > max_order else '')
@@ -182,9 +235,53 @@ def add_row_to_table(table: PrettyTable, test: TestMetrics, max_query: int = 30,
         sum(test.cache_misses_atom) // 1,
         sum(test.page_faults) // 1,
         format_memory(statistics.median(test.peak_memory)),
-        f"{statistics.median(test.elapsed_time):.0f}"
+        f"{statistics.median(test.elapsed_time):.0f}",
+        f"{test.speedup:.2f}x" if test.speedup > 0 else "N/A",
+        test.equivalent_query
     ]
     table.add_row(row)
+
+def write_to_csv(tests: List[TestMetrics], output_path: str):
+    """Write test results to a CSV file."""
+    fieldnames = [
+        'test_name',
+        'query',
+        'column_ordering',
+        'operators',
+        'instructions',
+        'cycles',
+        'branch_misses',
+        'cache_misses',
+        'page_faults',
+        'peak_memory',
+        'elapsed_time',
+        'is_packed',
+        'speedup',
+        'equivalent_query'
+    ]
+
+    with open(output_path, 'w', newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for test in sorted(tests, key=lambda x: (x.is_packed, x.query, x.column_ordering)):
+            row = {
+                'test_name': test.test_name,
+                'query': test.query,
+                'column_ordering': test.column_ordering,
+                'operators': format_operators(test.operators),
+                'instructions': sum(test.instructions_atom) // 1,
+                'cycles': sum(test.cycles_atom) // 1,
+                'branch_misses': sum(test.branch_misses_atom) // 1,
+                'cache_misses': sum(test.cache_misses_atom) // 1,
+                'page_faults': sum(test.page_faults) // 1,
+                'peak_memory': statistics.median(test.peak_memory),
+                'elapsed_time': statistics.median(test.elapsed_time),
+                'is_packed': test.is_packed,
+                'speedup': test.speedup,
+                'equivalent_query': test.equivalent_query
+            }
+            writer.writerow(row)
 
 def print_tables(tests: List[TestMetrics]):
     import os
@@ -200,6 +297,9 @@ def print_tables(tests: List[TestMetrics]):
     packed_tests.sort(key=lambda x: (x.query, x.column_ordering))
     base_tests.sort(key=lambda x: (x.query, x.column_ordering))
 
+    # Calculate speedups for packed tests
+    calculate_speedups(packed_tests, base_tests)
+
     packed_table = create_table("Packed Execution Results")
     for test in packed_tests:
         add_row_to_table(packed_table, test)
@@ -214,8 +314,8 @@ def print_tables(tests: List[TestMetrics]):
     print(base_table)
 
 def main():
-    if len(sys.argv) != 3:
-        print("Usage: python script.py <log_file_path> <num_runs>")
+    if len(sys.argv) not in [3, 4]:
+        print("Usage: python script.py <log_file_path> <num_runs> [csv_output_path]")
         sys.exit(1)
 
     with open(sys.argv[1], 'r') as f:
@@ -223,7 +323,16 @@ def main():
 
     num_runs = int(sys.argv[2])
     tests = parse_log_file(content, num_runs)
+
+    # Print tables to console
     print_tables(tests)
+
+    # Write to CSV if output path is provided
+    if len(sys.argv) == 4:
+        csv_output_path = sys.argv[3]
+        write_to_csv(tests, csv_output_path)
+        print(f"\nResults have been written to: {csv_output_path}")
 
 if __name__ == "__main__":
     main()
+
