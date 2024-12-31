@@ -29,8 +29,8 @@ ulong pipeline_example(const std::string &query) {
     const std::vector<std::string> column_ordering = {"c", "b", "a", "d", "e"};
     print_column_ordering(column_ordering);
 
-    const auto parser = std::make_unique<VFEngine::QueryParser>(query, column_ordering, VFEngine::SinkType::PACKED,
-                                                                column_names, column_alias_map);
+    const auto parser = std::make_unique<VFEngine::QueryParser>(
+            query, column_ordering, true, VFEngine::SinkType::PACKED, column_names, column_alias_map);
 
     const auto pipeline = parser->build_physical_pipeline();
     pipeline->init();
@@ -38,8 +38,8 @@ ulong pipeline_example(const std::string &query) {
 
     auto first_op = pipeline->get_first_operator();
 
-    const std::vector<std::string> operator_names{"SCAN", "INLJ_PACKED1", "INLJ_PACKED2", "INLJ_PACKED3", "INLJ_PACKED4",
-                                                  "SINK_PACKED"};
+    const std::vector<std::string> operator_names{"SCAN",         "INLJ_PACKED1", "INLJ_PACKED2",
+                                                  "INLJ_PACKED3", "INLJ_PACKED4", "SINK_PACKED"};
     int idx = 0;
 
     while (first_op) {

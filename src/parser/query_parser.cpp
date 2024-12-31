@@ -32,20 +32,30 @@ void __M_Assert(const char *expr_str, bool expr, const char *file, int line, con
 namespace VFEngine {
 
     QueryParser::QueryParser(const std::string &query, const std::vector<std::string> &column_ordering,
-                             SinkType sink_type, const std::vector<std::string> &column_names,
+                             const bool &is_packed, const SinkType sink_type,
+                             const std::vector<std::string> &column_names,
                              const std::unordered_map<std::string, std::string> &column_alias_map) :
-        _query(query), _column_ordering(column_ordering), _sink_type(sink_type), _delimiter("->"),
-        _column_names(column_names), _column_alias_map(column_alias_map), _ftree(nullptr) {
-        _is_packed = sink_type == SinkType::PACKED;
+        _query(query), _column_ordering(column_ordering), _is_packed(is_packed), _sink_type(sink_type),
+        _delimiter("->"), _column_names(column_names), _column_alias_map(column_alias_map), _ftree(nullptr) {
+        if (_is_packed) {
+            assert(_sink_type != SinkType::UNPACKED);
+        } else {
+            assert(_sink_type != SinkType::PACKED);
+        }
     }
 
     QueryParser::QueryParser(const std::string &query, const std::vector<std::string> &column_ordering,
-                             SinkType sink_type, const std::vector<std::string> &column_names,
+                             const bool &is_packed, const SinkType sink_type,
+                             const std::vector<std::string> &column_names,
                              const std::unordered_map<std::string, std::string> &column_alias_map,
                              const std::shared_ptr<FactorizedTreeElement> &ftree) :
-        _query(query), _column_ordering(column_ordering), _sink_type(sink_type), _delimiter("->"),
-        _column_names(column_names), _column_alias_map(column_alias_map), _ftree(ftree) {
-        _is_packed = sink_type == SinkType::PACKED;
+        _query(query), _column_ordering(column_ordering), _is_packed(is_packed), _sink_type(sink_type),
+        _delimiter("->"), _column_names(column_names), _column_alias_map(column_alias_map), _ftree(ftree) {
+        if (_is_packed) {
+            assert(_sink_type != SinkType::UNPACKED);
+        } else {
+            assert(_sink_type != SinkType::PACKED);
+        }
     }
 
 

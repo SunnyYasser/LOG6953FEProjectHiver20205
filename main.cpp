@@ -111,8 +111,8 @@ void parser_example() {
 
 
     const std::vector<std::string> column_names{"src", "dest"};
-    const auto parser = std::make_unique<VFEngine::QueryParser>(datalog, column_ordering, VFEngine::SinkType::PACKED,
-                                                                column_names, column_alias_map);
+    const auto parser = std::make_unique<VFEngine::QueryParser>(
+            datalog, column_ordering, true, VFEngine::SinkType::PACKED, column_names, column_alias_map);
 
     const auto pipeline = parser->build_physical_pipeline();
     pipeline->init();
@@ -121,8 +121,8 @@ void parser_example() {
     std::cout << "count (*) " << datalog << " = " << VFEngine::SinkPacked::get_total_row_size_if_materialized()
               << std::endl;
 
-    const auto parser2 = std::make_unique<VFEngine::QueryParser>(datalog, column_ordering, VFEngine::SinkType::UNPACKED,
-                                                                 column_names, column_alias_map);
+    const auto parser2 = std::make_unique<VFEngine::QueryParser>(
+            datalog, column_ordering, false, VFEngine::SinkType::UNPACKED, column_names, column_alias_map);
 
     const auto pipeline2 = parser2->build_physical_pipeline();
     pipeline2->init();
@@ -130,8 +130,8 @@ void parser_example() {
 
     std::cout << "count (*) " << datalog << " = " << VFEngine::Sink::get_total_row_size_if_materialized() << std::endl;
 
-    const auto parser3 = std::make_unique<VFEngine::QueryParser>(datalog, column_ordering, VFEngine::SinkType::NO_OP,
-                                                                 column_names, column_alias_map);
+    const auto parser3 = std::make_unique<VFEngine::QueryParser>(
+            datalog, column_ordering, true, VFEngine::SinkType::NO_OP, column_names, column_alias_map);
 
     const auto pipeline3 = parser3->build_physical_pipeline();
     pipeline3->init();
@@ -140,15 +140,27 @@ void parser_example() {
     std::cout << "count (*) " << datalog << " = " << VFEngine::SinkNoOp::get_total_row_size_if_materialized()
               << std::endl;
 
+    const auto parser4 = std::make_unique<VFEngine::QueryParser>(
+            datalog, column_ordering, false, VFEngine::SinkType::NO_OP, column_names, column_alias_map);
+
+    const auto pipeline4 = parser4->build_physical_pipeline();
+    pipeline4->init();
+    pipeline4->execute();
+
+    std::cout << "count (*) " << datalog << " = " << VFEngine::SinkNoOp::get_total_row_size_if_materialized()
+              << std::endl;
+
 
     const auto &auto_gen_ftree1 = parser->create_factorized_tree();
     const auto &auto_gen_ftree2 = parser2->create_factorized_tree();
     const auto &auto_gen_ftree3 = parser3->create_factorized_tree();
+    const auto &auto_gen_ftree4 = parser4->create_factorized_tree();
 
     // ftree->print_tree();
     auto_gen_ftree1->print_tree();
     auto_gen_ftree2->print_tree();
     auto_gen_ftree3->print_tree();
+    auto_gen_ftree4->print_tree();
 }
 
 int main() {

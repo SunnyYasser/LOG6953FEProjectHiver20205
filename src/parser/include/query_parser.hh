@@ -19,12 +19,12 @@ namespace VFEngine {
 
     class QueryParser {
     public:
-        QueryParser(const std::string &query, const std::vector<std::string> &column_ordering, SinkType sink_type,
-                    const std::vector<std::string> &column_names,
+        QueryParser(const std::string &query, const std::vector<std::string> &column_ordering, const bool &is_packed,
+                    SinkType sink_type, const std::vector<std::string> &column_names,
                     const std::unordered_map<std::string, std::string> &column_alias_map);
 
-        QueryParser(const std::string &query, const std::vector<std::string> &column_ordering, SinkType sink_type,
-                    const std::vector<std::string> &column_names,
+        QueryParser(const std::string &query, const std::vector<std::string> &column_ordering, const bool &is_packed,
+                    SinkType sink_type, const std::vector<std::string> &column_names,
                     const std::unordered_map<std::string, std::string> &column_alias_map,
                     const std::shared_ptr<FactorizedTreeElement> &ftree);
 

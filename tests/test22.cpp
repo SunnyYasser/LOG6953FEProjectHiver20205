@@ -28,8 +28,8 @@ ulong pipeline_example(const std::string &query) {
     const std::vector<std::string> column_ordering = {"b", "c", "a", "d"};
     print_column_ordering(column_ordering);
 
-    const auto parser = std::make_unique<VFEngine::QueryParser>(query, column_ordering, VFEngine::SinkType::UNPACKED,
-                                                                column_names, column_alias_map);
+    const auto parser = std::make_unique<VFEngine::QueryParser>(
+            query, column_ordering, false, VFEngine::SinkType::UNPACKED, column_names, column_alias_map);
 
     const auto pipeline = parser->build_physical_pipeline();
     pipeline->init();
