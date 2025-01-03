@@ -1,6 +1,7 @@
 import re
 from dataclasses import dataclass
-from typing import List, Dict
+from typing import List, Dict, Union
+import statistics
 import sys
 import csv
 import json
@@ -21,6 +22,9 @@ class TestMetrics:
     elapsed_time: List[float]
     peak_memory: List[float]
     is_packed: int
+    speedup: float = 0.0
+    equivalent_query: str = "N/A"
+
 
 def get_git_commit_hash():
     try:
@@ -30,6 +34,72 @@ def get_git_commit_hash():
 
 def parse_number(num_str: str) -> int:
     return int(num_str.replace(',', ''))
+
+
+def get_sink_type(operators: Union[Dict[str, List[int]], Dict[str, int]]) -> str:
+    """
+    Determine the type of sink operator being used.
+    Returns: 'no_op', 'packed', 'regular', or None
+    """
+    if isinstance(next(iter(operators.values())), list):
+        # Handle List[int] case
+        if 'SINK_NO_OP' in operators:
+            return 'no_op'
+        elif 'SINK_PACKED' in operators:
+            return 'packed'
+        elif 'SINK' in operators:
+            return 'regular'
+    else:
+        # Handle int case
+        if 'SINK_NO_OP' in operators and operators['SINK_NO_OP'] > 0:
+            return 'no_op'
+        elif 'SINK_PACKED' in operators and operators['SINK_PACKED'] > 0:
+            return 'packed'
+        elif 'SINK' in operators and operators['SINK'] > 0:
+            return 'regular'
+    return None
+
+def are_execution_patterns_compatible(packed_test: TestMetrics, base_test: TestMetrics) -> bool:
+    """
+    Check if a packed test and base test have compatible execution patterns.
+    """
+    sink_type_packed = get_sink_type(packed_test.operators)
+    sink_type_base = get_sink_type(base_test.operators)
+
+    # If either test has SINK_NO_OP, they must match exactly
+    if 'no_op' in (sink_type_packed, sink_type_base):
+        return sink_type_packed == sink_type_base
+
+    # For packed vs unpacked, ensure one is SINK_PACKED and other is regular SINK
+    return (sink_type_packed == 'packed' and sink_type_base == 'regular')
+
+def are_queries_equivalent(query1: TestMetrics, query2: TestMetrics) -> bool:
+    """Check if two queries are equivalent (same query and ordering)"""
+    return (query1.query == query2.query and
+            query1.column_ordering == query2.column_ordering)
+
+def calculate_speedups(packed_tests: List[TestMetrics], base_tests: List[TestMetrics]):
+    """
+    Calculate speedup for packed queries compared to their unpacked counterparts.
+    Matches queries based on compatible execution patterns.
+    """
+    for packed_test in packed_tests:
+        matching_base_tests = [
+            test for test in base_tests
+            if (are_queries_equivalent(test, packed_test) and    # Same query and ordering
+                are_execution_patterns_compatible(packed_test, test))  # Compatible sink types
+        ]
+
+        if matching_base_tests:
+            base_test = matching_base_tests[0]
+            base_time = statistics.median(base_test.elapsed_time)
+            packed_time = statistics.median(packed_test.elapsed_time)
+
+            if packed_time > 0:
+                packed_test.speedup = base_time / packed_time
+                packed_test.equivalent_query = f"Test {base_test.test_name}"
+
+
 
 def parse_log_file(content: str, num_runs: int) -> List[TestMetrics]:
     tests = []
@@ -131,6 +201,13 @@ def write_experimental_results(tests: List[TestMetrics], experiment_name: str, o
     commit_hash = get_git_commit_hash()
     experiment_id = f"{timestamp}_{commit_hash[:8]}"
 
+    # Split tests into packed and base
+    packed_tests = [test for test in tests if test.is_packed == 1]
+    base_tests = [test for test in tests if test.is_packed == 0]
+
+    # Calculate speedups before writing results
+    calculate_speedups(packed_tests, base_tests)
+
     with open(f"{output_path}/experiments.csv", 'a', newline='') as f:
         writer = csv.writer(f)
         if f.tell() == 0:  # File is empty, write header
@@ -140,7 +217,7 @@ def write_experimental_results(tests: List[TestMetrics], experiment_name: str, o
     with open(f"{output_path}/queries.csv", 'a', newline='') as f:
         writer = csv.writer(f, quotechar='"', quoting=csv.QUOTE_MINIMAL)
         if f.tell() == 0:  # File is empty, write header
-            writer.writerow(['experiment_id', 'query_id', 'ordering', 'is_packed', 'metrics'])
+            writer.writerow(['experiment_id', 'query_id', 'ordering', 'is_packed', 'metrics', 'speedup', 'equivalent_query'])
 
         for test in tests:
             metrics = {
@@ -159,8 +236,11 @@ def write_experimental_results(tests: List[TestMetrics], experiment_name: str, o
                 test.test_name,
                 test.column_ordering,
                 test.is_packed,
-                json.dumps(metrics, ensure_ascii=False)
+                json.dumps(metrics, ensure_ascii=False),
+                test.speedup,
+                test.equivalent_query
             ])
+
 
 def main():
     if len(sys.argv) != 5:

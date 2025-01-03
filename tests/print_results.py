@@ -6,6 +6,7 @@ from prettytable import PrettyTable
 import statistics
 import csv
 from typing import Union
+import json
 
 @dataclass
 class TestMetrics:
@@ -72,7 +73,7 @@ def parse_log_file(content: str, num_runs: int) -> List[TestMetrics]:
             if current_test is not None:
                 tests.append(current_test)
             current_test = TestMetrics(
-                test_name=test_num,
+                test_name=test_name,
                 query=query,
                 column_ordering=column_ordering,
                 operators={},
@@ -193,22 +194,69 @@ def format_operators(operators: Dict[str, List[int]]) -> str:
 
     sorted_ops = sorted(operators.items(), key=lambda x: operator_sort_key(x[0]))
     op_values = [sum(counts) // len(counts) for _, counts in sorted_ops]
-    return '[' + ' '.join(str(val) for val in op_values) + ']'
+    return op_values
+    #return '[' + ' '.join(str(val) for val in op_values) + ']'
 
 def are_queries_equivalent(query1: TestMetrics, query2: TestMetrics) -> bool:
     """Check if two queries are equivalent (same query and ordering)"""
     return (query1.query == query2.query and
             query1.column_ordering == query2.column_ordering)
 
+def get_sink_type(operators: Union[Dict[str, List[int]], Dict[str, int]]) -> str:
+    """
+    Determine the type of sink operator being used.
+    Returns: 'no_op', 'packed', 'regular', or None
+    """
+    if isinstance(next(iter(operators.values())), list):
+        # Handle List[int] case - use max value to determine if operator was used
+        if 'SINK_NO_OP' in operators:
+            return 'no_op'
+        elif 'SINK_PACKED' in operators:
+            return 'packed'
+        elif 'SINK' in operators:
+            return 'regular'
+    else:
+        # Handle int case
+        if 'SINK_NO_OP' in operators and operators['SINK_NO_OP'] > 0:
+            return 'no_op'
+        elif 'SINK_PACKED' in operators and operators['SINK_PACKED'] > 0:
+            return 'packed'
+        elif 'SINK' in operators and operators['SINK'] > 0:
+            return 'regular'
+    return None
+
+def are_execution_patterns_compatible(packed_test: TestMetrics, base_test: TestMetrics) -> bool:
+    """
+    Check if a packed test and base test have compatible execution patterns.
+    """
+
+    sink_type_packed = get_sink_type(packed_test.operators)
+    sink_type_base = get_sink_type(base_test.operators)
+
+    # If either test has SINK_NO_OP, they must match exactly
+    if 'no_op' in (sink_type_packed, sink_type_base):
+        return sink_type_packed == sink_type_base
+
+    # For packed vs unpacked, ensure one is SINK_PACKED and other is regular SINK
+    return (sink_type_packed == 'packed' and sink_type_base == 'regular')
+
 def calculate_speedups(packed_tests: List[TestMetrics], base_tests: List[TestMetrics]):
-    """Calculate speedup for packed queries compared to their unpacked counterparts."""
+    """
+    Calculate speedup for packed queries compared to their unpacked counterparts.
+    Matches queries based on compatible execution patterns.
+    """
+    print ([test.test_name for test in base_tests])
     for packed_test in packed_tests:
-        # Find matching unpacked test with same query and ordering
+        # Find matching unpacked tests with same query and ordering
         matching_base_tests = [
             test for test in base_tests
-            if (are_queries_equivalent(test, packed_test) and
-                not has_packed_inlj(test.operators))
+            if (are_queries_equivalent(test, packed_test) and    # Same query and ordering
+                are_execution_patterns_compatible(packed_test, test))  # Compatible sink types
         ]
+
+        print (packed_test.test_name)
+        print ([test.test_name for test in matching_base_tests])
+        print ("##################\n")
 
         if matching_base_tests:
             # Use the first matching base test
@@ -219,6 +267,7 @@ def calculate_speedups(packed_tests: List[TestMetrics], base_tests: List[TestMet
             if packed_time > 0:
                 packed_test.speedup = base_time / packed_time
                 packed_test.equivalent_query = f"Test {base_test.test_name}"
+
 
 def add_row_to_table(table: PrettyTable, test: TestMetrics, max_query: int = 30, max_order: int = 20):
     query = test.query[:max_query] + ('...' if len(test.query) > max_query else '')
@@ -297,7 +346,7 @@ def print_tables(tests: List[TestMetrics]):
     packed_tests.sort(key=lambda x: (x.query, x.column_ordering))
     base_tests.sort(key=lambda x: (x.query, x.column_ordering))
 
-    # Calculate speedups for packed tests
+# Calculate speedups for packed tests
     calculate_speedups(packed_tests, base_tests)
 
     packed_table = create_table("Packed Execution Results")
@@ -313,8 +362,33 @@ def print_tables(tests: List[TestMetrics]):
     print("\nBase Execution Results:")
     print(base_table)
 
+def write_to_json(tests: List[TestMetrics], output_path: str):
+    """Write test results to a JSON file."""
+    results = []
+
+    for test in sorted(tests, key=lambda x: (x.is_packed, x.query, x.column_ordering)):
+        results.append({
+            'test_name': test.test_name,
+            'query': test.query,
+            'column_ordering': test.column_ordering,
+            'operators': {op: counts for op, counts in test.operators.items()},
+            'instructions': sum(test.instructions_atom) // 1,
+            'cycles': sum(test.cycles_atom) // 1,
+            'branch_misses': sum(test.branch_misses_atom) // 1,
+            'cache_misses': sum(test.cache_misses_atom) // 1,
+            'page_faults': sum(test.page_faults) // 1,
+            'peak_memory': statistics.median(test.peak_memory),
+            'elapsed_time': statistics.median(test.elapsed_time),
+            'is_packed': test.is_packed,
+            'speedup': test.speedup,
+            'equivalent_query': test.equivalent_query
+        })
+
+    with open(output_path, 'w') as jsonfile:
+        json.dump(results, jsonfile, indent=4)
+
 def main():
-    if len(sys.argv) not in [3, 4]:
+    if len(sys.argv) not in [3, 4, 5]:
         print("Usage: python script.py <log_file_path> <num_runs> [csv_output_path]")
         sys.exit(1)
 
@@ -332,6 +406,12 @@ def main():
         csv_output_path = sys.argv[3]
         write_to_csv(tests, csv_output_path)
         print(f"\nResults have been written to: {csv_output_path}")
+
+    # Write to JSON if output path is provided
+    if len(sys.argv) == 5:
+        json_output_path = sys.argv[4]
+        write_to_json(tests, json_output_path)
+        print(f"\nResults have been written to JSON: {json_output_path}")
 
 if __name__ == "__main__":
     main()
