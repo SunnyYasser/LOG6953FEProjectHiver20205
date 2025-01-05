@@ -22,12 +22,15 @@ find_package(Threads REQUIRED)
 add_executable(mydb2 main.cpp)
 target_link_libraries(mydb2 PUBLIC libparser libgraph liboperator libmem libengine libutils libdebug)
 
-# Enable debug-specific options
+# Enable debug or release-specific options
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_definitions(mydb2 PRIVATE MY_DEBUG)
-    target_compile_options(mydb2 PRIVATE -fsanitize=address -fsanitize=leak)
+    target_compile_options(mydb2 PRIVATE -fsanitize=address -fsanitize=leak -g3)
     target_link_options(mydb2 PRIVATE -fsanitize=address -fsanitize=leak)
-endif()
+elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
+    target_compile_options(mydb2 PRIVATE -Ofast -march=native)
+endif ()
+
 
 # Add the tests directory
 add_subdirectory(tests)

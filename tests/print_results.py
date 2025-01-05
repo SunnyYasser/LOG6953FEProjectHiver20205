@@ -122,7 +122,7 @@ def parse_log_file(content: str, num_runs: int) -> List[TestMetrics]:
         if faults_match:
             current_test.page_faults.append(parse_number(faults_match.group(1)))
 
-        time_match = re.findall(r'Execution time: (\d+) ms', section)
+        time_match = re.findall(r'Execution time: (\d+) us', section)
         if time_match:
             for time in time_match:
                 current_test.elapsed_time.append(float(time))
@@ -195,7 +195,6 @@ def format_operators(operators: Dict[str, List[int]]) -> str:
     sorted_ops = sorted(operators.items(), key=lambda x: operator_sort_key(x[0]))
     op_values = [sum(counts) // len(counts) for _, counts in sorted_ops]
     return op_values
-    #return '[' + ' '.join(str(val) for val in op_values) + ']'
 
 def are_queries_equivalent(query1: TestMetrics, query2: TestMetrics) -> bool:
     """Check if two queries are equivalent (same query and ordering)"""
@@ -253,10 +252,6 @@ def calculate_speedups(packed_tests: List[TestMetrics], base_tests: List[TestMet
             if (are_queries_equivalent(test, packed_test) and    # Same query and ordering
                 are_execution_patterns_compatible(packed_test, test))  # Compatible sink types
         ]
-
-        print (packed_test.test_name)
-        print ([test.test_name for test in matching_base_tests])
-        print ("##################\n")
 
         if matching_base_tests:
             # Use the first matching base test
