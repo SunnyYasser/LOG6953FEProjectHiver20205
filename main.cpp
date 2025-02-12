@@ -163,6 +163,53 @@ void parser_example() {
     auto_gen_ftree4->print_tree();
 }
 
+void parser_example2() {
+    const std::string datalog = "a->b";
+    const std::vector<std::string> column_ordering = {"a", "b"};
+    const std::unordered_map<std::string, std::string> column_alias_map{{"a", "src"}, {"b", "dest"}};
+
+
+    const std::vector<std::string> column_names{"src", "dest"};
+    const auto parser = std::make_unique<VFEngine::QueryParser>(
+            datalog, column_ordering, true, VFEngine::SinkType::PACKED, column_names, column_alias_map);
+
+    const auto pipeline = parser->build_physical_pipeline();
+    pipeline->init();
+    pipeline->execute();
+
+    std::cout << "count (*) " << datalog << " = " << VFEngine::SinkPacked::get_total_row_size_if_materialized()
+              << std::endl;
+
+    const auto parser2 = std::make_unique<VFEngine::QueryParser>(
+            datalog, column_ordering, false, VFEngine::SinkType::UNPACKED, column_names, column_alias_map);
+
+    const auto pipeline2 = parser2->build_physical_pipeline();
+    pipeline2->init();
+    pipeline2->execute();
+
+    std::cout << "count (*) " << datalog << " = " << VFEngine::Sink::get_total_row_size_if_materialized() << std::endl;
+
+    const auto parser3 = std::make_unique<VFEngine::QueryParser>(
+            datalog, column_ordering, true, VFEngine::SinkType::NO_OP, column_names, column_alias_map);
+
+    const auto pipeline3 = parser3->build_physical_pipeline();
+    pipeline3->init();
+    pipeline3->execute();
+
+    std::cout << "count (*) " << datalog << " = " << VFEngine::SinkNoOp::get_total_row_size_if_materialized()
+              << std::endl;
+
+    const auto parser4 = std::make_unique<VFEngine::QueryParser>(
+            datalog, column_ordering, false, VFEngine::SinkType::NO_OP, column_names, column_alias_map);
+
+    const auto pipeline4 = parser4->build_physical_pipeline();
+    pipeline4->init();
+    pipeline4->execute();
+
+    std::cout << "count (*) " << datalog << " = " << VFEngine::SinkNoOp::get_total_row_size_if_materialized()
+              << std::endl;
+}
+
 int main() {
     if (std::getenv("GETCHAR_IN_MAIN")) {
         enable_debug();
@@ -173,8 +220,8 @@ int main() {
     }
 
     enable_component_debug();
-    parser_example();
-
+    // parser_example();
+    parser_example2();
 
     struct rusage usage;
     // Get resource usage

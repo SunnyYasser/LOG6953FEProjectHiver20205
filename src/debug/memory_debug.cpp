@@ -9,13 +9,13 @@
 
 namespace VFEngine {
 
-    void MemoryDebugUtility::print_adj_list(std::vector<std::vector<uint64_t>> &adj_list, uint64_t max_id,
+    void MemoryDebugUtility::print_adj_list(const std::unique_ptr<std::vector<uint64_t>[]> &adj_list, uint64_t max_id,
                                             bool reverse) {
         if (!is_memory_debug_enabled()) {
             return;
         }
 
-        const auto data_writing_folder = get_amazon0601_serialized_data_writing_path();
+        const auto data_writing_folder = get_dataset_serialized_data_writing_path();
         std::string folder;
 
         if (!data_writing_folder) {
@@ -39,7 +39,7 @@ namespace VFEngine {
         }
 
         uint64_t edges = 0;
-        file << "Number nodes : " << adj_list.size() << std::endl;
+        file << "Number nodes : " << max_id + 1 << std::endl;
         for (uint64_t idx = 0; idx <= max_id; ++idx) {
             if (adj_list[idx].empty()) {
                 continue;
@@ -73,7 +73,7 @@ namespace VFEngine {
             return;
         }
 
-        const auto data_writing_folder = get_amazon0601_serialized_data_writing_path();
+        const auto data_writing_folder = get_dataset_serialized_data_writing_path();
         std::string folder;
 
         if (!data_writing_folder) {
@@ -130,6 +130,24 @@ namespace VFEngine {
             file << std::endl;
         }
         file << "Number edges : " << edges << std::endl;
+        file.close();
+    }
+
+    void MemoryDebugUtility::print_serialize_deseerialize_time(ulong duration) {
+        if (!is_memory_debug_enabled()) {
+            return;
+        }
+
+        std::string folder = "serialize_deserialize";
+        std::filesystem::create_directories(folder);
+        std::ofstream file;
+        const auto &filename = folder + "/perf_stats.txt";
+        file.open(filename);
+        if (!file.is_open()) {
+            std::cerr << "Could not open for dumping logs" << std::endl;
+            return;
+        }
+        file << "TIME TAKEN FOR SERIALIZATION/DESERIALIZATION " << duration << " ms" << std::endl;
         file.close();
     }
 

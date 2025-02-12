@@ -1,9 +1,15 @@
 #include "include/pipeline.hh"
+#ifdef ARENA_ALLOCATOR
+#include "../graph/include/arena_allocator.hh"
+#endif
 
 namespace VFEngine {
     Pipeline::Pipeline(const std::vector<std::string> &columns,
                        const std::unordered_map<std::string, std::string> &column_alias_map) :
         _first_operator(nullptr) {
+#ifdef ARENA_ALLOCATOR
+        ArenaSetup::initialize(1ULL * 1024 * 1024 * 1024); // 1GB arena
+#endif
         _context_memory = std::make_shared<ContextMemory>();
         _datastore = std::make_shared<DataStore>(columns, column_alias_map);
     }

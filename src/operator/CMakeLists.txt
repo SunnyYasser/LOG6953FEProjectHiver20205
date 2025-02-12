@@ -5,6 +5,25 @@ add_library(liboperator STATIC operator_definition.cpp scan_operator.cpp index_n
 )
 target_include_directories(liboperator PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(liboperator PRIVATE libmem PRIVATE libgraph PRIVATE libengine PRIVATE libutils)
+
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_definitions(MY_DEBUG)
-endif()
+endif ()
+
+if (DISABLE_PTR_ALIAS)
+    add_compile_definitions(DISABLE_PTR_ALIAS)
+endif ()
+
+if (ARENA_ALLOCATOR)
+    add_compile_definitions(ARENA_ALLOCATOR)
+endif ()
+
+if (REMOVE_MEMSET)
+    add_compile_definitions(REMOVE_MEMSET)
+endif ()
+
+if (ENABLE_BRANCHLESS_SINK_PACKED)
+    add_compile_definitions(ENABLE_BRANCHLESS_SINK_PACKED)
+endif ()
+
+

@@ -1,4 +1,6 @@
 #include "include/sink_packed_operator.hh"
+
+#include <iostream>
 #include <unordered_set>
 #include <vector>
 
@@ -18,63 +20,105 @@ namespace VFEngine {
         update_total_row_size_if_materialized();
     }
 
-    /*
-     * Idea behind sink packed is as follows
-     * 1) If the vector is the root of ftree, its RLE will not be available. Instead we use the curr_start_pos and the
-     * curr_size, which would have been set last by some operator in the ftree
-     * 2) Each element in the root will lead to the output of N number of tuples, where N >= 0
-     * 3) We do a dfs call to the children of the current operator, we also pass the chunk_idx, which defines
-     * for which current parent element are we processing the current vector
-     * 4) Generally, for each element in a parent vector, we have a chunk of elements in the child vector, and the
-     * chunk_idx stores this relationship
-     * 5) For leaf nodes, we do not have to the recursive dfs call, and therefore simply return the size of the rle
-     * chunk pointed to by chunk_idx
-     * 6) Comments are added in the code as well for each specific line of interest
-     */
+#ifdef ENABLE_BRANCHLESS_SINK_PACKED
+    ulong count_leaf(const std::shared_ptr<FactorizedTreeElement> &op, const uint32_t parent_idx) {
+        const auto &vec = op->_value;
+        const auto &rle = vec->_state->_rle;
+        const auto &children = op->_children;
+        std::cout << "EBP_LEAF" << std::endl;
+#ifdef REMOVE_MEMSET
+        std::cout << "EBP_RM_LEAF" << std::endl;
+        const auto &rle_start_pos = vec->_state->_rle_start_pos;
+        return (parent_idx + 1 >= rle_start_pos) *
+               (rle[parent_idx + 1] - rle[parent_idx] * (parent_idx + 1 > rle_start_pos));
+#else
+        return rle[parent_idx + 1] - rle[parent_idx];
+#endif
+    }
 
+#else
+    // For leaf nodes
+    ulong count_leaf(const std::shared_ptr<FactorizedTreeElement> &op, const uint32_t parent_idx) {
+        const auto &vec = op->_value;
+        const auto &rle = vec->_state->_rle;
+        const auto &children = op->_children;
+        std::cout << "NO_EBP_LEAF" << std::endl;
+#ifdef REMOVE_MEMSET
+        std::cout << "NO_EBP_RM_LEAF" << std::endl;
+        const auto &rle_start_pos = vec->_state->_rle_start_pos;
+        if (parent_idx + 1 < rle_start_pos) {
+            return 0;
+        }
+        return parent_idx + 1 > rle_start_pos ? rle[parent_idx + 1] - rle[parent_idx] : rle[parent_idx + 1];
+#else
+        return rle[parent_idx + 1] - rle[parent_idx];
+#endif
+    }
 
-    ulong count(const std::shared_ptr<FactorizedTreeElement> &op, const uint32_t parent_idx) {
-#ifdef MY_DEBUG
-        const auto attr = op->_attribute;
-        const auto &rle_size = op->_value->_state->_rle_size;
 #endif
 
+#ifdef ENABLE_BRANCHLESS_SINK_PACKED
+    ulong count_internal(const std::shared_ptr<FactorizedTreeElement> &op, const uint32_t parent_idx) {
         const auto &vec = op->_value;
         const auto &children = op->_children;
         const auto &start_pos = vec->_state->_state_info._curr_start_pos;
         const auto &size = vec->_state->_state_info._size;
-        const auto &rle = vec->_state->_rle; // should have _rle[0] = 1
+        const auto &rle = vec->_state->_rle;
 
-        if (children.size() == 0) {
-            return rle[parent_idx + 1] - rle[parent_idx];
-        }
-
-        // for each set of a's, when we reach sink, not all c's would be produced, only a slice of the subarray of the
-        // 'a' vector is producing c's right now. We need to find the correct slice limits
+#ifdef REMOVE_MEMSET
+        const auto &rle_start_pos = vec->_state->_rle_start_pos;
+        auto rle_val = parent_idx == rle_start_pos - 1 ? 0 : rle[parent_idx];
+        const auto start = std::max(rle_val, static_cast<uint32_t>(start_pos));
+        const auto end = std::min(rle[parent_idx + 1], static_cast<uint32_t>(start_pos) + size);
+#else
         const auto start = std::max(rle[parent_idx], static_cast<uint32_t>(start_pos));
         const auto end = std::min(rle[parent_idx + 1], static_cast<uint32_t>(start_pos) + size);
+#endif
 
-        ulong sum = 0u;
+        ulong sum = 0;
         for (auto i = start; i < end; i++) {
             ulong value = 1;
             for (const auto &node: children) {
-#ifdef MY_DEBUG
-                const auto &child_attr = node->_attribute;
-                const auto &child_vec = node->_value;
-                const auto &child_size = child_vec->_state->_state_info._size;
-                const auto &child_start_pos = child_vec->_state->_state_info._curr_start_pos;
-                const auto &child_rle = child_vec->_state->_rle; // should have _rle[0] = 1
-#endif
-
-                value *= count(node, i);
+                value *= (node->_children.empty() ? count_leaf(node, i) : count_internal(node, i));
             }
             sum += value;
         }
         return sum;
     }
 
+#else
+
+    // For internal nodes (general case)
+    ulong count_internal(const std::shared_ptr<FactorizedTreeElement> &op, const uint32_t parent_idx) {
+        const auto &vec = op->_value;
+        const auto &children = op->_children;
+        const auto &start_pos = vec->_state->_state_info._curr_start_pos;
+        const auto &size = vec->_state->_state_info._size;
+        const auto &rle = vec->_state->_rle;
+
+#ifdef REMOVE_MEMSET
+        const auto &rle_start_pos = vec->_state->_rle_start_pos;
+        auto rle_val = parent_idx == rle_start_pos - 1 ? 0 : rle[parent_idx];
+        const auto start = std::max(rle_val, static_cast<uint32_t>(start_pos));
+        const auto end = std::min(rle[parent_idx + 1], static_cast<uint32_t>(start_pos) + size);
+#else
+        const auto start = std::max(rle[parent_idx], static_cast<uint32_t>(start_pos));
+        const auto end = std::min(rle[parent_idx + 1], static_cast<uint32_t>(start_pos) + size);
+#endif
+
+        ulong sum = 0;
+        for (auto i = start; i < end; i++) {
+            ulong value = 1;
+            for (const auto &node: children) {
+                value *= (node->_children.empty() ? count_leaf(node, i) : count_internal(node, i));
+            }
+            sum += value;
+        }
+        return sum;
+    }
+#endif
+
     ulong count(const std::shared_ptr<FactorizedTreeElement> &root) {
-        ulong sum = 0u;
         const auto &vec = root->_value;
         const auto &children = root->_children;
         const auto &start_pos = vec->_state->_state_info._curr_start_pos;
@@ -83,23 +127,15 @@ namespace VFEngine {
         if (children.empty())
             return curr_size;
 
-        // loop over root and its children
+        ulong sum = 0;
         for (auto i = 0; i < curr_size; i++) {
-            ulong value = 1u;
-            const auto parent_idx = start_pos + i;
+            ulong value = 1;
+            const auto parent_idx = static_cast<uint32_t>(start_pos + i);
             for (const auto &node: children) {
-#ifdef MY_DEBUG
-                const auto child_attr = node->_attribute;
-                const auto &child_vec = node->_value;
-                const auto &child_size = child_vec->_state->_state_info._size;
-                auto child_start_pos = child_vec->_state->_state_info._curr_start_pos;
-                const auto &child_rle = child_vec->_state->_rle; // should have _rle[0] = 1
-#endif
-                value *= count(node, parent_idx);
+                value *= (node->_children.empty() ? count_leaf(node, parent_idx) : count_internal(node, parent_idx));
             }
             sum += value;
         }
-
         return sum;
     }
 
@@ -126,21 +162,16 @@ namespace VFEngine {
             dfs_helper(child, visited, context);
         }
     }
+
     void SinkPacked::fill_vectors_in_ftree() const {
         std::unordered_set<std::string> visited;
         dfs_helper(_ftree, visited, _context);
     }
 
-
-    /*
-     * We only need to create read the data of given column (attribute)
-     * Output vector is not required for sink operator
-     */
     void SinkPacked::init(const std::shared_ptr<ContextMemory> &context, const std::shared_ptr<DataStore> &datastore) {
         _context = context;
         fill_vectors_in_ftree();
     }
-
 
     ulong SinkPacked::get_total_row_size_if_materialized() { return total_row_size_if_materialized; }
 

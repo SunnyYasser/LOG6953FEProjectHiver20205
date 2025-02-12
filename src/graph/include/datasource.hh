@@ -40,10 +40,9 @@ namespace VFEngine {
 
     private:
         void populate_store_with_temporary_data();
-
         void populate_csv_store();
-        void populate_fwd_adj_list(const std::vector<std::vector<uint64_t>> &);
-        void populate_bwd_adj_list(const std::vector<std::vector<uint64_t>> &);
+        void populate_fwd_adj_list(const std::unique_ptr<std::vector<uint64_t>[]> &_tmp_adj_list, uint64_t size);
+        void populate_bwd_adj_list(const std::unique_ptr<std::vector<uint64_t>[]> &_tmp_adj_list, uint64_t size);
         void populate_max_id_value();
         uint64_t _max_id_value{};
     };

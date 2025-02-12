@@ -13,6 +13,55 @@ namespace VFEngine {
         int32_t _curr_start_pos;
     };
 
+#ifdef ARENA_ALLOCATOR
+#ifdef REMOVE_MEMSET
+    class State {
+    public:
+        State() = delete;
+        explicit State(const int32_t &size);
+        void print_debug_info(std::ofstream &logfile) const;
+        static constexpr int32_t MAX_VECTOR_SIZE = 1024;
+        void allocate_filter();
+        void allocate_rle();
+        StateInfo _state_info;
+        int32_t _rle_size;
+        int32_t _filter_size;
+        int32_t _rle_start_pos;
+        uint32_t *_rle, *_filter_list;
+    };
+#else
+    class State {
+    public:
+        State() = delete;
+        explicit State(const int32_t &size);
+        void print_debug_info(std::ofstream &logfile) const;
+        static constexpr int32_t MAX_VECTOR_SIZE = 1024;
+        void allocate_filter();
+        void allocate_rle();
+        StateInfo _state_info;
+        int32_t _rle_size;
+        int32_t _filter_size;
+        uint32_t *_rle, *_filter_list;
+    };
+#endif
+
+#else
+#ifdef REMOVE_MEMSET
+    class State {
+    public:
+        State() = delete;
+        explicit State(const int32_t &size);
+        void print_debug_info(std::ofstream &logfile) const;
+        static constexpr int32_t MAX_VECTOR_SIZE = 1024;
+        void allocate_filter();
+        void allocate_rle();
+        StateInfo _state_info;
+        int32_t _rle_size;
+        int32_t _filter_size;
+        int32_t _rle_start_pos;
+        std::unique_ptr<uint32_t[]> _rle, _filter_list;
+    };
+#else
     class State {
     public:
         State() = delete;
@@ -26,5 +75,7 @@ namespace VFEngine {
         int32_t _filter_size;
         std::unique_ptr<uint32_t[]> _rle, _filter_list;
     };
+#endif
+#endif
 } // namespace VFEngine
 #endif

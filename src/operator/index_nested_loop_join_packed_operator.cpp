@@ -1,7 +1,6 @@
 #include "include/index_nested_loop_join_packed_operator.hh"
 #include <cmath>
 #include <cstring>
-
 #include "include/operator_utils.hh"
 
 
@@ -24,31 +23,70 @@ namespace VFEngine {
         _exec_call_counter++;
         const std::string fn_name = "IndexNestedLoopJoinPacked::execute_internal()";
 
+#if defined(DISABLE_PTR_ALIAS)
+#if defined(ARENA_ALLOCATOR)
+        State *__restrict__ input_state = _input_vector->_state;
+        State *__restrict__ output_state = _output_vector->_state;
+        const uint64_t *__restrict__ _ip_vector_values = _input_vector->_values;
+        uint64_t *__restrict__ _op_vector_values = _output_vector->_values;
+        uint32_t *__restrict__ _op_vector_rle = output_state->_rle;
+#else
+        State *__restrict__ input_state = _input_vector->_state.get();
+        State *__restrict__ output_state = _output_vector->_state.get();
+        const uint64_t *__restrict__ _ip_vector_values = _input_vector->_values;
+        uint64_t *__restrict__ _op_vector_values = _output_vector->_values;
+        uint32_t *__restrict__ _op_vector_rle = output_state->_rle.get();
+#endif
+#else
+#if defined(ARENA_ALLOCATOR)
+        State *input_state = _input_vector->_state;
+        State *output_state = _output_vector->_state;
+        const uint64_t *_ip_vector_values = _input_vector->_values;
+        uint64_t *_op_vector_values = _output_vector->_values;
+        uint32_t *_op_vector_rle = output_state->_rle;
+#else
+        State *input_state = _input_vector->_state.get();
+        State *output_state = _output_vector->_state.get();
+        const uint64_t *_ip_vector_values = _input_vector->_values;
+        uint64_t *_op_vector_values = _output_vector->_values;
+        uint32_t *_op_vector_rle = output_state->_rle.get();
+#endif
+#endif
+
         // read information from the rle window
-        const int32_t _ip_vector_pos = _input_vector->_state->_state_info._curr_start_pos;
-        const int32_t _ip_vector_size = _input_vector->_state->_state_info._size;
-        const auto &_ip_vector_values = _input_vector->_values;
-
-        auto &_op_vector_rle = _output_vector->_state->_rle; // should have _rle[0] = 1
-        auto &_op_vector_rle_size = _output_vector->_state->_rle_size; // should be 1
-        auto &_op_vector_values = _output_vector->_values; // should be garbage of size 1024
-        auto &_op_vector_size = _output_vector->_state->_state_info._size = 0; // since it is a new iteration, size is 0
-
+        const int32_t _ip_vector_pos = input_state->_state_info._curr_start_pos;
+        const int32_t _ip_vector_size = input_state->_state_info._size;
+        auto &_op_vector_rle_size = output_state->_rle_size; // should be 1
+        auto &_op_vector_size = output_state->_state_info._size = 0; // since it is a new iteration, size is 0
+#ifdef REMOVE_MEMSET
+        auto &_op_rle_start_pos = output_state->_rle_start_pos;
+#endif
         int32_t _op_filled_idx = 0; // idx to see how many of the output elements are filled
         int32_t _ip_values_idx = 0; // idx to see how many of adj list elements of curr ip_vector value are filled
         auto prev_ip_vector_pos = _ip_vector_pos;
 
+#ifdef REMOVE_MEMSET
+        // when this function is called for the first time, we need to ensure that the first rle generated is also
+        // packed correctly, since the ip_vector start pos can be non zero
+        // Mark range from 1 to _ip_vector_pos as valid (implicitly zero)
+        _op_vector_rle_size += _ip_vector_pos;
+        _op_rle_start_pos = _ip_vector_pos == 0 ? 0 : _op_vector_rle_size;
 
+#else
         // when this function is called for the first time, we need to ensure that the first rle generated is also
         // packed correctly, since the ip_vector start pos can be non zero
         memset(&_op_vector_rle[1], 0, _ip_vector_pos * sizeof(_op_vector_rle[0]));
         _op_vector_rle_size += _ip_vector_pos;
-
+#endif
 
         for (auto idx = 0; idx < _ip_vector_size;) {
             const auto curr_ip_vector_pos = _ip_vector_pos + idx;
             const auto &current_adj_node = (*_adj_list)[_ip_vector_values[curr_ip_vector_pos]];
+#ifdef DISABLE_PTR_ALIAS
+            const uint64_t *__restrict__ new_values_to_be_filled = current_adj_node._values;
+#else
             const auto &new_values_to_be_filled = current_adj_node._values;
+#endif
             const auto new_values_size = current_adj_node._size;
             const auto remaining_space = State::MAX_VECTOR_SIZE - _op_filled_idx;
             const auto remaining_values = new_values_size - _ip_values_idx;
@@ -62,7 +100,14 @@ namespace VFEngine {
             _ip_values_idx += elements_to_copy;
 
             // Update RLE information
+#ifdef REMOVE_MEMSET
+            auto prev_rle_value = _op_vector_rle[_op_vector_rle_size - 1];
+            if (_op_vector_rle_size == _op_rle_start_pos)
+                prev_rle_value = 0;
+            _op_vector_rle[_op_vector_rle_size] = prev_rle_value + elements_to_copy;
+#else
             _op_vector_rle[_op_vector_rle_size] = _op_vector_rle[_op_vector_rle_size - 1] + elements_to_copy;
+#endif
             _op_vector_rle_size++;
             _op_vector_size += elements_to_copy;
 
@@ -102,15 +147,23 @@ namespace VFEngine {
                 prev_ip_vector_pos = curr_ip_vector_pos + (_ip_values_idx == 0);
 
                 // Reset RLE alignment
+#ifdef REMOVE_MEMSET
+                _op_vector_rle_size += (_ip_vector_pos + idx);
+                _op_rle_start_pos = _op_vector_rle_size;
+#else
                 const auto rle_reset_size = (_ip_vector_pos + idx) * sizeof(_op_vector_rle[0]);
                 std::memset(&_op_vector_rle[1], 0, rle_reset_size);
                 _op_vector_rle_size += (_ip_vector_pos + idx);
+#endif
             }
         }
 
         _op_vector_rle_size =
                 1; // reset rle size to default, so next time non_incremental () is called we get clean values
         _op_vector_size = 0;
+#ifdef REMOVE_MEMSET
+        _op_rle_start_pos = 0;
+#endif
     }
 
 

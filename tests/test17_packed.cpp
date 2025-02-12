@@ -10,7 +10,7 @@
 
 void print_column_ordering(const std::vector<std::string> &column_ordering) {
     std::cout << "COLUMN ORDERING: ";
-    for (int i = 0; i < column_ordering.size(); i++) {
+    for (size_t i = 0; i < column_ordering.size(); i++) {
         std::cout << column_ordering[i];
         if (i != column_ordering.size() - 1) {
             std::cout << ", ";
@@ -68,8 +68,16 @@ ulong pipeline_example(const std::string &query) {
 ulong test(const std::string &query) { return pipeline_example(query); }
 
 ulong get_expected_value() {
-    if (get_amazon0601_csv_path()) {
-        return 314212869;
+    if (get_dataset_csv_path()) {
+        if (is_running_amazon0601())
+            return 314212869;
+        if (is_running_google_web())
+            return 878875364;
+        if (is_running_live_journal())
+            return -1;
+        if (is_running_soc_epinions())
+            return 3721042797;
+        return -1;
     }
     return 1;
 }

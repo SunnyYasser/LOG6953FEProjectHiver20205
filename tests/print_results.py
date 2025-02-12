@@ -18,6 +18,7 @@ class TestMetrics:
     cycles_atom: List[int]
     page_faults: List[int]
     elapsed_time: List[float]
+    total_time: List[float]
     peak_memory: List[float]
     branch_misses_atom: List[int]
     cache_misses_atom: List[int]
@@ -81,6 +82,7 @@ def parse_log_file(content: str, num_runs: int) -> List[TestMetrics]:
                 cycles_atom=[],
                 page_faults=[],
                 elapsed_time=[],
+                total_time=[],
                 peak_memory=[],
                 branch_misses_atom=[],
                 cache_misses_atom=[],
@@ -126,6 +128,12 @@ def parse_log_file(content: str, num_runs: int) -> List[TestMetrics]:
         if time_match:
             for time in time_match:
                 current_test.elapsed_time.append(float(time))
+        
+        total_time_match = re.findall(r'Total time: (\d+) us', section)
+        if total_time_match:
+            for time in total_time_match:
+                current_test.total_time.append(float(time))
+        
 
         memory_match = re.findall(r'Peak Memory Usage: (\d+\.\d+)', section)
         if memory_match:
@@ -160,7 +168,8 @@ def create_table(title: str) -> PrettyTable:
         "Cache Misses",
         "Page Faults",
         "Memory",
-        "Time(ms)",
+        "Execute() Time (us)",
+        "Total Time (us)",
         "Speedup",
         "Equivalent Query"
     ]
@@ -261,7 +270,7 @@ def calculate_speedups(packed_tests: List[TestMetrics], base_tests: List[TestMet
 
             if packed_time > 0:
                 packed_test.speedup = base_time / packed_time
-                packed_test.equivalent_query = f"Test {base_test.test_name}"
+                packed_test.equivalent_query = f"{base_test.test_name}"
 
 
 def add_row_to_table(table: PrettyTable, test: TestMetrics, max_query: int = 30, max_order: int = 20):
@@ -280,6 +289,7 @@ def add_row_to_table(table: PrettyTable, test: TestMetrics, max_query: int = 30,
         sum(test.page_faults) // 1,
         format_memory(statistics.median(test.peak_memory)),
         f"{statistics.median(test.elapsed_time):.0f}",
+        f"{statistics.median(test.total_time):.0f}",
         f"{test.speedup:.2f}x" if test.speedup > 0 else "N/A",
         test.equivalent_query
     ]
@@ -299,6 +309,7 @@ def write_to_csv(tests: List[TestMetrics], output_path: str):
         'page_faults',
         'peak_memory',
         'elapsed_time',
+        'total_time',
         'is_packed',
         'speedup',
         'equivalent_query'
@@ -321,6 +332,7 @@ def write_to_csv(tests: List[TestMetrics], output_path: str):
                 'page_faults': sum(test.page_faults) // 1,
                 'peak_memory': statistics.median(test.peak_memory),
                 'elapsed_time': statistics.median(test.elapsed_time),
+                'total_time': statistics.median(test.total_time),
                 'is_packed': test.is_packed,
                 'speedup': test.speedup,
                 'equivalent_query': test.equivalent_query
@@ -374,6 +386,7 @@ def write_to_json(tests: List[TestMetrics], output_path: str):
             'page_faults': sum(test.page_faults) // 1,
             'peak_memory': statistics.median(test.peak_memory),
             'elapsed_time': statistics.median(test.elapsed_time),
+            'total_time': statistics.median(test.total_time),
             'is_packed': test.is_packed,
             'speedup': test.speedup,
             'equivalent_query': test.equivalent_query
@@ -384,7 +397,7 @@ def write_to_json(tests: List[TestMetrics], output_path: str):
 
 def main():
     if len(sys.argv) not in [3, 4, 5]:
-        print("Usage: python script.py <log_file_path> <num_runs> [csv_output_path]")
+        print("Usage: python print_results.py <log_file_path> <num_runs> [csv_output_path] [json_output_path]")
         sys.exit(1)
 
     with open(sys.argv[1], 'r') as f:
@@ -397,10 +410,10 @@ def main():
     print_tables(tests)
 
     # Write to CSV if output path is provided
-    if len(sys.argv) == 4:
+    if len(sys.argv) >= 4:
         csv_output_path = sys.argv[3]
         write_to_csv(tests, csv_output_path)
-        print(f"\nResults have been written to: {csv_output_path}")
+        print(f"\nResults have been written to CSV: {csv_output_path}")
 
     # Write to JSON if output path is provided
     if len(sys.argv) == 5:

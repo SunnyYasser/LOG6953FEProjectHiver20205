@@ -3,9 +3,6 @@
 #include "include/operator_utils.hh"
 
 namespace VFEngine {
-    static Vector temp{}; // to initialize the _input_vector reference
-    static std::string table_name{"R"};
-
     Operator::Operator() : _next_operator(nullptr), _operator_type(Operator::get_operator_type()) {
         _uuid = create_uuid();
     }

@@ -19,7 +19,7 @@ namespace VFEngine {
     void SerializeDeserialize<T>::serialize() const {
         const auto &fwd_adj_list = _table->get_fwd_adj_list();
         const auto &bwd_adj_list = _table->get_bwd_adj_list();
-        const char *data_folder = get_amazon0601_serialized_data_writing_path();
+        const char *data_folder = get_dataset_serialized_data_writing_path();
 
         if (!data_folder) {
             std::cerr << "Failed to read path for serializing Amazon0601" << std::endl;
@@ -84,7 +84,7 @@ namespace VFEngine {
     void SerializeDeserialize<T>::deserialize() const {
         const auto &fwd_adj_list = _table->get_fwd_adj_list();
         const auto &bwd_adj_list = _table->get_bwd_adj_list();
-        const char *data_folder = get_amazon0601_serialized_data_reading_path();
+        const char *data_folder = get_dataset_serialized_data_reading_path();
 
         if (!data_folder) {
             std::cerr << "Failed to read path for deserializing Amazon0601" << std::endl;

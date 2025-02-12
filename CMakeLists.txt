@@ -5,6 +5,10 @@ project(MySampleDB
         LANGUAGES CXX
 )
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+
 # Enable CTest for running tests
 enable_testing()
 
@@ -22,15 +26,36 @@ find_package(Threads REQUIRED)
 add_executable(mydb2 main.cpp)
 target_link_libraries(mydb2 PUBLIC libparser libgraph liboperator libmem libengine libutils libdebug)
 
+function(enable_optimizations target)
+    option(DISABLE_PTR_ALIAS "Disable pointer aliasing" OFF)
+    option(ENABLE_BRANCHLESS_SINK_PACKED "Enable branchless Sink Packed Impl." OFF)
+    option(ARENA_ALLOCATOR "Enable arena alloc for vectors" OFF)
+    option(REMOVE_MEMSET "Remove memset for RLE slices" OFF)
+    if (DISABLE_PTR_ALIAS)
+        target_compile_definitions(${target} PRIVATE DISABLE_PTR_ALIAS)
+    endif ()
+    if (ENABLE_BRANCHLESS_SINK_PACKED)
+        target_compile_definitions(${target} PRIVATE ENABLE_BRANCHLESS_SINK_PACKED)
+    endif ()
+    if (ARENA_ALLOCATOR)
+        target_compile_definitions(${target} PRIVATE ARENA_ALLOCATOR)
+    endif ()
+    if (REMOVE_MEMSET)
+        target_compile_definitions(${target} PRIVATE REMOVE_MEMSET)
+    endif ()
+endfunction()
+
+
 # Enable debug or release-specific options
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_definitions(mydb2 PRIVATE MY_DEBUG)
-    target_compile_options(mydb2 PRIVATE -fsanitize=address -fsanitize=leak -g3)
+    target_compile_options(mydb2 PRIVATE -fsanitize=address -fsanitize=leak -g3 -Wall -Wextra -Wpedantic -Werror)
     target_link_options(mydb2 PRIVATE -fsanitize=address -fsanitize=leak)
 elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
     target_compile_options(mydb2 PRIVATE -Ofast -march=native)
 endif ()
 
+enable_optimizations(mydb2)
 
 # Add the tests directory
 add_subdirectory(tests)

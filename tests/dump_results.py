@@ -20,6 +20,7 @@ class TestMetrics:
     branch_misses_atom: List[int]
     cache_misses_atom: List[int]
     elapsed_time: List[float]
+    total_time: List[float]
     peak_memory: List[float]
     is_packed: int
     speedup: float = 0.0
@@ -141,6 +142,7 @@ def parse_log_file(content: str, num_runs: int) -> List[TestMetrics]:
                 cycles_atom=[],
                 page_faults=[],
                 elapsed_time=[],
+                total_time=[],
                 peak_memory=[],
                 branch_misses_atom=[],
                 cache_misses_atom=[],
@@ -176,11 +178,16 @@ def parse_log_file(content: str, num_runs: int) -> List[TestMetrics]:
         if faults_match:
             current_test.page_faults.append(parse_number(faults_match.group(1)))
 
-        time_match = re.findall(r'Execution time: (\d+) ms', section)
+        time_match = re.findall(r'Execution time: (\d+) us', section)
         if time_match:
             for time in time_match:
                 current_test.elapsed_time.append(float(time))
 
+        total_time_match = re.findall(r'Total time: (\d+) us', section)
+        if total_time_match:
+            for time in total_time_match:
+                current_test.total_time.append(float(time))
+        
         memory_match = re.findall(r'Peak Memory Usage: (\d+\.\d+)', section)
         if memory_match:
             for mem in memory_match:
@@ -227,7 +234,8 @@ def write_experimental_results(tests: List[TestMetrics], experiment_name: str, o
                 'page_faults': test.page_faults,
                 'branch_misses': test.branch_misses_atom,
                 'cache_misses': test.cache_misses_atom,
-                'time_ms': test.elapsed_time,
+                'elapsed_time_us': test.elapsed_time,
+                'total_time_us': test.total_time,
                 'memory_mb': test.peak_memory
             }
 
@@ -244,7 +252,7 @@ def write_experimental_results(tests: List[TestMetrics], experiment_name: str, o
 
 def main():
     if len(sys.argv) != 5:
-        print("Usage: python script.py <log_file_path> <num_runs> <experiment_name> <output_path>")
+        print("Usage: python dump_results.py <log_file_path> <num_runs> <experiment_name> <output_path>")
         sys.exit(1)
 
     with open(sys.argv[1], 'r') as f:

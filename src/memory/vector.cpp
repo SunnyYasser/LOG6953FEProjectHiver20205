@@ -1,29 +1,51 @@
 #include "include/vector.hh"
+#include <cstring>
 #include <iostream>
+#include "../graph/include/arena_allocator.hh"
 
 namespace VFEngine {
+#ifdef ARENA_ALLOCATOR
+    Vector::Vector() :
+        _state(new(ArenaAllocator::getInstance().allocate(sizeof(State))) State(State::MAX_VECTOR_SIZE)) {
+
+        _values = static_cast<uint64_t *>(
+                ArenaAllocator::getInstance().allocate(State::MAX_VECTOR_SIZE * sizeof(uint64_t)));
+        set_default_values();
+    }
+
+    Vector::Vector(const int32_t &size) :
+        _state(new(ArenaAllocator::getInstance().allocate(sizeof(State))) State(size)) {
+
+        _values = static_cast<uint64_t *>(
+                ArenaAllocator::getInstance().allocate(State::MAX_VECTOR_SIZE * sizeof(uint64_t)));
+        set_default_values();
+    }
+
+    Vector::Vector(const State *state) : _state(const_cast<State *>(state)) {
+        _values = static_cast<uint64_t *>(
+                ArenaAllocator::getInstance().allocate(State::MAX_VECTOR_SIZE * sizeof(uint64_t)));
+        set_default_values();
+    }
+#else
     Vector::Vector() :
         _state(std::make_shared<State>(State::MAX_VECTOR_SIZE)),
         _values_ptr(std::make_unique<uint64_t[]>(State::MAX_VECTOR_SIZE)) {
         _values = _values_ptr.get();
         set_default_values();
     }
-
     Vector::Vector(const int32_t &size) :
         _state(std::make_shared<State>(size)), _values_ptr(std::make_unique<uint64_t[]>(State::MAX_VECTOR_SIZE)) {
         _values = _values_ptr.get();
         set_default_values();
     }
-
     Vector::Vector(const std::shared_ptr<State> &state) :
         _state(state), _values_ptr(std::make_unique<uint64_t[]>(State::MAX_VECTOR_SIZE)) {
         _values = _values_ptr.get();
         set_default_values();
     }
 
-    void Vector::set_default_values() const {
-        std::fill_n(_values, State::MAX_VECTOR_SIZE, 0); // just a default value
-    }
+#endif
+    void Vector::set_default_values() const { memset(_values, 0, State::MAX_VECTOR_SIZE * sizeof(uint64_t)); }
 
     void Vector::allocate_filter() const { _state->allocate_filter(); }
 

@@ -20,7 +20,8 @@ function(add_profiling_test name source)
         set_tests_properties(${name} PROPERTIES RUN_SERIAL TRUE)
     else ()
         # Add -g only when profiling is disabled
-        target_compile_options(${name} PRIVATE -g -fsanitize=address -fsanitize=leak)
+        target_compile_options(${name} PRIVATE -fsanitize=address -fsanitize=leak -g3 -Wall -Wextra -Wpedantic -Werror)
+
         target_link_options(${name} PRIVATE -fsanitize=address -fsanitize=leak)
         add_test(NAME ${name} COMMAND ${CMAKE_BINARY_DIR}/tests/${name})
     endif ()
