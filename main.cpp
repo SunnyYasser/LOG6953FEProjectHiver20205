@@ -1,7 +1,9 @@
 #include <cstring>
+#include <hardcoded_linear_plan_sink_packed.hh>
 #include <iostream>
 #include <memory>
 #include <sink_no_op.hh>
+#include <sink_packed_min_operator.hh>
 #include <sink_packed_operator.hh>
 #include <sys/resource.h>
 #include <unistd.h>
@@ -210,6 +212,59 @@ void parser_example2() {
               << std::endl;
 }
 
+void linear_sink_example() {
+    const std::string datalog = "a->b,b->c";
+    const std::vector<std::string> column_ordering = {"a", "b", "c"};
+    const std::unordered_map<std::string, std::string> column_alias_map{{"a", "src"}, {"b", "src"}, {"c", "dest"}};
+    const std::vector<std::string> column_names{"src", "dest"};
+
+    const auto parser = std::make_unique<VFEngine::QueryParser>(
+            datalog, column_ordering, true, VFEngine::SinkType::HARDCODED_LINEAR, column_names, column_alias_map);
+
+    const auto pipeline = parser->build_physical_pipeline();
+    pipeline->init();
+    pipeline->execute();
+
+    std::cout << "count (*) " << datalog << " = " << VFEngine::SinkLinearHardcoded::get_total_row_size_if_materialized()
+              << std::endl;
+
+
+    const auto parser2 = std::make_unique<VFEngine::QueryParser>(
+            datalog, column_ordering, false, VFEngine::SinkType::UNPACKED, column_names, column_alias_map);
+
+    const auto pipeline2 = parser2->build_physical_pipeline();
+    pipeline2->init();
+    pipeline2->execute();
+
+    std::cout << "count (*) " << datalog << " = " << VFEngine::Sink::get_total_row_size_if_materialized() << std::endl;
+}
+
+void min_sink_example() {
+    const std::string datalog = "a->b,b->c,c->d,d->e";
+    const std::vector<std::string> column_ordering = {"a", "b", "c", "d", "e"};
+    const std::unordered_map<std::string, std::string> column_alias_map{
+            {"a", "src"}, {"b", "src"}, {"c", "src"}, {"d", "src"}, {"e", "dest"}};
+
+    // const std::string datalog = "a->b,b->c";
+    // const std::vector<std::string> column_ordering = {"a", "b", "c"};
+    // const std::unordered_map<std::string, std::string> column_alias_map{{"a", "src"}, {"b", "src"}, {"c", "dest"}};
+    const std::vector<std::string> column_names{"src", "dest"};
+
+    const auto parser = std::make_unique<VFEngine::QueryParser>(
+            datalog, column_ordering, true, VFEngine::SinkType::PACKED_MIN, column_names, column_alias_map);
+
+    const auto pipeline = parser->build_physical_pipeline();
+    pipeline->init();
+    pipeline->execute();
+
+    const auto freqs = VFEngine::SinkPackedMin::get_min_values();
+    std::cout << "a" << " = " << freqs[0] << std::endl;
+    std::cout << "b" << " = " << freqs[1] << std::endl;
+    std::cout << "c" << " = " << freqs[2] << std::endl;
+    std::cout << "d" << " = " << freqs[3] << std::endl;
+    std::cout << "e" << " = " << freqs[4] << std::endl;
+}
+
 int main() {
     if (std::getenv("GETCHAR_IN_MAIN")) {
         enable_debug();
@@ -221,7 +276,9 @@ int main() {
 
     enable_component_debug();
     // parser_example();
-    parser_example2();
+    // parser_example2();
+    // linear_sink_example();
+    min_sink_example();
 
     struct rusage usage;
     // Get resource usage

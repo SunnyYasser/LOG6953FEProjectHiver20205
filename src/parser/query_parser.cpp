@@ -2,8 +2,9 @@
 
 #include <cassert>
 #include <factorized_tree.hh>
+#include <hardcoded_linear_plan_sink_packed.hh>
 #include <iostream>
-#include <sink_packed_operator.hh>
+#include <sink_packed_min_operator.hh>
 #include <sstream>
 #include "../operator/include/index_nested_loop_join_operator.hh"
 #include "../operator/include/index_nested_loop_join_packed_operator.hh"
@@ -12,6 +13,8 @@
 #include "../operator/include/sink_no_op.hh"
 #include "../operator/include/sink_operator.hh"
 #include "../operator/include/sink_packed_operator.hh"
+#include "../operator/include/sink_packed_post_order_operator.hh"
+
 
 #ifndef NDEBUG
 #define M_Assert(Expr, Msg) __M_Assert(#Expr, Expr, __FILE__, __LINE__, Msg)
@@ -41,6 +44,9 @@ namespace VFEngine {
             assert(_sink_type != SinkType::UNPACKED);
         } else {
             assert(_sink_type != SinkType::PACKED);
+            assert(_sink_type != SinkType::PACKED_VECTORIZED);
+            assert(_sink_type != SinkType::HARDCODED_LINEAR);
+            assert(_sink_type != SinkType::PACKED_MIN);
         }
     }
 
@@ -55,6 +61,9 @@ namespace VFEngine {
             assert(_sink_type != SinkType::UNPACKED);
         } else {
             assert(_sink_type != SinkType::PACKED);
+            assert(_sink_type != SinkType::PACKED_VECTORIZED);
+            assert(_sink_type != SinkType::HARDCODED_LINEAR);
+            assert(_sink_type != SinkType::PACKED_MIN);
         }
     }
 
@@ -158,6 +167,14 @@ namespace VFEngine {
             case SinkType::NO_OP:
                 _logical_pipeline.push_back({OP_SINK_NO_OP, "", "", ANY});
                 break;
+            case SinkType::PACKED_VECTORIZED:
+                _logical_pipeline.push_back({OP_SINK_PACKED_VECTORIZED, "", "", ANY});
+                break;
+            case SinkType::HARDCODED_LINEAR:
+                _logical_pipeline.push_back({OP_SINK_PACKED_HARDCODED_LINEAR, "", "", ANY});
+                break;
+            case SinkType::PACKED_MIN:
+                _logical_pipeline.push_back({OP_SINK_PACKED_MIN, "", "", ANY});
         }
     }
 
@@ -190,6 +207,32 @@ namespace VFEngine {
                         _ftree = create_factorized_tree();
                     }
                     auto sink_packed = std::static_pointer_cast<Operator>(std::make_shared<SinkPacked>(_ftree));
+                    physical_pipeline.push_back(sink_packed);
+                } break;
+
+                case OP_SINK_PACKED_VECTORIZED: {
+                    if (!_ftree) {
+                        _ftree = create_factorized_tree();
+                    }
+                    auto sink_packed =
+                            std::static_pointer_cast<Operator>(std::make_shared<SinkPackedPostOrder>(_ftree));
+                    physical_pipeline.push_back(sink_packed);
+                } break;
+
+                case OP_SINK_PACKED_HARDCODED_LINEAR: {
+                    if (!_ftree) {
+                        _ftree = create_factorized_tree();
+                    }
+                    auto sink_packed =
+                            std::static_pointer_cast<Operator>(std::make_shared<SinkLinearHardcoded>(_ftree));
+                    physical_pipeline.push_back(sink_packed);
+                } break;
+
+                case OP_SINK_PACKED_MIN: {
+                    if (!_ftree) {
+                        _ftree = create_factorized_tree();
+                    }
+                    auto sink_packed = std::static_pointer_cast<Operator>(std::make_shared<SinkPackedMin>(_ftree));
                     physical_pipeline.push_back(sink_packed);
                 } break;
 
