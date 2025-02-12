@@ -1,6 +1,4 @@
 #include "include/sink_packed_operator.hh"
-
-#include <iostream>
 #include <unordered_set>
 #include <vector>
 
@@ -25,9 +23,7 @@ namespace VFEngine {
         const auto &vec = op->_value;
         const auto &rle = vec->_state->_rle;
         const auto &children = op->_children;
-        std::cout << "EBP_LEAF" << std::endl;
 #ifdef REMOVE_MEMSET
-        std::cout << "EBP_RM_LEAF" << std::endl;
         const auto &rle_start_pos = vec->_state->_rle_start_pos;
         return (parent_idx + 1 >= rle_start_pos) *
                (rle[parent_idx + 1] - rle[parent_idx] * (parent_idx + 1 > rle_start_pos));
@@ -42,9 +38,7 @@ namespace VFEngine {
         const auto &vec = op->_value;
         const auto &rle = vec->_state->_rle;
         const auto &children = op->_children;
-        std::cout << "NO_EBP_LEAF" << std::endl;
 #ifdef REMOVE_MEMSET
-        std::cout << "NO_EBP_RM_LEAF" << std::endl;
         const auto &rle_start_pos = vec->_state->_rle_start_pos;
         if (parent_idx + 1 < rle_start_pos) {
             return 0;
