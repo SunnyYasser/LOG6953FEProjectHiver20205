@@ -4,7 +4,7 @@
 #include "../graph/include/arena_allocator.hh"
 
 namespace VFEngine {
-#ifdef ARENA_ALLOCATOR
+#ifdef VECTOR_STATE_ARENA_ALLOCATOR
     Vector::Vector() :
         _state(new(ArenaAllocator::getInstance().allocate(sizeof(State))) State(State::MAX_VECTOR_SIZE)) {
 

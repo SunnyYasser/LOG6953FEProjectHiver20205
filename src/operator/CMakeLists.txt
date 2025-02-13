@@ -11,16 +11,16 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_definitions(MY_DEBUG)
 endif ()
 
-if (DISABLE_PTR_ALIAS)
-    add_compile_definitions(DISABLE_PTR_ALIAS)
+if (STORAGE_TO_VECTOR_MEMCPY_PTR_ALIAS)
+    add_compile_definitions(STORAGE_TO_VECTOR_MEMCPY_PTR_ALIAS)
 endif ()
 
-if (ARENA_ALLOCATOR)
-    add_compile_definitions(ARENA_ALLOCATOR)
+if (VECTOR_STATE_ARENA_ALLOCATOR)
+    add_compile_definitions(VECTOR_STATE_ARENA_ALLOCATOR)
 endif ()
 
-if (REMOVE_MEMSET)
-    add_compile_definitions(REMOVE_MEMSET)
+if (MEMSET_TO_SET_VECTOR_SLICE)
+    add_compile_definitions(MEMSET_TO_SET_VECTOR_SLICE)
 endif ()
 
 if (ENABLE_BRANCHLESS_SINK_PACKED)

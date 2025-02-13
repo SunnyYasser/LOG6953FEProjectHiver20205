@@ -34,7 +34,12 @@ namespace VFEngine {
         static unsigned long total_row_size_if_materialized;
         unsigned long _exec_call_counter{};
         std::shared_ptr<ContextMemory> _context;
+
+#ifdef VECTOR_STATE_ARENA_ALLOCATOR
+        const State* _leaf_state;
+#else
         const std::shared_ptr<State>* _leaf_state;
+#endif
 
 #ifdef MY_DEBUG
         std::unique_ptr<OperatorDebugUtility> _debug;

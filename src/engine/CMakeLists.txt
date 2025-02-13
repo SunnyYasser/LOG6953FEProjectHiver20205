@@ -4,10 +4,6 @@ target_link_libraries(libengine PUBLIC liboperator PUBLIC libmem PUBLIC libgraph
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_definitions(MY_DEBUG)
 endif()
-if(DISABLE_PTR_ALIAS)
-    add_compile_definitions(DISABLE_PTR_ALIAS)
-endif()
-
-if(ARENA_ALLOCATOR)
-    add_compile_definitions(ARENA_ALLOCATOR)
+if(VECTOR_STATE_ARENA_ALLOCATOR)
+    add_compile_definitions(VECTOR_STATE_ARENA_ALLOCATOR)
 endif()

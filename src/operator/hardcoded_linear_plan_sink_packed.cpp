@@ -20,8 +20,11 @@ namespace VFEngine {
         _exec_call_counter++;
         update_total_row_size_if_materialized();
     }
-
+#ifdef VECTOR_STATE_ARENA_ALLOCATOR
+    static ulong count(const State* leaf) {
+#else
     static ulong count(const std::shared_ptr<State> &leaf) {
+#endif
         const auto &rle = leaf->_rle;
         const auto &rle_size = leaf->_rle_size;
         ulong ans = 0;
@@ -33,7 +36,11 @@ namespace VFEngine {
     }
 
     void SinkLinearHardcoded::update_total_row_size_if_materialized() {
+#ifdef VECTOR_STATE_ARENA_ALLOCATOR
+        total_row_size_if_materialized += count(_leaf_state);
+#else
         total_row_size_if_materialized += count(*_leaf_state);
+#endif
     }
 
     void SinkLinearHardcoded::update_total_column_size_if_materialized() {}
@@ -64,7 +71,11 @@ namespace VFEngine {
 
     void SinkLinearHardcoded::capture_leaf_node(const std::shared_ptr<FactorizedTreeElement> &root) {
         if (root->_children.empty()) {
+#ifdef VECTOR_STATE_ARENA_ALLOCATOR
+            _leaf_state = root->_value->_state;
+#else
             _leaf_state = &(root->_value->_state);
+#endif
             return;
         }
         assert(root->_children.size() == 1 && "Node has more than one child");

@@ -7,7 +7,7 @@
 #include "state.hh"
 
 namespace VFEngine {
-#ifdef ARENA_ALLOCATOR
+#ifdef VECTOR_STATE_ARENA_ALLOCATOR
     class Vector {
     public:
         Vector();

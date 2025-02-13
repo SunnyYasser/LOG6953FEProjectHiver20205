@@ -45,7 +45,7 @@ namespace VFEngine {
 
                 bool add_to_unique_states = true;
 
-#ifdef ARENA_ALLOCATOR
+#ifdef VECTOR_STATE_ARENA_ALLOCATOR
                 for (auto &unique_state: _unique_states) {
                     if (unique_state == state) {
                         add_to_unique_states = false;

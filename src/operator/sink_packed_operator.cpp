@@ -23,32 +23,30 @@ namespace VFEngine {
         const auto &vec = op->_value;
         const auto &rle = vec->_state->_rle;
         const auto &children = op->_children;
-#ifdef REMOVE_MEMSET
+#ifdef MEMSET_TO_SET_VECTOR_SLICE
+        return rle[parent_idx + 1] - rle[parent_idx];
+#else
         const auto &rle_start_pos = vec->_state->_rle_start_pos;
         return (parent_idx + 1 >= rle_start_pos) *
                (rle[parent_idx + 1] - rle[parent_idx] * (parent_idx + 1 > rle_start_pos));
-#else
-        return rle[parent_idx + 1] - rle[parent_idx];
 #endif
     }
 
 #else
-    // For leaf nodes
     ulong count_leaf(const std::shared_ptr<FactorizedTreeElement> &op, const uint32_t parent_idx) {
         const auto &vec = op->_value;
         const auto &rle = vec->_state->_rle;
         const auto &children = op->_children;
-#ifdef REMOVE_MEMSET
+#ifdef MEMSET_TO_SET_VECTOR_SLICE
+        return rle[parent_idx + 1] - rle[parent_idx];
+#else
         const auto &rle_start_pos = vec->_state->_rle_start_pos;
         if (parent_idx + 1 < rle_start_pos) {
             return 0;
         }
         return parent_idx + 1 > rle_start_pos ? rle[parent_idx + 1] - rle[parent_idx] : rle[parent_idx + 1];
-#else
-        return rle[parent_idx + 1] - rle[parent_idx];
 #endif
     }
-
 #endif
 
 #ifdef ENABLE_BRANCHLESS_SINK_PACKED
@@ -59,13 +57,13 @@ namespace VFEngine {
         const auto &size = vec->_state->_state_info._size;
         const auto &rle = vec->_state->_rle;
 
-#ifdef REMOVE_MEMSET
+#ifdef MEMSET_TO_SET_VECTOR_SLICE
+        const auto start = std::max(rle[parent_idx], static_cast<uint32_t>(start_pos));
+        const auto end = std::min(rle[parent_idx + 1], static_cast<uint32_t>(start_pos) + size);
+#else
         const auto &rle_start_pos = vec->_state->_rle_start_pos;
         auto rle_val = parent_idx == rle_start_pos - 1 ? 0 : rle[parent_idx];
         const auto start = std::max(rle_val, static_cast<uint32_t>(start_pos));
-        const auto end = std::min(rle[parent_idx + 1], static_cast<uint32_t>(start_pos) + size);
-#else
-        const auto start = std::max(rle[parent_idx], static_cast<uint32_t>(start_pos));
         const auto end = std::min(rle[parent_idx + 1], static_cast<uint32_t>(start_pos) + size);
 #endif
 
@@ -81,8 +79,6 @@ namespace VFEngine {
     }
 
 #else
-
-    // For internal nodes (general case)
     ulong count_internal(const std::shared_ptr<FactorizedTreeElement> &op, const uint32_t parent_idx) {
         const auto &vec = op->_value;
         const auto &children = op->_children;
@@ -90,13 +86,13 @@ namespace VFEngine {
         const auto &size = vec->_state->_state_info._size;
         const auto &rle = vec->_state->_rle;
 
-#ifdef REMOVE_MEMSET
+#ifdef MEMSET_TO_SET_VECTOR_SLICE
+        const auto start = std::max(rle[parent_idx], static_cast<uint32_t>(start_pos));
+        const auto end = std::min(rle[parent_idx + 1], static_cast<uint32_t>(start_pos) + size);
+#else
         const auto &rle_start_pos = vec->_state->_rle_start_pos;
         auto rle_val = parent_idx == rle_start_pos - 1 ? 0 : rle[parent_idx];
         const auto start = std::max(rle_val, static_cast<uint32_t>(start_pos));
-        const auto end = std::min(rle[parent_idx + 1], static_cast<uint32_t>(start_pos) + size);
-#else
-        const auto start = std::max(rle[parent_idx], static_cast<uint32_t>(start_pos));
         const auto end = std::min(rle[parent_idx + 1], static_cast<uint32_t>(start_pos) + size);
 #endif
 
@@ -133,7 +129,9 @@ namespace VFEngine {
         return sum;
     }
 
-    void SinkPacked::update_total_row_size_if_materialized() { total_row_size_if_materialized += count(_ftree); }
+    void SinkPacked::update_total_row_size_if_materialized() {
+        total_row_size_if_materialized += count(_ftree);
+    }
 
     void SinkPacked::update_total_column_size_if_materialized() {}
 
@@ -167,8 +165,12 @@ namespace VFEngine {
         fill_vectors_in_ftree();
     }
 
-    ulong SinkPacked::get_total_row_size_if_materialized() { return total_row_size_if_materialized; }
+    ulong SinkPacked::get_total_row_size_if_materialized() {
+        return total_row_size_if_materialized;
+    }
 
-    ulong SinkPacked::get_exec_call_counter() const { return _exec_call_counter; }
+    ulong SinkPacked::get_exec_call_counter() const {
+        return _exec_call_counter;
+    }
 
 } // namespace VFEngine

@@ -13,8 +13,8 @@ namespace VFEngine {
         int32_t _curr_start_pos;
     };
 
-#ifdef ARENA_ALLOCATOR
-#ifdef REMOVE_MEMSET
+#ifdef VECTOR_STATE_ARENA_ALLOCATOR
+#ifdef MEMSET_TO_SET_VECTOR_SLICE
     class State {
     public:
         State() = delete;
@@ -26,7 +26,6 @@ namespace VFEngine {
         StateInfo _state_info;
         int32_t _rle_size;
         int32_t _filter_size;
-        int32_t _rle_start_pos;
         uint32_t *_rle, *_filter_list;
     };
 #else
@@ -41,12 +40,13 @@ namespace VFEngine {
         StateInfo _state_info;
         int32_t _rle_size;
         int32_t _filter_size;
+        int32_t _rle_start_pos;
         uint32_t *_rle, *_filter_list;
     };
 #endif
 
 #else
-#ifdef REMOVE_MEMSET
+#ifdef MEMSET_TO_SET_VECTOR_SLICE
     class State {
     public:
         State() = delete;
@@ -58,7 +58,6 @@ namespace VFEngine {
         StateInfo _state_info;
         int32_t _rle_size;
         int32_t _filter_size;
-        int32_t _rle_start_pos;
         std::unique_ptr<uint32_t[]> _rle, _filter_list;
     };
 #else
@@ -73,6 +72,7 @@ namespace VFEngine {
         StateInfo _state_info;
         int32_t _rle_size;
         int32_t _filter_size;
+        int32_t _rle_start_pos;
         std::unique_ptr<uint32_t[]> _rle, _filter_list;
     };
 #endif
