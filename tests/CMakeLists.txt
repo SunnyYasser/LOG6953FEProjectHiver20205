@@ -16,7 +16,7 @@ function(add_profiling_test name source)
 
     if (RUN_WITH_PROFILING)
         target_compile_options(${name} PRIVATE -g)
-        add_test(NAME ${name} COMMAND bash ${CMAKE_BINARY_DIR}/run_with_profiling.sh ${CMAKE_BINARY_DIR}/tests/${name} 3)
+        add_test(NAME ${name} COMMAND bash ${CMAKE_BINARY_DIR}/run_with_profiling.sh ${CMAKE_BINARY_DIR}/tests/${name} ${NUM_RUNS})
         set_tests_properties(${name} PROPERTIES RUN_SERIAL TRUE)
     else ()
         # Add -g only when profiling is disabled

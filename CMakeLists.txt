@@ -8,6 +8,10 @@ project(MySampleDB
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Set default number of runs for profiling tests
+if(NOT DEFINED NUM_RUNS)
+    set(NUM_RUNS 3)
+endif()
 
 # Enable CTest for running tests
 enable_testing()
@@ -56,6 +60,9 @@ elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
 endif ()
 
 enable_optimizations(mydb2)
+
+# Export NUM_RUNS to be used by subdirectories
+set(NUM_RUNS ${NUM_RUNS} CACHE STRING "Number of runs for profiling tests")
 
 # Add the tests directory
 add_subdirectory(tests)
