@@ -1,8 +1,6 @@
 #include "include/index_nested_loop_join_packed_operator.hh"
 #include <cmath>
 #include <cstring>
-#include <sink_packed_operator.hh>
-
 #include "include/operator_utils.hh"
 
 namespace VFEngine {
@@ -12,9 +10,8 @@ namespace VFEngine {
                                                          const bool &is_join_index_fwd,
                                                          const RelationType &relation_type,
                                                          const std::shared_ptr<Operator> &next_operator) :
-        Operator(next_operator), _input_vector(nullptr),
-        _output_vector(nullptr), _is_join_index_fwd(is_join_index_fwd), _relation_type(relation_type),
-        _input_attribute(input_attribute), _output_attribute(output_attribute) {
+        Operator(next_operator), _input_vector(nullptr), _output_vector(nullptr), _is_join_index_fwd(is_join_index_fwd),
+        _relation_type(relation_type), _input_attribute(input_attribute), _output_attribute(output_attribute) {
 #ifdef MY_DEBUG
         _debug = std::make_unique<OperatorDebugUtility>(this);
 #endif
@@ -84,6 +81,19 @@ namespace VFEngine {
         const auto &adj_list_ptr = *_adj_list;
         int32_t curr_ip_vector_pos = 0;
         ulong current_val = 0;
+        int32_t _op_filled_idx = 0;
+        int32_t _ip_values_idx = 0;
+        auto prev_ip_vector_pos = _ip_vector_pos;
+        uint64_t *new_values_to_be_filled = nullptr;
+        int32_t new_values_size = 0;
+        int32_t remaining_space = 0;
+        int32_t remaining_values = 0;
+        int32_t elements_to_copy = 0;
+        bool is_chunk_complete = false;
+        bool should_process = false;
+        int32_t window_start = 0;
+        int32_t window_size = 0;
+
 #ifdef MEMSET_TO_SET_VECTOR_SLICE
         memset(&_op_vector_rle[1], 0, _ip_vector_pos * sizeof(_op_vector_rle[0]));
         _op_vector_rle_size += _ip_vector_pos;
@@ -92,9 +102,6 @@ namespace VFEngine {
         _op_vector_rle_size += _ip_vector_pos;
         _op_rle_start_pos = _ip_vector_pos == 0 ? 0 : _op_vector_rle_size;
 #endif
-        int32_t _op_filled_idx = 0;
-        int32_t _ip_values_idx = 0;
-        auto prev_ip_vector_pos = _ip_vector_pos;
         for (auto idx = 0; idx < _ip_vector_size;) {
             curr_ip_vector_pos = _ip_vector_pos + idx;
             current_val = _ip_vector_values[curr_ip_vector_pos];
@@ -102,12 +109,12 @@ namespace VFEngine {
 #ifdef STORAGE_TO_VECTOR_MEMCPY_PTR_ALIAS
             const uint64_t *__restrict__ new_values_to_be_filled = current_adj_node._values;
 #else
-            const auto &new_values_to_be_filled = current_adj_node._values;
+            new_values_to_be_filled = current_adj_node._values;
 #endif
-            const auto new_values_size = current_adj_node._size;
-            const auto remaining_space = State::MAX_VECTOR_SIZE - _op_filled_idx;
-            const auto remaining_values = new_values_size - _ip_values_idx;
-            const auto elements_to_copy = std::min(remaining_space, static_cast<int32_t>(remaining_values));
+            new_values_size = current_adj_node._size;
+            remaining_space = State::MAX_VECTOR_SIZE - _op_filled_idx;
+            remaining_values = new_values_size - _ip_values_idx;
+            elements_to_copy = std::min(remaining_space, static_cast<int32_t>(remaining_values));
             std::memcpy(&_op_vector_values[_op_filled_idx], &new_values_to_be_filled[_ip_values_idx],
                         elements_to_copy * sizeof(_op_vector_values[0]));
 
@@ -120,18 +127,17 @@ namespace VFEngine {
             update_rle(_op_vector_rle, _op_vector_rle_size, elements_to_copy, _op_rle_start_pos);
 #endif
             _op_vector_size += elements_to_copy;
-
-            const bool is_chunk_complete = (_ip_values_idx >= new_values_size);
+            is_chunk_complete = (_ip_values_idx >= new_values_size);
             idx += is_chunk_complete;
             _ip_values_idx *= !is_chunk_complete;
+            should_process = (_op_filled_idx >= State::MAX_VECTOR_SIZE) | (idx >= _ip_vector_size);
 
-            const bool should_process = (_op_filled_idx >= State::MAX_VECTOR_SIZE) | (idx >= _ip_vector_size);
             if (should_process) {
-                const auto window_start = prev_ip_vector_pos;
-                const auto window_size = curr_ip_vector_pos - prev_ip_vector_pos + 1;
+                window_start = prev_ip_vector_pos;
+                window_size = curr_ip_vector_pos - prev_ip_vector_pos + 1;
 
-                _input_vector->_state->_state_info._curr_start_pos = window_start;
-                _input_vector->_state->_state_info._size = window_size;
+                input_state->_state_info._curr_start_pos = window_start;
+                input_state->_state_info._size = window_size;
 
 #ifdef MY_DEBUG
                 _debug->log_vector(_input_vector, _output_vector, fn_name);
@@ -139,13 +145,13 @@ namespace VFEngine {
 
                 get_next_operator()->execute();
 
-                _output_vector->_state->_state_info._size = 0;
-                _output_vector->_state->_rle_size = 1;
-                _output_vector->_state->_state_info._curr_start_pos = 0;
+                output_state->_state_info._size = 0;
+                output_state->_rle_size = 1;
+                output_state->_state_info._curr_start_pos = 0;
                 _op_filled_idx = 0;
 
-                _input_vector->_state->_state_info._curr_start_pos = _ip_vector_pos;
-                _input_vector->_state->_state_info._size = _ip_vector_size;
+                input_state->_state_info._curr_start_pos = _ip_vector_pos;
+                input_state->_state_info._size = _ip_vector_size;
 
                 prev_ip_vector_pos = curr_ip_vector_pos + (_ip_values_idx == 0);
 
@@ -181,8 +187,6 @@ namespace VFEngine {
         _input_vector = context->read_vector_for_column(_input_attribute);
         _output_vector = context->read_vector_for_column(_output_attribute);
         _output_vector->allocate_rle();
-        //_input_vector->allocate_selection_bitmask();
-        //_output_vector->allocate_selection_bitmask();
         if (_is_join_index_fwd)
             _adj_list = &(datastore->get_fwd_adj_lists());
         else
