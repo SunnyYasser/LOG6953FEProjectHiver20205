@@ -50,11 +50,15 @@ namespace VFEngine {
         const auto &rle = vec->_state->_rle;
         const auto attr_idx = op->_attribute[0] - 'a'; // Convert attribute name to index
         const auto &values = vec->_values;
+        const BitMask<State::MAX_VECTOR_SIZE> &_ip_selection_mask = *(vec->_state->_selection_mask);
 
         const auto start = std::max(rle[parent_idx], static_cast<uint32_t>(start_pos));
         const auto end = std::min(rle[parent_idx + 1], static_cast<uint32_t>(start_pos) + size);
 
         for (auto i = start; i < end; i++) {
+            // if (!TEST_BIT(_ip_selection_mask, i)) {
+            //     continue;
+            // }
             min_values[attr_idx] = std::min(min_values[attr_idx], values[i]);
             for (const auto &node: children) {
                 if (node->_children.empty()) {
@@ -73,9 +77,13 @@ namespace VFEngine {
         const auto &curr_size = vec->_state->_state_info._size;
         const auto attr_idx = root->_attribute[0] - 'a'; // Convert attribute name to index
         const auto &values = vec->_values;
+        const BitMask<State::MAX_VECTOR_SIZE> &_ip_selection_mask = *(vec->_state->_selection_mask);
 
         for (auto i = 0; i < curr_size; i++) {
             const auto parent_idx = static_cast<uint32_t>(start_pos + i);
+            // if (!TEST_BIT(_ip_selection_mask, parent_idx)) {
+            //     continue;
+            // }
             min_values[attr_idx] = std::min(min_values[attr_idx], values[parent_idx]);
             for (const auto &node: children) {
                 if (node->_children.empty()) {

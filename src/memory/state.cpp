@@ -1,6 +1,5 @@
 #include "include/state.hh"
-#include <fstream>
-#include <valarray>
+#include <cstring>
 #include "../graph/include/arena_allocator.hh"
 
 namespace VFEngine {
@@ -8,13 +7,15 @@ namespace VFEngine {
 #ifdef VECTOR_STATE_ARENA_ALLOCATOR
 #ifdef MEMSET_TO_SET_VECTOR_SLICE
     State::State(const int32_t &size) :
-        _state_info(size), _rle_size(-1), _filter_size(-1), _filter_list(nullptr), _rle(nullptr) {}
+        _state_info(size), _rle_size(-1), _filter_size(-1), _filter_list(nullptr), _rle(nullptr),
+        _selection_mask(nullptr) {}
 
     void State::allocate_filter() {
         if (_filter_list) {
             return;
         }
-        _filter_list = static_cast<uint32_t *>(ArenaAllocator::getInstance().allocate(MAX_VECTOR_SIZE * sizeof(uint32_t)));
+        _filter_list =
+                static_cast<uint32_t *>(ArenaAllocator::getInstance().allocate(MAX_VECTOR_SIZE * sizeof(uint32_t)));
         _filter_size = 0;
     }
 
@@ -22,9 +23,19 @@ namespace VFEngine {
         if (_rle) {
             return;
         }
-        _rle = static_cast<uint32_t *>(ArenaAllocator::getInstance().allocate((MAX_VECTOR_SIZE + 1) * sizeof(uint32_t)));
-        _rle[0] = 0;
+        _rle = static_cast<uint32_t *>(
+                ArenaAllocator::getInstance().allocate((MAX_VECTOR_SIZE + 1) * sizeof(uint32_t)));
+        std::memset(_rle, 0, (MAX_VECTOR_SIZE + 1) * sizeof(uint32_t));
         _rle_size = 1;
+    }
+
+    void State::allocate_selection_bitmask() {
+        if (_selection_mask) {
+            return;
+        }
+        _selection_mask = static_cast<BitMask<MAX_VECTOR_SIZE> *>(
+                ArenaAllocator::getInstance().allocate(sizeof(BitMask<MAX_VECTOR_SIZE>)));
+        SET_ALL_BITS(*_selection_mask);
     }
 
     void State::print_debug_info(std::ofstream &logfile) const {
@@ -52,13 +63,15 @@ namespace VFEngine {
     }
 #else
     State::State(const int32_t &size) :
-        _state_info(size), _rle_size(-1), _filter_size(-1), _rle_start_pos(0), _filter_list(nullptr), _rle(nullptr) {}
+        _state_info(size), _rle_size(-1), _filter_size(-1), _rle_start_pos(0), _filter_list(nullptr), _rle(nullptr),
+        _selection_mask(nullptr) {}
 
     void State::allocate_filter() {
         if (_filter_list) {
             return;
         }
-        _filter_list = static_cast<uint32_t *>(ArenaAllocator::getInstance().allocate(MAX_VECTOR_SIZE * sizeof(uint32_t)));
+        _filter_list =
+                static_cast<uint32_t *>(ArenaAllocator::getInstance().allocate(MAX_VECTOR_SIZE * sizeof(uint32_t)));
         _filter_size = 0;
     }
 
@@ -66,9 +79,19 @@ namespace VFEngine {
         if (_rle) {
             return;
         }
-        _rle = static_cast<uint32_t *>(ArenaAllocator::getInstance().allocate((MAX_VECTOR_SIZE + 1) * sizeof(uint32_t)));
-        _rle[0] = 0;
+        _rle = static_cast<uint32_t *>(
+                ArenaAllocator::getInstance().allocate((MAX_VECTOR_SIZE + 1) * sizeof(uint32_t)));
+        std::memset(_rle, 0, (MAX_VECTOR_SIZE + 1) * sizeof(uint32_t));
         _rle_size = 1;
+    }
+
+    void State::allocate_selection_bitmask() {
+        if (_selection_mask) {
+            return;
+        }
+        _selection_mask = static_cast<BitMask<MAX_VECTOR_SIZE> *>(
+                ArenaAllocator::getInstance().allocate(sizeof(BitMask<MAX_VECTOR_SIZE>)));
+        SET_ALL_BITS(*_selection_mask);
     }
 
     void State::print_debug_info(std::ofstream &logfile) const {
@@ -114,8 +137,16 @@ namespace VFEngine {
             return;
         }
         _rle = std::make_unique<uint32_t[]>(State::MAX_VECTOR_SIZE + 1);
-        _rle[0] = 0;
+        std::memset(_rle.get(), 0, (MAX_VECTOR_SIZE + 1) * sizeof(uint32_t));
         _rle_size = 1;
+    }
+
+    void State::allocate_selection_bitmask() {
+        if (_selection_mask) {
+            return;
+        }
+        _selection_mask = std::make_unique<BitMask<MAX_VECTOR_SIZE>>();
+        SET_ALL_BITS(*_selection_mask);
     }
 
     void State::print_debug_info(std::ofstream &logfile) const {
@@ -157,8 +188,16 @@ namespace VFEngine {
             return;
         }
         _rle = std::make_unique<uint32_t[]>(State::MAX_VECTOR_SIZE + 1);
-        _rle[0] = 0;
+        std::memset(_rle.get(), 0, (MAX_VECTOR_SIZE + 1) * sizeof(uint32_t));
         _rle_size = 1;
+    }
+
+    void State::allocate_selection_bitmask() {
+        if (_selection_mask) {
+            return;
+        }
+        _selection_mask = std::make_unique<BitMask<MAX_VECTOR_SIZE>>();
+        SET_ALL_BITS(*_selection_mask);
     }
 
     void State::print_debug_info(std::ofstream &logfile) const {

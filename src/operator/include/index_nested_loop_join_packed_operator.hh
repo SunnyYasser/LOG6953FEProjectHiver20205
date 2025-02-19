@@ -28,13 +28,11 @@ namespace VFEngine {
     private:
         void execute_internal();
         [[nodiscard]] operator_type_t get_operator_type() const override;
-
-
+        const std::string _input_attribute, _output_attribute;
         Vector *_input_vector;
         Vector *_output_vector;
         bool _is_join_index_fwd;
         const RelationType _relation_type;
-        const std::string _input_attribute, _output_attribute;
         const std::unique_ptr<AdjList[]> *_adj_list{};
         uint64_t _adj_list_size{};
         unsigned long _exec_call_counter{};

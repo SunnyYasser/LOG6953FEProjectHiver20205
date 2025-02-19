@@ -49,6 +49,14 @@ namespace VFEngine {
                 return "INLJ_OPERATOR_PACKED";
             case OP_INLJ_NTO1:
                 return "INLJ_OPERATOR_NTO1";
+            case OP_SINK_PACKED_VECTORIZED:
+                return "SINK_OPERATOR_PACKED_VECTORIZED";
+            case OP_SINK_PACKED_MIN:
+                return "SINK_OPERATOR_PACKED_MIN";
+            case OP_SINK_PACKED_HARDCODED_LINEAR:
+                return "SINK_OPERATOR_PACKED_HARDCODED_LINEAR";
+            case OP_CASCADE_SELECTION:
+                return "CASCADE_SELECTION_OPERATOR";
             case OP_SIZE:
                 return "UNKNOWN_OPERATOR";
         }

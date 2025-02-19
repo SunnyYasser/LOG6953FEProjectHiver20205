@@ -51,6 +51,8 @@ namespace VFEngine {
 
     void Vector::allocate_rle() const { _state->allocate_rle(); }
 
+    void Vector::allocate_selection_bitmask() const { _state->allocate_selection_bitmask(); }
+
     void Vector::print_debug_info(std::ofstream &logfile) const {
         logfile << "VECTOR DEBUG INFO BEGINS:\n";
         _state->print_debug_info(logfile);

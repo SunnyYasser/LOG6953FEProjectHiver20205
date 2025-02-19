@@ -17,10 +17,10 @@ namespace VFEngine {
         return 1 + maxDepth;
     }
 
-    std::shared_ptr<FactorizedTreeElement>
+    FactorizedTreeElement *
     FactorizedTree::find_last_non_leaf_node(const std::shared_ptr<FactorizedTreeElement> &node) const {
         if (!node || node->_children.empty())
-            return node; // Node is a leaf
+            return node.get(); // Node is a leaf
 
         auto current = node;
         while (!current->_children.empty()) {
@@ -42,8 +42,8 @@ namespace VFEngine {
                 break;
             }
         }
-        return current ? current->_parent.lock() : nullptr; // this function finds the leaf, so we return
-                                                            // one step above for the last non leaf
+        return current ? current->_parent : nullptr; // this function finds the leaf, so we return
+                                                     // one step above for the last non leaf
     }
 
     std::shared_ptr<FactorizedTreeElement> FactorizedTree::create_node(const LogicalPipelineElement &elem,
@@ -79,7 +79,7 @@ namespace VFEngine {
 
         auto new_node = create_node(elem, false);
         root->_children.push_back(new_node);
-        new_node->_parent = root;
+        new_node->_parent = root.get();
 
         return new_node;
     }

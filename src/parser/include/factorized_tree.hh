@@ -17,7 +17,7 @@ namespace VFEngine {
         [[nodiscard]] std::shared_ptr<FactorizedTreeElement>
         insert_packed(const std::shared_ptr<FactorizedTreeElement> &root, const LogicalPipelineElement &node) const;
         [[nodiscard]] int32_t get_max_depth(const std::shared_ptr<FactorizedTreeElement> &node) const;
-        [[nodiscard]] std::shared_ptr<FactorizedTreeElement>
+        [[nodiscard]] FactorizedTreeElement *
         find_last_non_leaf_node(const std::shared_ptr<FactorizedTreeElement> &node) const;
         [[nodiscard]] std::shared_ptr<FactorizedTreeElement> create_node(const LogicalPipelineElement &ele,
                                                                          bool is_first) const;

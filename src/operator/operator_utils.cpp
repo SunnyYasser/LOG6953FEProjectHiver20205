@@ -14,4 +14,10 @@ namespace VFEngine {
                (relation_type == RelationType::ONE_TO_MANY and !is_join_index_fwd);
     }
 
+    bool is_packed_operator(const Operator *op) {
+        return op->get_operator_type() == OP_SINK_PACKED or op->get_operator_type() == OP_SINK_PACKED_MIN or
+               op->get_operator_type() == OP_SINK_PACKED_HARDCODED_LINEAR;
+    }
+
+
 } // namespace VFEngine

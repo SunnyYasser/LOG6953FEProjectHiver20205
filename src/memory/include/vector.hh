@@ -21,6 +21,7 @@ namespace VFEngine {
         uint64_t *_values;
         void allocate_rle() const;
         void allocate_filter() const;
+        void allocate_selection_bitmask() const;
 
     private:
         void set_default_values() const;
@@ -38,6 +39,7 @@ namespace VFEngine {
         uint64_t *_values;
         void allocate_rle() const;
         void allocate_filter() const;
+        void allocate_selection_bitmask() const;
     private:
         std::unique_ptr<uint64_t[]> _values_ptr;
         void set_default_values() const;

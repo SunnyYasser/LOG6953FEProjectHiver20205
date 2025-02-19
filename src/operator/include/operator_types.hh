@@ -14,6 +14,7 @@ namespace VFEngine {
         OP_SINK_PACKED_VECTORIZED,
         OP_SINK_PACKED_HARDCODED_LINEAR,
         OP_SINK_PACKED_MIN,
+        OP_CASCADE_SELECTION,
         OP_SIZE
     };
 }
