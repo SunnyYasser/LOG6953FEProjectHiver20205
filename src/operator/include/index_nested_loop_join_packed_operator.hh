@@ -26,17 +26,21 @@ namespace VFEngine {
 
 
     private:
-        __attribute__((always_inline)) inline void process_data_chunk(State *input_state, State *output_state, int32_t window_start, int32_t window_size,
-                                int32_t ip_vector_pos, int32_t ip_vector_size, int32_t &op_filled_idx,
-                                uint32_t *op_vector_rle, int32_t curr_pos, int32_t idx, const std::string &fn_name);
-        __attribute__((always_inline)) inline void copy_adjacency_values(uint64_t *op_vector_values, const uint64_t *adj_values, int32_t op_filled_idx,
-                                   int32_t ip_values_idx, int32_t elements_to_copy);
+        __attribute__((always_inline)) inline void
+        process_data_chunk(State *input_state, State *output_state, int32_t window_start, int32_t window_size,
+                           int32_t ip_vector_pos, int32_t ip_vector_size, int32_t &op_filled_idx,
+                           uint32_t *op_vector_rle, int32_t curr_pos, int32_t idx, const std::string &fn_name);
+        __attribute__((always_inline)) inline void copy_adjacency_values(uint64_t *op_vector_values,
+                                                                         const uint64_t *adj_values,
+                                                                         int32_t op_filled_idx, int32_t ip_values_idx,
+                                                                         int32_t elements_to_copy);
         void execute_internal();
         [[nodiscard]] operator_type_t get_operator_type() const override;
         const std::string _input_attribute, _output_attribute;
         Vector *_input_vector;
         Vector *_output_vector;
         BitMask<State::MAX_VECTOR_SIZE> *_original_ip_selection_mask;
+        BitMask<State::MAX_VECTOR_SIZE> *_current_ip_selection_mask;
         BitMask<State::MAX_VECTOR_SIZE> *_output_selection_mask;
         bool _is_join_index_fwd;
         const RelationType _relation_type;

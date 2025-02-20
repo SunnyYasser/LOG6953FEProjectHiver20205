@@ -12,7 +12,7 @@ namespace VFEngine {
                                                          const std::shared_ptr<Operator> &next_operator) :
         Operator(next_operator), _input_vector(nullptr), _output_vector(nullptr), _is_join_index_fwd(is_join_index_fwd),
         _relation_type(relation_type), _input_attribute(input_attribute), _output_attribute(output_attribute),
-        _original_ip_selection_mask(nullptr), _output_selection_mask(nullptr) {
+        _original_ip_selection_mask(nullptr), _current_ip_selection_mask(nullptr), _output_selection_mask(nullptr) {
 #ifdef MY_DEBUG
         _debug = std::make_unique<OperatorDebugUtility>(this);
 #endif
@@ -139,14 +139,15 @@ namespace VFEngine {
         int32_t remaining_values = 0;
         int32_t elements_to_copy = 0;
         int32_t window_size = 0;
+        int32_t output_elems_produced = 0;
         bool is_chunk_complete = false;
-
+        
         for (auto idx = 0; idx < ip_vector_size;) {
             curr_pos = ip_vector_pos + idx;
             const auto &curr_adj_node = adj_list_ptr[_ip_vector_values[curr_pos]];
-
+            output_elems_produced = curr_adj_node._size;
             remaining_space = State::MAX_VECTOR_SIZE - op_filled_idx;
-            remaining_values = curr_adj_node._size - ip_values_idx;
+            remaining_values = output_elems_produced - ip_values_idx;
             elements_to_copy = std::min(remaining_space, remaining_values);
 
             copy_adjacency_values(_op_vector_values, curr_adj_node._values, op_filled_idx, ip_values_idx,
@@ -163,7 +164,7 @@ namespace VFEngine {
 #endif
             op_vector_size += elements_to_copy;
 
-            is_chunk_complete = (ip_values_idx >= curr_adj_node._size);
+            is_chunk_complete = (ip_values_idx >= output_elems_produced);
             idx += is_chunk_complete;
             ip_values_idx *= !is_chunk_complete;
 
@@ -181,6 +182,7 @@ namespace VFEngine {
 #ifndef MEMSET_TO_SET_VECTOR_SLICE
         op_rle_start_pos = 0;
 #endif
+        input_state->_selection_mask = _original_ip_selection_mask;
     }
 
     void IndexNestedLoopJoinPacked::execute() { execute_internal(); }
