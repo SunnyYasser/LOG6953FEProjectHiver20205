@@ -37,6 +37,48 @@ namespace VFEngine {
 #endif
 
 
+    __attribute__((always_inline)) inline void
+    IndexNestedLoopJoinPacked::process_data_chunk(State *input_state, State *output_state, int32_t window_start,
+                                                  int32_t window_size, int32_t ip_vector_pos, int32_t ip_vector_size,
+                                                  int32_t &op_filled_idx, uint32_t *op_vector_rle, int32_t curr_pos,
+                                                  int32_t idx, const std::string &fn_name) {
+        input_state->_state_info._curr_start_pos = window_start;
+        input_state->_state_info._size = window_size;
+
+#ifdef MY_DEBUG
+        _debug->log_vector(_input_vector, _output_vector, fn_name);
+#endif
+
+        get_next_operator()->execute();
+
+        // Reset output state
+        output_state->_state_info._size = 0;
+        output_state->_rle_size = 1;
+        output_state->_state_info._curr_start_pos = 0;
+        op_filled_idx = 0;
+
+        // Reset input state
+        input_state->_state_info._curr_start_pos = ip_vector_pos;
+        input_state->_state_info._size = ip_vector_size;
+
+#ifdef MEMSET_TO_SET_VECTOR_SLICE
+        const auto rle_reset_size = (ip_vector_pos + idx) * sizeof(op_vector_rle[0]);
+        std::memset(&op_vector_rle[1], 0, rle_reset_size);
+        output_state->_rle_size += (ip_vector_pos + idx);
+#else
+        output_state->_rle_size += (ip_vector_pos + idx);
+        output_state->_rle_start_pos = output_state->_rle_size;
+#endif
+    }
+
+    __attribute__((always_inline)) inline void
+    IndexNestedLoopJoinPacked::copy_adjacency_values(uint64_t *op_vector_values, const uint64_t *adj_values,
+                                                     int32_t op_filled_idx, int32_t ip_values_idx,
+                                                     int32_t elements_to_copy) {
+        std::memcpy(&op_vector_values[op_filled_idx], &adj_values[ip_values_idx],
+                    elements_to_copy * sizeof(op_vector_values[0]));
+    }
+
     void IndexNestedLoopJoinPacked::execute_internal() {
         _exec_call_counter++;
         const std::string fn_name = "IndexNestedLoopJoinPacked::execute_internal()";
@@ -48,14 +90,12 @@ namespace VFEngine {
         const uint64_t *__restrict__ _ip_vector_values = _input_vector->_values;
         uint64_t *__restrict__ _op_vector_values = _output_vector->_values;
         uint32_t *__restrict__ _op_vector_rle = output_state->_rle;
-        // BitMask<State::MAX_VECTOR_SIZE> &_ip_selection_mask = *(input_state->_selection_mask);
 #else
         State *__restrict__ input_state = _input_vector->_state.get();
         State *__restrict__ output_state = _output_vector->_state.get();
         const uint64_t *__restrict__ _ip_vector_values = _input_vector->_values;
         uint64_t *__restrict__ _op_vector_values = _output_vector->_values;
         uint32_t *__restrict__ _op_vector_rle = output_state->_rle.get();
-        // BitMask<State::MAX_VECTOR_SIZE> &_ip_selection_mask = *(input_state->_selection_mask);
 #endif
 #else
 #if defined(VECTOR_STATE_ARENA_ALLOCATOR)
@@ -64,115 +104,82 @@ namespace VFEngine {
         const uint64_t *_ip_vector_values = _input_vector->_values;
         uint64_t *_op_vector_values = _output_vector->_values;
         uint32_t *_op_vector_rle = output_state->_rle;
-        // BitMask<State::MAX_VECTOR_SIZE> &_ip_selection_mask = *(input_state->_selection_mask);
 #else
         State *input_state = _input_vector->_state.get();
         State *output_state = _output_vector->_state.get();
         const uint64_t *_ip_vector_values = _input_vector->_values;
         uint64_t *_op_vector_values = _output_vector->_values;
         uint32_t *_op_vector_rle = output_state->_rle.get();
-        // BitMask<State::MAX_VECTOR_SIZE> &_ip_selection_mask = *(input_state->_selection_mask);
 #endif
 #endif
 
-        const int32_t _ip_vector_pos = input_state->_state_info._curr_start_pos;
-        const int32_t _ip_vector_size = input_state->_state_info._size;
-        auto &_op_vector_rle_size = output_state->_rle_size;
-        auto &_op_vector_size = output_state->_state_info._size = 0;
+        // Initialize processing state
+        const int32_t ip_vector_pos = input_state->_state_info._curr_start_pos;
+        const int32_t ip_vector_size = input_state->_state_info._size;
+        auto &op_vector_rle_size = output_state->_rle_size;
+        auto &op_vector_size = output_state->_state_info._size = 0;
         const auto &adj_list_ptr = *_adj_list;
-        int32_t curr_ip_vector_pos = 0;
-        ulong current_val = 0;
-        int32_t _op_filled_idx = 0;
-        int32_t _ip_values_idx = 0;
-        auto prev_ip_vector_pos = _ip_vector_pos;
-        uint64_t *new_values_to_be_filled = nullptr;
-        int32_t new_values_size = 0;
+
+        // Initialize RLE
+#ifdef MEMSET_TO_SET_VECTOR_SLICE
+        std::memset(&_op_vector_rle[1], 0, ip_vector_pos * sizeof(_op_vector_rle[0]));
+        op_vector_rle_size += ip_vector_pos;
+#else
+        auto &op_rle_start_pos = output_state->_rle_start_pos;
+        op_vector_rle_size += ip_vector_pos;
+        op_rle_start_pos = ip_vector_pos == 0 ? 0 : op_vector_rle_size;
+#endif
+
+        // Process input vector
+        int32_t op_filled_idx = 0;
+        int32_t ip_values_idx = 0;
+        int32_t prev_ip_vector_pos = ip_vector_pos;
+        int32_t curr_pos = 0;
         int32_t remaining_space = 0;
         int32_t remaining_values = 0;
         int32_t elements_to_copy = 0;
-        bool is_chunk_complete = false;
-        bool should_process = false;
-        int32_t window_start = 0;
         int32_t window_size = 0;
+        bool is_chunk_complete = false;
 
+        for (auto idx = 0; idx < ip_vector_size;) {
+            curr_pos = ip_vector_pos + idx;
+            const auto &curr_adj_node = adj_list_ptr[_ip_vector_values[curr_pos]];
+
+            remaining_space = State::MAX_VECTOR_SIZE - op_filled_idx;
+            remaining_values = curr_adj_node._size - ip_values_idx;
+            elements_to_copy = std::min(remaining_space, remaining_values);
+
+            copy_adjacency_values(_op_vector_values, curr_adj_node._values, op_filled_idx, ip_values_idx,
+                                  elements_to_copy);
+
+            op_filled_idx += elements_to_copy;
+            ip_values_idx += elements_to_copy;
+
+            // Update RLE
 #ifdef MEMSET_TO_SET_VECTOR_SLICE
-        memset(&_op_vector_rle[1], 0, _ip_vector_pos * sizeof(_op_vector_rle[0]));
-        _op_vector_rle_size += _ip_vector_pos;
+            update_rle(_op_vector_rle, op_vector_rle_size, elements_to_copy);
 #else
-        auto &_op_rle_start_pos = output_state->_rle_start_pos;
-        _op_vector_rle_size += _ip_vector_pos;
-        _op_rle_start_pos = _ip_vector_pos == 0 ? 0 : _op_vector_rle_size;
+            update_rle(_op_vector_rle, op_vector_rle_size, elements_to_copy, op_rle_start_pos);
 #endif
-        for (auto idx = 0; idx < _ip_vector_size;) {
-            curr_ip_vector_pos = _ip_vector_pos + idx;
-            current_val = _ip_vector_values[curr_ip_vector_pos];
-            const auto &current_adj_node = adj_list_ptr[current_val];
-#ifdef STORAGE_TO_VECTOR_MEMCPY_PTR_ALIAS
-            const uint64_t *__restrict__ new_values_to_be_filled = current_adj_node._values;
-#else
-            new_values_to_be_filled = current_adj_node._values;
-#endif
-            new_values_size = current_adj_node._size;
-            remaining_space = State::MAX_VECTOR_SIZE - _op_filled_idx;
-            remaining_values = new_values_size - _ip_values_idx;
-            elements_to_copy = std::min(remaining_space, static_cast<int32_t>(remaining_values));
-            std::memcpy(&_op_vector_values[_op_filled_idx], &new_values_to_be_filled[_ip_values_idx],
-                        elements_to_copy * sizeof(_op_vector_values[0]));
+            op_vector_size += elements_to_copy;
 
-            _op_filled_idx += elements_to_copy;
-            _ip_values_idx += elements_to_copy;
-
-#ifdef MEMSET_TO_SET_VECTOR_SLICE
-            update_rle(_op_vector_rle, _op_vector_rle_size, elements_to_copy);
-#else
-            update_rle(_op_vector_rle, _op_vector_rle_size, elements_to_copy, _op_rle_start_pos);
-#endif
-            _op_vector_size += elements_to_copy;
-            is_chunk_complete = (_ip_values_idx >= new_values_size);
+            is_chunk_complete = (ip_values_idx >= curr_adj_node._size);
             idx += is_chunk_complete;
-            _ip_values_idx *= !is_chunk_complete;
-            should_process = (_op_filled_idx >= State::MAX_VECTOR_SIZE) | (idx >= _ip_vector_size);
+            ip_values_idx *= !is_chunk_complete;
 
-            if (should_process) {
-                window_start = prev_ip_vector_pos;
-                window_size = curr_ip_vector_pos - prev_ip_vector_pos + 1;
-
-                input_state->_state_info._curr_start_pos = window_start;
-                input_state->_state_info._size = window_size;
-
-#ifdef MY_DEBUG
-                _debug->log_vector(_input_vector, _output_vector, fn_name);
-#endif
-
-                get_next_operator()->execute();
-
-                output_state->_state_info._size = 0;
-                output_state->_rle_size = 1;
-                output_state->_state_info._curr_start_pos = 0;
-                _op_filled_idx = 0;
-
-                input_state->_state_info._curr_start_pos = _ip_vector_pos;
-                input_state->_state_info._size = _ip_vector_size;
-
-                prev_ip_vector_pos = curr_ip_vector_pos + (_ip_values_idx == 0);
-
-#ifdef MEMSET_TO_SET_VECTOR_SLICE
-                const auto rle_reset_size = (_ip_vector_pos + idx) * sizeof(_op_vector_rle[0]);
-                std::memset(&_op_vector_rle[1], 0, rle_reset_size);
-                _op_vector_rle_size += (_ip_vector_pos + idx);
-#else
-                _op_vector_rle_size += (_ip_vector_pos + idx);
-                _op_rle_start_pos = _op_vector_rle_size;
-#endif
+            if ((op_filled_idx >= State::MAX_VECTOR_SIZE) || (idx >= ip_vector_size)) {
+                window_size = curr_pos - prev_ip_vector_pos + 1;
+                process_data_chunk(input_state, output_state, prev_ip_vector_pos, window_size, ip_vector_pos,
+                                   ip_vector_size, op_filled_idx, _op_vector_rle, curr_pos, idx, fn_name);
+                prev_ip_vector_pos = curr_pos + (ip_values_idx == 0);
             }
         }
 
-        _op_vector_rle_size = 1;
-        _op_vector_size = 0;
-#ifdef MEMSET_TO_SET_VECTOR_SLICE
-        // No additional cleanup needed
-#else
-        _op_rle_start_pos = 0;
+        // Final cleanup
+        op_vector_rle_size = 1;
+        op_vector_size = 0;
+#ifndef MEMSET_TO_SET_VECTOR_SLICE
+        op_rle_start_pos = 0;
 #endif
     }
 
