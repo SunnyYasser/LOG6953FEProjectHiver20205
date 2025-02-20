@@ -7,7 +7,8 @@
 
 namespace VFEngine {
     Scan::Scan(const std::string &scan_attribute, const std::shared_ptr<Operator> &next_operator) :
-        Operator(next_operator), _output_vector(nullptr), _max_id_value(0), _attribute(scan_attribute) {
+        Operator(next_operator), _output_vector(nullptr), _max_id_value(0), _attribute(scan_attribute),
+        _output_selection_mask(nullptr) {
 #ifdef MY_DEBUG
         _debug = std::make_unique<OperatorDebugUtility>(this);
 #endif
@@ -48,6 +49,7 @@ namespace VFEngine {
 
             // only needed for INLJ Packed
             _output_vector->_state->_state_info._curr_start_pos = 0;
+            SET_ALL_BITS(*_output_selection_mask);
 
 #ifdef MY_DEBUG
             // log updated output vector
@@ -75,6 +77,8 @@ namespace VFEngine {
 #endif
         context->allocate_memory_for_column(_attribute);
         _output_vector = context->read_vector_for_column(_attribute);
+        _output_vector->allocate_selection_bitmask();
+        _output_selection_mask = _output_vector->_state->_selection_mask;
         _max_id_value = datastore->get_max_id_value();
         get_next_operator()->init(context, datastore);
     }

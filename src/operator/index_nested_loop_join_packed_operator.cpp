@@ -11,7 +11,8 @@ namespace VFEngine {
                                                          const RelationType &relation_type,
                                                          const std::shared_ptr<Operator> &next_operator) :
         Operator(next_operator), _input_vector(nullptr), _output_vector(nullptr), _is_join_index_fwd(is_join_index_fwd),
-        _relation_type(relation_type), _input_attribute(input_attribute), _output_attribute(output_attribute) {
+        _relation_type(relation_type), _input_attribute(input_attribute), _output_attribute(output_attribute),
+        _original_ip_selection_mask(nullptr), _output_selection_mask(nullptr) {
 #ifdef MY_DEBUG
         _debug = std::make_unique<OperatorDebugUtility>(this);
 #endif
@@ -175,7 +176,6 @@ namespace VFEngine {
 #endif
     }
 
-    // Rest of the implementation remains unchanged
     void IndexNestedLoopJoinPacked::execute() { execute_internal(); }
 
     void IndexNestedLoopJoinPacked::init(const std::shared_ptr<ContextMemory> &context,
@@ -187,6 +187,9 @@ namespace VFEngine {
         _input_vector = context->read_vector_for_column(_input_attribute);
         _output_vector = context->read_vector_for_column(_output_attribute);
         _output_vector->allocate_rle();
+        _output_vector->allocate_selection_bitmask();
+        _original_ip_selection_mask = _input_vector->_state->_selection_mask;
+        _output_selection_mask = _output_vector->_state->_selection_mask;
         if (_is_join_index_fwd)
             _adj_list = &(datastore->get_fwd_adj_lists());
         else

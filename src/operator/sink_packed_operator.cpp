@@ -124,10 +124,14 @@ namespace VFEngine {
 
         ulong sum = 0;
         const auto children_size = children.size();
+        const auto selection_mask = state->_selection_mask;
 
         for (auto i = start; i < end; i++) {
             ulong value = 1;
             for (size_t child_idx = 0; child_idx < children_size; child_idx++) {
+                if (!TEST_BIT(*selection_mask, child_idx)) {
+                    continue;
+                }
                 const auto &node = children[child_idx];
                 value *= node->_children.empty() ? count_leaf(node, i) : count_internal(node, i);
             }
@@ -164,11 +168,13 @@ namespace VFEngine {
 
         ulong sum = 0;
         const auto children_size = children.size();
-
+        const auto selection_mask = state->_selection_mask;
         for (auto i = 0; i < curr_size; i++) {
             ulong value = 1;
             const auto parent_idx = static_cast<uint32_t>(start_pos + i);
-
+            if (!TEST_BIT(*selection_mask, parent_idx)) {
+                continue;
+            }
             for (size_t child_idx = 0; child_idx < children_size; child_idx++) {
                 const auto &node = children[child_idx];
                 value *= node->_children.empty() ? count_leaf(node, parent_idx) : count_internal(node, parent_idx);

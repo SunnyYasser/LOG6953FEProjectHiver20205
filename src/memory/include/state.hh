@@ -29,7 +29,7 @@ namespace VFEngine {
         int32_t _rle_size;
         int32_t _filter_size;
         uint32_t *_rle, *_filter_list;
-        BitMask<MAX_VECTOR_SIZE>* _selection_mask;
+        BitMask<MAX_VECTOR_SIZE> *_selection_mask;
     };
 #else
     class State {
@@ -46,7 +46,7 @@ namespace VFEngine {
         int32_t _filter_size;
         int32_t _rle_start_pos;
         uint32_t *_rle, *_filter_list;
-        BitMask<MAX_VECTOR_SIZE>* _selection_mask;
+        BitMask<MAX_VECTOR_SIZE> *_selection_mask;
     };
 #endif
 
@@ -65,7 +65,8 @@ namespace VFEngine {
         int32_t _rle_size;
         int32_t _filter_size;
         std::unique_ptr<uint32_t[]> _rle, _filter_list;
-        std::unique_ptr<BitMask<MAX_VECTOR_SIZE>> _selection_mask;
+        std::unique_ptr<BitMask<MAX_VECTOR_SIZE>> _selection_mask_uptr;
+        BitMask<MAX_VECTOR_SIZE> *_selection_mask;
     };
 #else
     class State {
@@ -82,7 +83,8 @@ namespace VFEngine {
         int32_t _filter_size;
         int32_t _rle_start_pos;
         std::unique_ptr<uint32_t[]> _rle, _filter_list;
-        std::unique_ptr<BitMask<MAX_VECTOR_SIZE>> _selection_mask;
+        std::unique_ptr<BitMask<MAX_VECTOR_SIZE>> _selection_mask_uptr;
+        BitMask<MAX_VECTOR_SIZE> *_selection_mask;
     };
 #endif
 #endif

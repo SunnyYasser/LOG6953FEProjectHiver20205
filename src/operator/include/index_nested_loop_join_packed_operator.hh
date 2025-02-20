@@ -31,6 +31,8 @@ namespace VFEngine {
         const std::string _input_attribute, _output_attribute;
         Vector *_input_vector;
         Vector *_output_vector;
+        BitMask<State::MAX_VECTOR_SIZE> *_original_ip_selection_mask;
+        BitMask<State::MAX_VECTOR_SIZE> *_output_selection_mask;
         bool _is_join_index_fwd;
         const RelationType _relation_type;
         const std::unique_ptr<AdjList[]> *_adj_list{};

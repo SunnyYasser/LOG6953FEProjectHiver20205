@@ -122,7 +122,8 @@ namespace VFEngine {
 
 #else
 #ifdef MEMSET_TO_SET_VECTOR_SLICE
-    State::State(const int32_t &size) : _state_info(size), _rle_size(-1), _filter_size(-1) {}
+    State::State(const int32_t &size) :
+        _state_info(size), _rle_size(-1), _filter_size(-1), _selection_mask_uptr(nullptr), _selection_mask(nullptr) {}
 
     void State::allocate_filter() {
         if (_filter_list) {
@@ -142,10 +143,11 @@ namespace VFEngine {
     }
 
     void State::allocate_selection_bitmask() {
-        if (_selection_mask) {
+        if (_selection_mask_uptr) {
             return;
         }
-        _selection_mask = std::make_unique<BitMask<MAX_VECTOR_SIZE>>();
+        _selection_mask_uptr = std::make_unique<BitMask<MAX_VECTOR_SIZE>>();
+        _selection_mask = _selection_mask_uptr.get();
         SET_ALL_BITS(*_selection_mask);
     }
 
@@ -173,7 +175,9 @@ namespace VFEngine {
         logfile << std::endl;
     }
 #else
-    State::State(const int32_t &size) : _state_info(size), _rle_size(-1), _filter_size(-1), _rle_start_pos(0) {}
+    State::State(const int32_t &size) :
+        _state_info(size), _rle_size(-1), _filter_size(-1), _rle_start_pos(0), _selection_mask_uptr(nullptr),
+        _selection_mask(nullptr) {}
 
     void State::allocate_filter() {
         if (_filter_list) {
@@ -193,10 +197,11 @@ namespace VFEngine {
     }
 
     void State::allocate_selection_bitmask() {
-        if (_selection_mask) {
+        if (_selection_mask_uptr) {
             return;
         }
-        _selection_mask = std::make_unique<BitMask<MAX_VECTOR_SIZE>>();
+        _selection_mask_uptr = std::make_unique<BitMask<MAX_VECTOR_SIZE>>();
+        _selection_mask = _selection_mask_uptr.get();
         SET_ALL_BITS(*_selection_mask);
     }
 

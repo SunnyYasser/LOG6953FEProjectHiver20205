@@ -1,5 +1,6 @@
 #include <array>
 #include <cstdint>
+#include <cstring>
 
 constexpr std::size_t BITS_PER_UINT64 = 64;
 constexpr uint64_t ALL_ONES = ~0ULL;

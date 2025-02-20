@@ -28,6 +28,7 @@ namespace VFEngine
         [[nodiscard]] operator_type_t get_operator_type() const override;
         Vector *_output_vector;
         uint64_t _max_id_value;
+        BitMask<State::MAX_VECTOR_SIZE> *_output_selection_mask;
         const std::string _attribute;
         unsigned long _exec_call_counter{};
 #ifdef MY_DEBUG
