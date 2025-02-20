@@ -39,3 +39,12 @@ struct BitMask {
             first_ptr[i] &= second_ptr[i];                                                                             \
         }                                                                                                              \
     } while (0)
+
+#define RESET_BITMASK(N, first, second)                                                                                \
+    do {                                                                                                               \
+        uint64_t *__restrict__ first_ptr = (first).bits.data();                                                        \
+        const uint64_t *__restrict__ second_ptr = (second).bits.data();                                                \
+        for (size_t i = 0; i < REQUIRED_UINT64<N>; i++) {                                                              \
+            first_ptr[i] = second_ptr[i];                                                                              \
+        }                                                                                                              \
+    } while (0)

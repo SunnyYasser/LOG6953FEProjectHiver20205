@@ -16,6 +16,10 @@ namespace VFEngine {
 #ifdef MY_DEBUG
         _debug = std::make_unique<OperatorDebugUtility>(this);
 #endif
+#ifdef STORAGE_TO_VECTOR_MEMCPY_PTR_ALIAS
+        _original_ip_selection_mask_uptr = std::make_unique<BitMask<MAX_VECTOR_SIZE>>();
+        _original_ip_selection_mask = _original_ip_selection_mask_uptr.get();
+#endif
     }
 
     operator_type_t IndexNestedLoopJoinPacked::get_operator_type() const { return OP_INLJ_PACKED; }
@@ -44,7 +48,11 @@ namespace VFEngine {
                                                   int32_t idx, const std::string &fn_name) {
         input_state->_state_info._curr_start_pos = window_start;
         input_state->_state_info._size = window_size;
-
+        // Set all output values as valid
+        SET_ALL_BITS(*_output_selection_mask);
+        // Get a copy of the current ip bitmask, since we need to restore it after
+        // the function stack returns
+        auto working_ip_bitmask_copy = *_current_ip_selection_mask;
 #ifdef MY_DEBUG
         _debug->log_vector(_input_vector, _output_vector, fn_name);
 #endif
@@ -60,6 +68,8 @@ namespace VFEngine {
         // Reset input state
         input_state->_state_info._curr_start_pos = ip_vector_pos;
         input_state->_state_info._size = ip_vector_size;
+        // reset input bitmask to original working ip bitmask
+        RESET_BITMASK(State::MAX_VECTOR_SIZE, *_current_ip_selection_mask, working_ip_bitmask_copy);
 
 #ifdef MEMSET_TO_SET_VECTOR_SLICE
         const auto rle_reset_size = (ip_vector_pos + idx) * sizeof(op_vector_rle[0]);
@@ -73,8 +83,10 @@ namespace VFEngine {
 
     __attribute__((always_inline)) inline void
     IndexNestedLoopJoinPacked::copy_adjacency_values(uint64_t *op_vector_values, const uint64_t *adj_values,
-                                                     int32_t op_filled_idx, int32_t ip_values_idx,
-                                                     int32_t elements_to_copy) {
+                                                     const int32_t op_filled_idx, const int32_t ip_values_idx,
+                                                     const int32_t elements_to_copy) {
+        if (elements_to_copy == 0)
+            return;
         std::memcpy(&op_vector_values[op_filled_idx], &adj_values[ip_values_idx],
                     elements_to_copy * sizeof(op_vector_values[0]));
     }
@@ -141,7 +153,8 @@ namespace VFEngine {
         int32_t window_size = 0;
         int32_t output_elems_produced = 0;
         bool is_chunk_complete = false;
-        
+        _current_ip_selection_mask = _output_selection_mask;
+
         for (auto idx = 0; idx < ip_vector_size;) {
             curr_pos = ip_vector_pos + idx;
             const auto &curr_adj_node = adj_list_ptr[_ip_vector_values[curr_pos]];
@@ -150,6 +163,10 @@ namespace VFEngine {
             remaining_values = output_elems_produced - ip_values_idx;
             elements_to_copy = std::min(remaining_space, remaining_values);
 
+            if (!TEST_BIT(*_current_ip_selection_mask, idx) || output_elems_produced == 0) {
+                CLEAR_BIT(*_current_ip_selection_mask, idx);
+                elements_to_copy = 0;
+            }
             copy_adjacency_values(_op_vector_values, curr_adj_node._values, op_filled_idx, ip_values_idx,
                                   elements_to_copy);
 
