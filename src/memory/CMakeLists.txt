@@ -1,4 +1,4 @@
-add_library(libmem STATIC context.cpp state.cpp vector.cpp)
+add_library(libmem STATIC context.cpp state.cpp vector.cpp bitmask.cpp)
 target_include_directories(libmem PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(libmem PUBLIC libgraph)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -10,5 +10,9 @@ endif()
 
 if(MEMSET_TO_SET_VECTOR_SLICE)
     add_compile_definitions(MEMSET_TO_SET_VECTOR_SLICE)
+endif()
+
+if(BIT_ARRAY_AS_FILTER)
+    add_compile_definitions(BIT_ARRAY_AS_FILTER)
 endif()
 

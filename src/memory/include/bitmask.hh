@@ -1,50 +1,80 @@
+#ifndef BITMASK_HH
+#define BITMASK_HH
+
 #include <array>
 #include <cstdint>
-#include <cstring>
 
-constexpr std::size_t BITS_PER_UINT64 = 64;
-constexpr uint64_t ALL_ONES = ~0ULL;
-constexpr uint64_t BIT_MASK_63 = BITS_PER_UINT64 - 1; // 63 = 0b111111
+namespace VFEngine {
 
-template<std::size_t N>
-constexpr std::size_t REQUIRED_UINT64 = (N + BITS_PER_UINT64 - 1) / BITS_PER_UINT64;
+#ifdef BIT_ARRAY_AS_FILTER
+    // BitArrayMask implementation (one byte per bit)
+    template<std::size_t N>
+    class BitMask {
+    public:
+        static_assert((N & (N - 1)) == 0, "Size must be a power of 2");
 
-template<std::size_t N>
-struct BitMask {
-    static_assert((N & (N - 1)) == 0, "Size must be a power of 2");
-    std::array<uint64_t, REQUIRED_UINT64<N>> bits{};
-};
+        BitMask();
+        BitMask(const BitMask &other);
+        BitMask &operator=(const BitMask &other);
+        void setBit(std::size_t index);
+        void clearBit(std::size_t index);
+        bool testBit(std::size_t index) const;
+        void toggleBit(std::size_t index);
+        void clearAllBits();
+        void setAllBits();
+        void andWith(const BitMask &other);
+        void copyFrom(const BitMask &other);
+        static constexpr std::size_t size() { return N; }
 
-#define GET_BIT_POSITION(index) ((index) & BIT_MASK_63)
-#define GET_UINT64_INDEX(index) ((index) >> 6)
-#define BIT_MASK(index) (1ULL << GET_BIT_POSITION(index))
+    private:
+        std::array<uint8_t, N> bits{};
+    };
 
-#define SET_BIT(bitmask, index) ((bitmask).bits[GET_UINT64_INDEX(index)] |= BIT_MASK(index))
+#else
+    // BitMask implementation (bit packing in uint64_t)
+    constexpr std::size_t BITS_PER_UINT64 = 64;
+    constexpr uint64_t ALL_ONES = ~0ULL;
+    constexpr uint64_t BIT_MASK_63 = BITS_PER_UINT64 - 1; // 63 = 0b111111
 
-#define CLEAR_BIT(bitmask, index) ((bitmask).bits[GET_UINT64_INDEX(index)] &= ~BIT_MASK(index))
+    template<std::size_t N>
+    constexpr std::size_t REQUIRED_UINT64 = (N + BITS_PER_UINT64 - 1) / BITS_PER_UINT64;
 
-#define TEST_BIT(bitmask, index) (((bitmask).bits[GET_UINT64_INDEX(index)] & BIT_MASK(index)) != 0)
+    template<std::size_t N>
+    class BitMask {
+    public:
+        static_assert((N & (N - 1)) == 0, "Size must be a power of 2");
+        BitMask();
+        BitMask(const BitMask &other);
+        BitMask &operator=(const BitMask &other);
+        void setBit(std::size_t index);
+        void clearBit(std::size_t index);
+        bool testBit(std::size_t index) const;
+        void toggleBit(std::size_t index);
+        void clearAllBits();
+        void setAllBits();
+        void andWith(const BitMask &other);
+        void copyFrom(const BitMask &other);
+        static constexpr std::size_t getBitPosition(const std::size_t index) { return index & BIT_MASK_63; }
 
-#define TOGGLE_BIT(bitmask, index) ((bitmask).bits[GET_UINT64_INDEX(index)] ^= BIT_MASK(index))
+        static constexpr std::size_t getUint64Index(const std::size_t index) { return index >> 6; }
 
-#define CLEAR_ALL_BITS(bitmask) std::memset((bitmask).bits.data(), 0, sizeof((bitmask).bits))
+        static constexpr uint64_t getBitMask(const std::size_t index) { return 1ULL << getBitPosition(index); }
 
-#define SET_ALL_BITS(bitmask) std::memset((bitmask).bits.data(), 0xFF, sizeof((bitmask).bits))
+        static constexpr std::size_t size() { return N; }
 
-#define AND_BITMASKS(N, first, second)                                                                                 \
-    do {                                                                                                               \
-        uint64_t *__restrict__ first_ptr = (first).bits.data();                                                        \
-        const uint64_t *__restrict__ second_ptr = (second).bits.data();                                                \
-        for (size_t i = 0; i < REQUIRED_UINT64<N>; i++) {                                                              \
-            first_ptr[i] &= second_ptr[i];                                                                             \
-        }                                                                                                              \
-    } while (0)
+    private:
+        std::array<uint64_t, REQUIRED_UINT64<N>> bits{};
+    };
+#endif
 
-#define RESET_BITMASK(N, first, second)                                                                                \
-    do {                                                                                                               \
-        uint64_t *__restrict__ first_ptr = (first).bits.data();                                                        \
-        const uint64_t *__restrict__ second_ptr = (second).bits.data();                                                \
-        for (size_t i = 0; i < REQUIRED_UINT64<N>; i++) {                                                              \
-            first_ptr[i] = second_ptr[i];                                                                              \
-        }                                                                                                              \
-    } while (0)
+} // namespace VFEngine
+
+#define SET_BIT(bitmask, index) ((bitmask).setBit(index))
+#define CLEAR_BIT(bitmask, index) ((bitmask).clearBit(index))
+#define TEST_BIT(bitmask, index) ((bitmask).testBit(index))
+#define TOGGLE_BIT(bitmask, index) ((bitmask).toggleBit(index))
+#define CLEAR_ALL_BITS(bitmask) ((bitmask).clearAllBits())
+#define SET_ALL_BITS(bitmask) ((bitmask).setAllBits())
+#define AND_BITMASKS(N, first, second) ((first).andWith(second))
+#define RESET_BITMASK(N, first, second) ((first).copyFrom(second))
+#endif
