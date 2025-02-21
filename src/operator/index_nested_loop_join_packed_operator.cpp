@@ -4,7 +4,6 @@
 #include "include/operator_utils.hh"
 
 namespace VFEngine {
-    // Constructor remains unchanged
     IndexNestedLoopJoinPacked::IndexNestedLoopJoinPacked(const std::string &input_attribute,
                                                          const std::string &output_attribute,
                                                          const bool &is_join_index_fwd,
@@ -16,10 +15,12 @@ namespace VFEngine {
 #ifdef MY_DEBUG
         _debug = std::make_unique<OperatorDebugUtility>(this);
 #endif
-#ifdef STORAGE_TO_VECTOR_MEMCPY_PTR_ALIAS
-        _original_ip_selection_mask_uptr = std::make_unique<BitMask<MAX_VECTOR_SIZE>>();
+        // Always create a unique pointer for the original mask
+        _original_ip_selection_mask_uptr = std::make_unique<BitMask<State::MAX_VECTOR_SIZE>>();
+        // Create a separate mask for working operations
+        _working_ip_selection_mask_uptr = std::make_unique<BitMask<State::MAX_VECTOR_SIZE>>();
         _original_ip_selection_mask = _original_ip_selection_mask_uptr.get();
-#endif
+        _current_ip_selection_mask = _working_ip_selection_mask_uptr.get();
     }
 
     operator_type_t IndexNestedLoopJoinPacked::get_operator_type() const { return OP_INLJ_PACKED; }
@@ -53,6 +54,8 @@ namespace VFEngine {
         // Get a copy of the current ip bitmask, since we need to restore it after
         // the function stack returns
         auto working_ip_bitmask_copy = *_current_ip_selection_mask;
+        RESET_BITMASK(State::MAX_VECTOR_SIZE, working_ip_bitmask_copy, *_current_ip_selection_mask);
+
 #ifdef MY_DEBUG
         _debug->log_vector(_input_vector, _output_vector, fn_name);
 #endif
@@ -153,7 +156,9 @@ namespace VFEngine {
         int32_t window_size = 0;
         int32_t output_elems_produced = 0;
         bool is_chunk_complete = false;
-        _current_ip_selection_mask = _output_selection_mask;
+
+        // Reset the working mask with the original mask values at the start of execution
+        RESET_BITMASK(State::MAX_VECTOR_SIZE, *_current_ip_selection_mask, *_original_ip_selection_mask);
 
         for (auto idx = 0; idx < ip_vector_size;) {
             curr_pos = ip_vector_pos + idx;
@@ -199,6 +204,7 @@ namespace VFEngine {
 #ifndef MEMSET_TO_SET_VECTOR_SLICE
         op_rle_start_pos = 0;
 #endif
+        // Always restore original selection mask at the end of execution
         input_state->_selection_mask = _original_ip_selection_mask;
     }
 
@@ -214,7 +220,10 @@ namespace VFEngine {
         _output_vector = context->read_vector_for_column(_output_attribute);
         _output_vector->allocate_rle();
         _output_vector->allocate_selection_bitmask();
-        _original_ip_selection_mask = _input_vector->_state->_selection_mask;
+        // Store a copy of the original input selection mask
+        RESET_BITMASK(State::MAX_VECTOR_SIZE, *_original_ip_selection_mask, *(_input_vector->_state->_selection_mask));
+        // Initialize the working mask with the same values
+        RESET_BITMASK(State::MAX_VECTOR_SIZE, *_current_ip_selection_mask, *_original_ip_selection_mask);
         _output_selection_mask = _output_vector->_state->_selection_mask;
         if (_is_join_index_fwd)
             _adj_list = &(datastore->get_fwd_adj_lists());

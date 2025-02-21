@@ -39,10 +39,9 @@ namespace VFEngine {
         const std::string _input_attribute, _output_attribute;
         Vector *_input_vector;
         Vector *_output_vector;
+        std::unique_ptr<BitMask<State::MAX_VECTOR_SIZE>> _original_ip_selection_mask_uptr;
+        std::unique_ptr<BitMask<State::MAX_VECTOR_SIZE>> _working_ip_selection_mask_uptr;
         BitMask<State::MAX_VECTOR_SIZE> *_original_ip_selection_mask;
-#ifdef VECTOR
-        std::unique_ptr<BitMask<MAX_VECTOR_SIZE>> _original_ip_selection_mask_uptr;
-#endif
         BitMask<State::MAX_VECTOR_SIZE> *_current_ip_selection_mask;
         BitMask<State::MAX_VECTOR_SIZE> *_output_selection_mask;
         bool _is_join_index_fwd;
