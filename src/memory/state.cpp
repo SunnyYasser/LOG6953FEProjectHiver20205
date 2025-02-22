@@ -33,9 +33,8 @@ namespace VFEngine {
         if (_selection_mask) {
             return;
         }
-        _selection_mask = static_cast<BitMask<MAX_VECTOR_SIZE> *>(
-                ArenaAllocator::getInstance().allocate(sizeof(BitMask<MAX_VECTOR_SIZE>)));
-        SET_ALL_BITS(*_selection_mask);
+        void *memory = ArenaAllocator::getInstance().allocate(sizeof(BitMask<MAX_VECTOR_SIZE>));
+        _selection_mask = new (memory) BitMask<MAX_VECTOR_SIZE>();
     }
 
     void State::print_debug_info(std::ofstream &logfile) const {
@@ -89,9 +88,8 @@ namespace VFEngine {
         if (_selection_mask) {
             return;
         }
-        _selection_mask = static_cast<BitMask<MAX_VECTOR_SIZE> *>(
-                ArenaAllocator::getInstance().allocate(sizeof(BitMask<MAX_VECTOR_SIZE>)));
-        SET_ALL_BITS(*_selection_mask);
+        void *memory = ArenaAllocator::getInstance().allocate(sizeof(BitMask<MAX_VECTOR_SIZE>));
+        _selection_mask = new (memory) BitMask<MAX_VECTOR_SIZE>();
     }
 
     void State::print_debug_info(std::ofstream &logfile) const {
@@ -148,7 +146,6 @@ namespace VFEngine {
         }
         _selection_mask_uptr = std::make_unique<BitMask<MAX_VECTOR_SIZE>>();
         _selection_mask = _selection_mask_uptr.get();
-        SET_ALL_BITS(*_selection_mask);
     }
 
     void State::print_debug_info(std::ofstream &logfile) const {
@@ -202,7 +199,6 @@ namespace VFEngine {
         }
         _selection_mask_uptr = std::make_unique<BitMask<MAX_VECTOR_SIZE>>();
         _selection_mask = _selection_mask_uptr.get();
-        SET_ALL_BITS(*_selection_mask);
     }
 
     void State::print_debug_info(std::ofstream &logfile) const {

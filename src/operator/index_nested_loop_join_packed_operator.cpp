@@ -1,4 +1,6 @@
 #include "include/index_nested_loop_join_packed_operator.hh"
+
+#include <cassert>
 #include <cmath>
 #include <cstring>
 #include "include/operator_utils.hh"
@@ -15,12 +17,6 @@ namespace VFEngine {
 #ifdef MY_DEBUG
         _debug = std::make_unique<OperatorDebugUtility>(this);
 #endif
-        // Always create a unique pointer for the original mask
-        _original_ip_selection_mask_uptr = std::make_unique<BitMask<State::MAX_VECTOR_SIZE>>();
-        // Create a separate mask for working operations
-        _working_ip_selection_mask_uptr = std::make_unique<BitMask<State::MAX_VECTOR_SIZE>>();
-        _original_ip_selection_mask = _original_ip_selection_mask_uptr.get();
-        _current_ip_selection_mask = _working_ip_selection_mask_uptr.get();
     }
 
     operator_type_t IndexNestedLoopJoinPacked::get_operator_type() const { return OP_INLJ_PACKED; }
@@ -31,7 +27,12 @@ namespace VFEngine {
         rle_size++;
     }
 #else
-    static inline void update_rle(uint32_t *rle, int32_t &rle_size, uint32_t elements_to_add, int32_t rle_start_pos) {
+    static inline void update_rle(uint32_t *rle, int32_t &rle_size, const uint32_t elements_to_add,
+                                  const int32_t rle_start_pos) {
+#ifdef MY_DEBUG
+        assert(rle_size <= State::MAX_VECTOR_SIZE);
+#endif
+
         auto prev_rle_value = rle[rle_size - 1];
         if (rle_size == rle_start_pos) {
             prev_rle_value = 0;
@@ -128,6 +129,14 @@ namespace VFEngine {
 #endif
 #endif
 
+#ifdef MY_DEBUG
+        assert(input_state != nullptr);
+        assert(output_state != nullptr);
+        assert(_ip_vector_values != nullptr);
+        assert(_op_vector_values != nullptr);
+        assert(_op_vector_rle != nullptr);
+#endif
+
         // Initialize processing state
         const int32_t ip_vector_pos = input_state->_state_info._curr_start_pos;
         const int32_t ip_vector_size = input_state->_state_info._size;
@@ -208,7 +217,16 @@ namespace VFEngine {
         input_state->_selection_mask = _original_ip_selection_mask;
     }
 
-    void IndexNestedLoopJoinPacked::execute() { execute_internal(); }
+    void IndexNestedLoopJoinPacked::execute() {
+#ifdef MY_DEBUG
+        assert(_original_ip_selection_mask != nullptr);
+        assert(_current_ip_selection_mask != nullptr);
+        assert(_output_selection_mask != nullptr);
+        assert(_input_vector != nullptr);
+        assert(_output_vector != nullptr);
+#endif
+        execute_internal();
+    }
 
     void IndexNestedLoopJoinPacked::init(const std::shared_ptr<ContextMemory> &context,
                                          const std::shared_ptr<DataStore> &datastore) {
@@ -220,11 +238,21 @@ namespace VFEngine {
         _output_vector = context->read_vector_for_column(_output_attribute);
         _output_vector->allocate_rle();
         _output_vector->allocate_selection_bitmask();
+
+        // Always create a unique pointer for the original mask
+        _original_ip_selection_mask_uptr = std::make_unique<BitMask<State::MAX_VECTOR_SIZE>>();
+        // Create a separate mask for working operations
+        _working_ip_selection_mask_uptr = std::make_unique<BitMask<State::MAX_VECTOR_SIZE>>();
+        _original_ip_selection_mask = _original_ip_selection_mask_uptr.get();
+        _current_ip_selection_mask = _working_ip_selection_mask_uptr.get();
+
         // Store a copy of the original input selection mask
         RESET_BITMASK(State::MAX_VECTOR_SIZE, *_original_ip_selection_mask, *(_input_vector->_state->_selection_mask));
         // Initialize the working mask with the same values
         RESET_BITMASK(State::MAX_VECTOR_SIZE, *_current_ip_selection_mask, *_original_ip_selection_mask);
+
         _output_selection_mask = _output_vector->_state->_selection_mask;
+
         if (_is_join_index_fwd)
             _adj_list = &(datastore->get_fwd_adj_lists());
         else

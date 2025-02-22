@@ -1,19 +1,40 @@
 #include "bitmask.hh"
 #include <cstring>
+#ifdef VECTOR_STATE_ARENA_ALLOCATOR
+#include "../graph/include/arena_allocator.hh"
+#endif
 namespace VFEngine {
 
 #ifdef BIT_ARRAY_AS_FILTER
-
+#ifdef VECTOR_STATE_ARENA_ALLOCATOR
+    // Arena allocator implementation
     template<std::size_t N>
     BitMask<N>::BitMask() {
+        bits = static_cast<uint8_t *>(ArenaAllocator::getInstance().allocate(N * sizeof(uint8_t)));
         setAllBits();
     }
 
     template<std::size_t N>
     BitMask<N>::BitMask(const BitMask &other) {
+        bits = static_cast<uint8_t *>(ArenaAllocator::getInstance().allocate(N * sizeof(uint8_t)));
         copyFrom(other);
     }
 
+#else
+    // Standard allocator implementation with unique_ptr
+    template<std::size_t N>
+    BitMask<N>::BitMask() : bits_uptr(std::make_unique<uint8_t[]>(N)) {
+        bits = bits_uptr.get();
+        setAllBits();
+    }
+
+    template<std::size_t N>
+    BitMask<N>::BitMask(const BitMask &other) : bits_uptr(std::make_unique<uint8_t[]>(N)) {
+        bits = bits_uptr.get();
+        copyFrom(other);
+    }
+
+#endif
     template<std::size_t N>
     BitMask<N> &BitMask<N>::operator=(const BitMask &other) {
         if (this != &other) {
@@ -44,14 +65,14 @@ namespace VFEngine {
 
     template<std::size_t N>
     void BitMask<N>::clearAllBits() {
-        for (auto i=0; i<N; i++) bits[i] = 0;
-        //std::memset(bits.data(), 0, sizeof(bits));
+        for (auto i = 0; i < N; i++)
+            std::memset(bits, 0, N);
     }
 
     template<std::size_t N>
     void BitMask<N>::setAllBits() {
-        for (auto i=0; i<N; i++) bits[i] = 1;
-        //std::memset(bits.data(), 1, sizeof(bits));
+        for (auto i = 0; i < N; i++)
+            std::memset(bits, 1, N);
     }
 
     template<std::size_t N>
@@ -63,9 +84,8 @@ namespace VFEngine {
 
     template<std::size_t N>
     void BitMask<N>::copyFrom(const BitMask &other) {
-        for (auto i=0; i<N; i++)
-            bits[i] = other.bits[i];
-        //std::memcpy(bits.data(), other.bits.data(), sizeof(bits));
+        for (auto i = 0; i < N; i++)
+            std::memcpy(bits, other.bits, N);
     }
 
 #else

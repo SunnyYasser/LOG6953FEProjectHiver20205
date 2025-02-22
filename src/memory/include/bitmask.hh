@@ -3,7 +3,7 @@
 
 #include <array>
 #include <cstdint>
-
+#include <memory>
 namespace VFEngine {
 
 #ifdef BIT_ARRAY_AS_FILTER
@@ -14,6 +14,7 @@ namespace VFEngine {
         static_assert((N & (N - 1)) == 0, "Size must be a power of 2");
 
         BitMask();
+        ~BitMask() = default;
         BitMask(const BitMask &other);
         BitMask &operator=(const BitMask &other);
         void setBit(std::size_t index);
@@ -27,7 +28,12 @@ namespace VFEngine {
         static constexpr std::size_t size() { return N; }
 
     private:
-        std::array<uint8_t, N> bits{};
+#ifdef VECTOR_STATE_ARENA_ALLOCATOR
+        uint8_t *bits;
+#else
+        std::unique_ptr<uint8_t[]> bits_uptr;
+        uint8_t *bits;
+#endif
     };
 
 #else
