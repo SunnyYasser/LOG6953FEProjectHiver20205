@@ -19,7 +19,7 @@ namespace VFEngine {
         BitMask &operator=(const BitMask &other);
         void setBit(const std::size_t index);
         void clearBit(const std::size_t index);
-        bool testBit(const std::size_t index) const;
+        [[nodiscard]] bool testBit(const std::size_t index) const;
         void toggleBit(const std::size_t index);
         void clearAllBits();
         void setAllBits();
@@ -60,12 +60,14 @@ namespace VFEngine {
         BitMask &operator=(const BitMask &other);
         void setBit(std::size_t index);
         void clearBit(std::size_t index);
-        bool testBit(std::size_t index) const;
+        [[nodiscard]] bool testBit(std::size_t index) const;
         void toggleBit(std::size_t index);
         void clearAllBits();
         void setAllBits();
         void andWith(const BitMask &other);
         void copyFrom(const BitMask &other);
+        void updatePositionsOnSet(int32_t index);
+        void updatePositions();
         static constexpr std::size_t getBitPosition(const std::size_t index) { return index & BIT_MASK_63; }
         static constexpr std::size_t getUint64Index(const std::size_t index) { return index >> 6; }
         static constexpr uint64_t getBitMask(const std::size_t index) { return 1ULL << getBitPosition(index); }
@@ -77,6 +79,7 @@ namespace VFEngine {
 
     private:
         std::array<uint64_t, REQUIRED_UINT64<N>> bits{};
+        int32_t start_pos, end_pos;
     };
 #endif
 

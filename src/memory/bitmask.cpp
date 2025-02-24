@@ -164,12 +164,12 @@ namespace VFEngine {
 #else
 
     template<std::size_t N>
-    BitMask<N>::BitMask() {
+    BitMask<N>::BitMask() : start_pos(N), end_pos(-1) {
         setAllBits();
     }
 
     template<std::size_t N>
-    BitMask<N>::BitMask(const BitMask &other) {
+    BitMask<N>::BitMask(const BitMask &other) : start_pos(other.start_pos), end_pos(other.end_pos) {
         copyFrom(other);
     }
 
@@ -182,33 +182,42 @@ namespace VFEngine {
     }
 
     template<std::size_t N>
-    void BitMask<N>::setBit(std::size_t index) {
+    void BitMask<N>::setBit(const std::size_t index) {
         bits[getUint64Index(index)] |= getBitMask(index);
+        updatePositionsOnSet(static_cast<int32_t>(index));
     }
 
     template<std::size_t N>
-    void BitMask<N>::clearBit(std::size_t index) {
+    void BitMask<N>::clearBit(const std::size_t index) {
         bits[getUint64Index(index)] &= ~getBitMask(index);
+        if (index == static_cast<std::size_t>(start_pos) || index == static_cast<std::size_t>(end_pos)) {
+            updatePositions();
+        }
     }
 
     template<std::size_t N>
-    bool BitMask<N>::testBit(std::size_t index) const {
+    bool BitMask<N>::testBit(const std::size_t index) const {
         return (bits[getUint64Index(index)] & getBitMask(index)) != 0;
     }
 
     template<std::size_t N>
-    void BitMask<N>::toggleBit(std::size_t index) {
+    void BitMask<N>::toggleBit(const std::size_t index) {
         bits[getUint64Index(index)] ^= getBitMask(index);
+        updatePositions();
     }
 
     template<std::size_t N>
     void BitMask<N>::clearAllBits() {
         std::memset(bits.data(), 0, sizeof(bits));
+        start_pos = N;
+        end_pos = -1;
     }
 
     template<std::size_t N>
     void BitMask<N>::setAllBits() {
         std::memset(bits.data(), 0xFF, sizeof(bits));
+        start_pos = 0;
+        end_pos = N - 1;
     }
 
     template<std::size_t N>
@@ -216,32 +225,59 @@ namespace VFEngine {
         for (std::size_t i = 0; i < REQUIRED_UINT64<N>; ++i) {
             bits[i] &= other.bits[i];
         }
+        updatePositions();
     }
 
     template<std::size_t N>
     void BitMask<N>::copyFrom(const BitMask &other) {
         std::memcpy(bits.data(), other.bits.data(), sizeof(bits));
+        start_pos = other.start_pos;
+        end_pos = other.end_pos;
     }
 
-    // Below re just placeholders, will add correct impl next
+    template<std::size_t N>
+    void BitMask<N>::updatePositions() {
+        start_pos = N;
+        end_pos = -1;
+
+        for (std::size_t block = 0; block < REQUIRED_UINT64<N>; ++block) {
+            if (bits[block]) {
+                const uint64_t val = bits[block];
+                for (std::size_t bit = 0; bit < BITS_PER_UINT64 && (block * BITS_PER_UINT64 + bit) < N; ++bit) {
+                    if (val & (1ULL << bit)) {
+                        int32_t index = block * BITS_PER_UINT64 + bit;
+                        start_pos = std::min(start_pos, index);
+                        end_pos = std::max(end_pos, index);
+                    }
+                }
+            }
+        }
+    }
+
+    template<std::size_t N>
+    void BitMask<N>::updatePositionsOnSet(int32_t index) {
+        start_pos = std::min(start_pos, index);
+        end_pos = std::max(end_pos, index);
+    }
+
     template<std::size_t N>
     int32_t BitMask<N>::getStartPos() const {
-        return 0;
+        return start_pos;
     }
 
     template<std::size_t N>
     int32_t BitMask<N>::getEndPos() const {
-        return 0;
+        return end_pos;
     }
 
     template<std::size_t N>
     void BitMask<N>::setStartPos(const int32_t idx_value) {
-        return;
+        start_pos = idx_value;
     }
 
     template<std::size_t N>
     void BitMask<N>::setEndPos(const int32_t idx_value) {
-        return;
+        end_pos = idx_value;
     }
 
 
