@@ -37,6 +37,8 @@ function(enable_optimizations target)
     option(ENABLE_BRANCHLESS_SINK_PACKED "Enable branchless Sink Packed Impl." OFF)
     option(VECTOR_STATE_ARENA_ALLOCATOR "Enable arena alloc for vectors" OFF)
     option(MEMSET_TO_SET_VECTOR_SLICE "Use memset for vector slices" OFF)
+    option(BIT_ARRAY_AS_FILTER "Use bit arrays for selection" OFF)
+
     if (STORAGE_TO_VECTOR_MEMCPY_PTR_ALIAS)
         target_compile_definitions(${target} PRIVATE STORAGE_TO_VECTOR_MEMCPY_PTR_ALIAS)
     endif ()

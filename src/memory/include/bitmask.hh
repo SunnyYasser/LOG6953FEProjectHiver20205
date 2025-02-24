@@ -17,10 +17,10 @@ namespace VFEngine {
         ~BitMask() = default;
         BitMask(const BitMask &other);
         BitMask &operator=(const BitMask &other);
-        void setBit(std::size_t index);
-        void clearBit(std::size_t index);
-        bool testBit(std::size_t index) const;
-        void toggleBit(std::size_t index);
+        void setBit(const std::size_t index);
+        void clearBit(const std::size_t index);
+        bool testBit(const std::size_t index) const;
+        void toggleBit(const std::size_t index);
         void clearAllBits();
         void setAllBits();
         void andWith(const BitMask &other);
@@ -29,6 +29,8 @@ namespace VFEngine {
         int32_t getStartPos() const;
         int32_t getEndPos() const;
         void updatePositions();
+        void setStartPos(int32_t idx_value);
+        void setEndPos(int32_t idx_value);
 
     private:
 #ifdef VECTOR_STATE_ARENA_ALLOCATOR
@@ -70,6 +72,8 @@ namespace VFEngine {
         static constexpr std::size_t size() { return N; }
         int32_t getStartPos() const;
         int32_t getEndPos() const;
+        void setStartPos(int32_t idx_value);
+        void setEndPos(int32_t idx_value);
 
     private:
         std::array<uint64_t, REQUIRED_UINT64<N>> bits{};
@@ -88,4 +92,6 @@ namespace VFEngine {
 #define RESET_BITMASK(N, first, second) ((first).copyFrom(second))
 #define GET_START_POS(bitmask) ((bitmask).getStartPos())
 #define GET_END_POS(bitmask) ((bitmask).getEndPos())
+#define SET_START_POS(bitmask, index) ((bitmask).setStartPos(index))
+#define SET_END_POS(bitmask, index) ((bitmask).setEndPos(index))
 #endif

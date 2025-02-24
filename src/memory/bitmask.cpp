@@ -151,6 +151,16 @@ namespace VFEngine {
         return end_pos;
     }
 
+    template<std::size_t N>
+    void BitMask<N>::setStartPos(const int32_t idx_value) {
+        start_pos = idx_value;
+    }
+
+    template<std::size_t N>
+    void BitMask<N>::setEndPos(const int32_t idx_value) {
+        end_pos = idx_value;
+    }
+
 #else
 
     template<std::size_t N>
@@ -223,6 +233,17 @@ namespace VFEngine {
     int32_t BitMask<N>::getEndPos() const {
         return 0;
     }
+
+    template<std::size_t N>
+    void BitMask<N>::setStartPos(const int32_t idx_value) {
+        return;
+    }
+
+    template<std::size_t N>
+    void BitMask<N>::setEndPos(const int32_t idx_value) {
+        return;
+    }
+
 
 #endif
 
