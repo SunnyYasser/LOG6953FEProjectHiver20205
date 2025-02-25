@@ -169,14 +169,13 @@ namespace VFEngine {
         // Reset the working mask with the original mask values at the start of execution
         RESET_BITMASK(State::MAX_VECTOR_SIZE, *_current_ip_selection_mask, *_original_ip_selection_mask);
 
-#ifdef BIT_ARRAY_AS_FILTER
-        // Get the active bit range from the bitmask
+        // Get the active bit range from the bitmask - this works for both BIT_ARRAY_AS_FILTER and regular bitmask
         int32_t start_idx = GET_START_POS(*_current_ip_selection_mask);
         int32_t end_idx = GET_END_POS(*_current_ip_selection_mask);
 
         // Ensure indices are within valid range
         start_idx = std::max(start_idx, ip_vector_pos);
-        end_idx = std::min(end_idx, ip_vector_pos + ip_vector_size);
+        end_idx = std::min(end_idx, ip_vector_pos + ip_vector_size - 1);
 
         // Update RLE for elements from 0 to start_idx-1 (if start_idx > 0)
 #ifdef MEMSET_TO_SET_VECTOR_SLICE
@@ -189,15 +188,14 @@ namespace VFEngine {
         op_vector_rle_size += start_idx;
         op_rle_start_pos = op_vector_rle_size;
 #endif
-        // We need to store the idx of the first and last valid idx of the bitarray
+
+        // We need to store the idx of the first and last valid idx of the bitmask
         int32_t first_valid_idx = -1, last_valid_idx = -1;
+
         // Process only the active bit range
         for (auto idx = start_idx; idx <= end_idx;) {
-#else
-        // Regular iteration for non-BitArray implementation
-        for (auto idx = 0; idx < ip_vector_size;) {
-#endif
-            curr_pos = ip_vector_pos + idx;
+            // curr_pos = ip_vector_pos + idx;
+            curr_pos = idx;
             const auto &curr_adj_node = adj_list_ptr[_ip_vector_values[curr_pos]];
             output_elems_produced = curr_adj_node._size;
             remaining_space = State::MAX_VECTOR_SIZE - op_filled_idx;
@@ -209,18 +207,19 @@ namespace VFEngine {
                 elements_to_copy = 0;
             }
 
-#ifdef BIT_ARRAY_AS_FILTER
-            if (elements_to_copy > 0 and first_valid_idx == -1) {
+            // Track first and last valid indices
+            if (elements_to_copy > 0 && first_valid_idx == -1) {
                 first_valid_idx = idx;
             }
             if (elements_to_copy > 0) {
                 last_valid_idx = idx;
             }
-            if (elements_to_copy) {
+
+            // Update positions in the bitmask
+            if (elements_to_copy > 0) {
                 SET_START_POS(*_current_ip_selection_mask, first_valid_idx);
                 SET_END_POS(*_current_ip_selection_mask, last_valid_idx);
             }
-#endif
 
             copy_adjacency_values(_op_vector_values, curr_adj_node._values, op_filled_idx, ip_values_idx,
                                   elements_to_copy);
@@ -248,7 +247,6 @@ namespace VFEngine {
             }
         }
 
-#ifdef BIT_ARRAY_AS_FILTER
         // After processing the active bit range, update RLE for remaining elements
         if (end_idx < ip_vector_pos + ip_vector_size) {
             // Calculate number of remaining elements
@@ -265,8 +263,6 @@ namespace VFEngine {
             op_rle_start_pos = op_vector_rle_size;
 #endif
         }
-#endif
-
 
         // Final cleanup
         op_vector_rle_size = 1;

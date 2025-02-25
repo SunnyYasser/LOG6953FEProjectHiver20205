@@ -78,7 +78,12 @@ namespace VFEngine {
         void setEndPos(int32_t idx_value);
 
     private:
-        std::array<uint64_t, REQUIRED_UINT64<N>> bits{};
+#ifdef VECTOR_STATE_ARENA_ALLOCATOR
+        uint64_t *bits;
+#else
+        std::unique_ptr<uint64_t[]> bits_uptr;
+        uint64_t *bits;
+#endif
         int32_t start_pos, end_pos;
     };
 #endif

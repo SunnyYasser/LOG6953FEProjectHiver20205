@@ -163,74 +163,105 @@ namespace VFEngine {
 
 #else
 
+#ifdef VECTOR_STATE_ARENA_ALLOCATOR
     template<std::size_t N>
-    BitMask<N>::BitMask() : start_pos(N), end_pos(-1) {
+    BitMask<N>::BitMask() : start_pos(0), end_pos(N - 1) {
+        const std::size_t numBlocks = REQUIRED_UINT64<N>;
+        bits = static_cast<uint64_t *>(ArenaAllocator::getInstance().allocate(numBlocks * sizeof(uint64_t)));
         setAllBits();
     }
 
     template<std::size_t N>
     BitMask<N>::BitMask(const BitMask &other) : start_pos(other.start_pos), end_pos(other.end_pos) {
+        const std::size_t numBlocks = REQUIRED_UINT64<N>;
+        bits = static_cast<uint64_t *>(ArenaAllocator::getInstance().allocate(numBlocks * sizeof(uint64_t)));
         copyFrom(other);
     }
+
+    // No explicit destructor needed when using ArenaAllocator
+    // Memory is freed when the allocator is destroyed
+#else
+    template<std::size_t N>
+    BitMask<N>::BitMask() : start_pos(0), end_pos(N - 1) {
+        const std::size_t numBlocks = REQUIRED_UINT64<N>;
+        bits_uptr = std::make_unique<uint64_t[]>(numBlocks);
+        bits = bits_uptr.get();
+        setAllBits();
+    }
+
+    template<std::size_t N>
+    BitMask<N>::BitMask(const BitMask &other) : start_pos(other.start_pos), end_pos(other.end_pos) {
+        const std::size_t numBlocks = REQUIRED_UINT64<N>;
+        bits_uptr = std::make_unique<uint64_t[]>(numBlocks);
+        bits = bits_uptr.get();
+        copyFrom(other);
+    }
+#endif
 
     template<std::size_t N>
     BitMask<N> &BitMask<N>::operator=(const BitMask &other) {
         if (this != &other) {
             copyFrom(other);
+            start_pos = other.start_pos;
+            end_pos = other.end_pos;
         }
         return *this;
     }
 
     template<std::size_t N>
-    void BitMask<N>::setBit(const std::size_t index) {
+    void BitMask<N>::setBit(std::size_t index) {
         bits[getUint64Index(index)] |= getBitMask(index);
-        updatePositionsOnSet(static_cast<int32_t>(index));
+        // updatePositionsOnSet(static_cast<int32_t>(index));
     }
 
     template<std::size_t N>
-    void BitMask<N>::clearBit(const std::size_t index) {
+    void BitMask<N>::clearBit(std::size_t index) {
         bits[getUint64Index(index)] &= ~getBitMask(index);
-        if (index == static_cast<std::size_t>(start_pos) || index == static_cast<std::size_t>(end_pos)) {
-            updatePositions();
-        }
+        // if (index == static_cast<std::size_t>(start_pos) || index == static_cast<std::size_t>(end_pos)) {
+        //     updatePositions();
+        // }
     }
 
     template<std::size_t N>
-    bool BitMask<N>::testBit(const std::size_t index) const {
+    bool BitMask<N>::testBit(std::size_t index) const {
         return (bits[getUint64Index(index)] & getBitMask(index)) != 0;
     }
 
     template<std::size_t N>
-    void BitMask<N>::toggleBit(const std::size_t index) {
+    void BitMask<N>::toggleBit(std::size_t index) {
         bits[getUint64Index(index)] ^= getBitMask(index);
-        updatePositions();
+        // updatePositions();
     }
 
     template<std::size_t N>
     void BitMask<N>::clearAllBits() {
-        std::memset(bits.data(), 0, sizeof(bits));
+        std::size_t numBlocks = REQUIRED_UINT64<N>;
+        std::memset(bits, 0, numBlocks * sizeof(uint64_t));
         start_pos = N;
         end_pos = -1;
     }
 
     template<std::size_t N>
     void BitMask<N>::setAllBits() {
-        std::memset(bits.data(), 0xFF, sizeof(bits));
+        std::size_t numBlocks = REQUIRED_UINT64<N>;
+        std::memset(bits, 0xFF, numBlocks * sizeof(uint64_t));
         start_pos = 0;
         end_pos = N - 1;
     }
 
     template<std::size_t N>
     void BitMask<N>::andWith(const BitMask &other) {
-        for (std::size_t i = 0; i < REQUIRED_UINT64<N>; ++i) {
+        std::size_t numBlocks = REQUIRED_UINT64<N>;
+        for (std::size_t i = 0; i < numBlocks; ++i) {
             bits[i] &= other.bits[i];
         }
-        updatePositions();
+        // updatePositions();
     }
 
     template<std::size_t N>
     void BitMask<N>::copyFrom(const BitMask &other) {
-        std::memcpy(bits.data(), other.bits.data(), sizeof(bits));
+        const std::size_t numBlocks = REQUIRED_UINT64<N>;
+        std::memcpy(bits, other.bits, numBlocks * sizeof(uint64_t));
         start_pos = other.start_pos;
         end_pos = other.end_pos;
     }
@@ -240,12 +271,13 @@ namespace VFEngine {
         start_pos = N;
         end_pos = -1;
 
-        for (std::size_t block = 0; block < REQUIRED_UINT64<N>; ++block) {
+        std::size_t numBlocks = REQUIRED_UINT64<N>;
+        for (std::size_t block = 0; block < numBlocks; ++block) {
             if (bits[block]) {
                 const uint64_t val = bits[block];
                 for (std::size_t bit = 0; bit < BITS_PER_UINT64 && (block * BITS_PER_UINT64 + bit) < N; ++bit) {
                     if (val & (1ULL << bit)) {
-                        int32_t index = block * BITS_PER_UINT64 + bit;
+                        int32_t index = static_cast<int32_t>(block * BITS_PER_UINT64 + bit);
                         start_pos = std::min(start_pos, index);
                         end_pos = std::max(end_pos, index);
                     }
@@ -255,7 +287,7 @@ namespace VFEngine {
     }
 
     template<std::size_t N>
-    void BitMask<N>::updatePositionsOnSet(int32_t index) {
+    void BitMask<N>::updatePositionsOnSet(const int32_t index) {
         start_pos = std::min(start_pos, index);
         end_pos = std::max(end_pos, index);
     }
@@ -279,10 +311,9 @@ namespace VFEngine {
     void BitMask<N>::setEndPos(const int32_t idx_value) {
         end_pos = idx_value;
     }
-
-
 #endif
 
+    template class BitMask<4>;
     template class BitMask<1024>;
     template class BitMask<2048>;
 
