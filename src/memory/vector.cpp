@@ -47,8 +47,6 @@ namespace VFEngine {
 #endif
     void Vector::set_default_values() const { memset(_values, 0, State::MAX_VECTOR_SIZE * sizeof(uint64_t)); }
 
-    void Vector::allocate_filter() const { _state->allocate_filter(); }
-
     void Vector::allocate_rle() const { _state->allocate_rle(); }
 
     void Vector::allocate_selection_bitmask() const { _state->allocate_selection_bitmask(); }

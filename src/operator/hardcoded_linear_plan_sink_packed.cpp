@@ -20,19 +20,45 @@ namespace VFEngine {
         _exec_call_counter++;
         update_total_row_size_if_materialized();
     }
+
 #ifdef VECTOR_STATE_ARENA_ALLOCATOR
-    static ulong count(const State* leaf) {
+    static ulong count(const State *leaf) {
 #else
     static ulong count(const std::shared_ptr<State> &leaf) {
 #endif
         const auto &rle = leaf->_rle;
-        const auto &rle_size = leaf->_rle_size;
-        ulong ans = 0;
-        for (std::size_t i = 1; i < rle_size; i++) {
-            ans += rle[i] - rle[i - 1];
+        const auto &selection_mask = *(leaf->_selection_mask);
+
+        // Get the valid range from the selection mask
+        const auto start_pos = GET_START_POS(selection_mask);
+        const auto end_pos = GET_END_POS(selection_mask);
+
+        // Check if there's any valid range
+        if (start_pos > end_pos) {
+            return 0;
         }
 
-        return ans;
+        // Count valid elements using RLE
+        ulong total_count = 0;
+
+        for (auto idx = start_pos; idx <= end_pos; idx++) {
+            // Skip invalid indices
+            if (!TEST_BIT(selection_mask, idx)) {
+                continue;
+            }
+
+            // Calculate the number of elements at this index
+            uint32_t count_at_idx;
+            if (idx == 0) {
+                count_at_idx = rle[idx + 1];
+            } else {
+                count_at_idx = rle[idx + 1] - rle[idx];
+            }
+
+            total_count += count_at_idx;
+        }
+
+        return total_count;
     }
 
     void SinkLinearHardcoded::update_total_row_size_if_materialized() {
@@ -64,6 +90,7 @@ namespace VFEngine {
             dfs_helper(child, visited, context);
         }
     }
+
     void SinkLinearHardcoded::fill_vectors_in_ftree() const {
         std::unordered_set<std::string> visited;
         dfs_helper(_ftree, visited, _context);
@@ -88,7 +115,6 @@ namespace VFEngine {
         fill_vectors_in_ftree();
         capture_leaf_node(_ftree);
     }
-
 
     ulong SinkLinearHardcoded::get_total_row_size_if_materialized() { return total_row_size_if_materialized; }
 

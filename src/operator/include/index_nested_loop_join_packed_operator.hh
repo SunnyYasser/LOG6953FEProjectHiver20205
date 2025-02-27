@@ -27,9 +27,10 @@ namespace VFEngine {
 
     private:
         __attribute__((always_inline)) inline void
-        process_data_chunk(State *input_state, State *output_state, int32_t window_start, int32_t window_size,
-                           int32_t ip_vector_pos, int32_t ip_vector_size, int32_t &op_filled_idx,
-                           uint32_t *op_vector_rle, int32_t curr_pos, int32_t idx, const std::string &fn_name);
+        process_data_chunk(int32_t new_ip_selection_vector_start_pos, int32_t new_ip_selection_vector_end_pos,
+                           int32_t current_ip_vector_idx, bool is_chunk_complete, int32_t &op_filled_idx,
+                           uint32_t *op_vector_rle, const std::string &fn_name);
+
         __attribute__((always_inline)) inline void copy_adjacency_values(uint64_t *op_vector_values,
                                                                          const uint64_t *adj_values,
                                                                          int32_t op_filled_idx, int32_t ip_values_idx,

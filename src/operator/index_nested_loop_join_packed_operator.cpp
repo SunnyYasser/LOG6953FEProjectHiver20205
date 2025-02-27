@@ -21,41 +21,38 @@ namespace VFEngine {
 
     operator_type_t IndexNestedLoopJoinPacked::get_operator_type() const { return OP_INLJ_PACKED; }
 
-#ifdef MEMSET_TO_SET_VECTOR_SLICE
-    static inline void update_rle(uint32_t *rle, int32_t &rle_size, uint32_t elements_to_add) {
-        rle[rle_size] = rle[rle_size - 1] + elements_to_add;
-        rle_size++;
-    }
-#else
-    static inline void update_rle(uint32_t *rle, int32_t &rle_size, const uint32_t elements_to_add,
-                                  const int32_t rle_start_pos) {
+    static inline void update_rle(uint32_t *rle, const uint32_t index, const uint32_t value) {
 #ifdef MY_DEBUG
-        assert(rle_size <= State::MAX_VECTOR_SIZE);
+        assert(index > 0 && index < State::MAX_VECTOR_SIZE);
 #endif
 
-        auto prev_rle_value = rle[rle_size - 1];
-        if (rle_size == rle_start_pos) {
-            prev_rle_value = 0;
-        }
-        rle[rle_size] = prev_rle_value + elements_to_add;
-        rle_size++;
+        // Set RLE value directly at the index
+        rle[index] = rle[index - 1] + value;
     }
+
+    __attribute__((always_inline)) inline void IndexNestedLoopJoinPacked::process_data_chunk(
+            const int32_t new_ip_selection_vector_start_pos, const int32_t new_ip_selection_vector_end_pos,
+            const int32_t current_ip_vector_idx, const bool is_chunk_complete, int32_t &op_filled_idx,
+            uint32_t *op_vector_rle, const std::string &fn_name) {
+#ifdef MY_DEBUG
+        assert(op_filled_idx <= State::MAX_VECTOR_SIZE);
+        assert(op_vector_rle != nullptr);
+        assert(current_ip_vector_idx <= State::MAX_VECTOR_SIZE);
 #endif
 
+        // Set all idx upto op_filled_idx as valid, rest as invalid
+        CLEAR_ALL_BITS(*_output_selection_mask);
+        SET_BITS_TILL_IDX(*_output_selection_mask, op_filled_idx - 1);
 
-    __attribute__((always_inline)) inline void
-    IndexNestedLoopJoinPacked::process_data_chunk(State *input_state, State *output_state, int32_t window_start,
-                                                  int32_t window_size, int32_t ip_vector_pos, int32_t ip_vector_size,
-                                                  int32_t &op_filled_idx, uint32_t *op_vector_rle, int32_t curr_pos,
-                                                  int32_t idx, const std::string &fn_name) {
-        input_state->_state_info._curr_start_pos = window_start;
-        input_state->_state_info._size = window_size;
-        // Set all output values as valid
-        SET_ALL_BITS(*_output_selection_mask);
-        // Get a copy of the current ip bitmask, since we need to restore it after
+        // First get a copy of the current ip bitmask, since we need to restore it after
         // the function stack returns
-        auto working_ip_bitmask_copy = *_current_ip_selection_mask;
-        RESET_BITMASK(State::MAX_VECTOR_SIZE, working_ip_bitmask_copy, *_current_ip_selection_mask);
+        const auto working_ip_bitmask_copy = *_current_ip_selection_mask;
+
+        // Update selection mask with the correct slice range, we do not need to clear
+        // indices outside the range since they are by default invalid
+        SET_START_POS(*_current_ip_selection_mask, new_ip_selection_vector_start_pos);
+        SET_END_POS(*_current_ip_selection_mask, new_ip_selection_vector_end_pos);
+
 
 #ifdef MY_DEBUG
         _debug->log_vector(_input_vector, _output_vector, fn_name);
@@ -63,34 +60,26 @@ namespace VFEngine {
 
         get_next_operator()->execute();
 
-        // Reset output state
-        output_state->_state_info._size = 0;
-        output_state->_rle_size = 1;
-        output_state->_state_info._curr_start_pos = 0;
-        op_filled_idx = 0;
-
-        // Reset input state
-        input_state->_state_info._curr_start_pos = ip_vector_pos;
-        input_state->_state_info._size = ip_vector_size;
-        // reset input bitmask to original working ip bitmask
+        // reset input bitmask to original working ip bitmask, start and end pos are also restored
         RESET_BITMASK(State::MAX_VECTOR_SIZE, *_current_ip_selection_mask, working_ip_bitmask_copy);
 
-#ifdef MEMSET_TO_SET_VECTOR_SLICE
-        const auto rle_reset_size = (ip_vector_pos + idx) * sizeof(op_vector_rle[0]);
-        std::memset(&op_vector_rle[1], 0, rle_reset_size);
-        output_state->_rle_size += (ip_vector_pos + idx);
-#else
-        output_state->_rle_size += (ip_vector_pos + idx);
-        output_state->_rle_start_pos = output_state->_rle_size;
-#endif
+        // We need to set all the values upto the current ip_vector_idx to be marked invalid, since they
+        // have already been processed .This operation is similar to marking the RLE slices for each new
+        // call to the next operator. An easier operation is to mark the entire bitmask as invalid, and
+        // then for the current ip vector idx mark it valid if it has more elements to produce.
+        CLEAR_ALL_BITS(*_current_ip_selection_mask);
+        if (!is_chunk_complete)
+            SET_BIT(*_current_ip_selection_mask, current_ip_vector_idx);
+
+        // finally clean the output vector rle for new batch
+        std::memset(op_vector_rle, 0, State::MAX_VECTOR_SIZE * sizeof(uint32_t));
+        op_filled_idx = 0;
     }
 
     __attribute__((always_inline)) inline void
     IndexNestedLoopJoinPacked::copy_adjacency_values(uint64_t *op_vector_values, const uint64_t *adj_values,
                                                      const int32_t op_filled_idx, const int32_t ip_values_idx,
                                                      const int32_t elements_to_copy) {
-        if (elements_to_copy == 0)
-            return;
         std::memcpy(&op_vector_values[op_filled_idx], &adj_values[ip_values_idx],
                     elements_to_copy * sizeof(op_vector_values[0]));
     }
@@ -99,21 +88,6 @@ namespace VFEngine {
         _exec_call_counter++;
         const std::string fn_name = "IndexNestedLoopJoinPacked::execute_internal()";
 
-#if defined(STORAGE_TO_VECTOR_MEMCPY_PTR_ALIAS)
-#if defined(VECTOR_STATE_ARENA_ALLOCATOR)
-        State *__restrict__ input_state = _input_vector->_state;
-        State *__restrict__ output_state = _output_vector->_state;
-        const uint64_t *__restrict__ _ip_vector_values = _input_vector->_values;
-        uint64_t *__restrict__ _op_vector_values = _output_vector->_values;
-        uint32_t *__restrict__ _op_vector_rle = output_state->_rle;
-#else
-        State *__restrict__ input_state = _input_vector->_state.get();
-        State *__restrict__ output_state = _output_vector->_state.get();
-        const uint64_t *__restrict__ _ip_vector_values = _input_vector->_values;
-        uint64_t *__restrict__ _op_vector_values = _output_vector->_values;
-        uint32_t *__restrict__ _op_vector_rle = output_state->_rle.get();
-#endif
-#else
 #if defined(VECTOR_STATE_ARENA_ALLOCATOR)
         State *input_state = _input_vector->_state;
         State *output_state = _output_vector->_state;
@@ -127,7 +101,6 @@ namespace VFEngine {
         uint64_t *_op_vector_values = _output_vector->_values;
         uint32_t *_op_vector_rle = output_state->_rle.get();
 #endif
-#endif
 
 #ifdef MY_DEBUG
         assert(input_state != nullptr);
@@ -137,139 +110,91 @@ namespace VFEngine {
         assert(_op_vector_rle != nullptr);
 #endif
 
-        // Initialize processing state
-        const int32_t ip_vector_pos = input_state->_state_info._curr_start_pos;
-        const int32_t ip_vector_size = input_state->_state_info._size;
-        auto &op_vector_rle_size = output_state->_rle_size;
-        auto &op_vector_size = output_state->_state_info._size = 0;
-        const auto &adj_list_ptr = *_adj_list;
+        // Reset the working mask with the original mask values at the start of execution
+        RESET_BITMASK(State::MAX_VECTOR_SIZE, *_original_ip_selection_mask, *(input_state->_selection_mask));
+        RESET_BITMASK(State::MAX_VECTOR_SIZE, *_current_ip_selection_mask, *_original_ip_selection_mask);
 
-        // Initialize RLE
-#ifdef MEMSET_TO_SET_VECTOR_SLICE
-        std::memset(&_op_vector_rle[1], 0, ip_vector_pos * sizeof(_op_vector_rle[0]));
-        op_vector_rle_size += ip_vector_pos;
-#else
-        auto &op_rle_start_pos = output_state->_rle_start_pos;
-        op_vector_rle_size += ip_vector_pos;
-        op_rle_start_pos = ip_vector_pos == 0 ? 0 : op_vector_rle_size;
-#endif
+        // Get the active bit range from the bitmask
+        const int32_t start_idx = GET_START_POS(*_current_ip_selection_mask);
+        const int32_t end_idx = GET_END_POS(*_current_ip_selection_mask);
+        const auto &adj_list_ptr = *_adj_list;
 
         // Process input vector
         int32_t op_filled_idx = 0;
         int32_t ip_values_idx = 0;
-        int32_t prev_ip_vector_pos = ip_vector_pos;
         int32_t curr_pos = 0;
-        int32_t remaining_space = 0;
-        int32_t remaining_values = 0;
-        int32_t elements_to_copy = 0;
-        int32_t window_size = 0;
         int32_t output_elems_produced = 0;
         bool is_chunk_complete = false;
 
-        // Reset the working mask with the original mask values at the start of execution
-        RESET_BITMASK(State::MAX_VECTOR_SIZE, *_current_ip_selection_mask, *_original_ip_selection_mask);
-
-        // Get the active bit range from the bitmask - this works for both BIT_ARRAY_AS_FILTER and regular bitmask
-        int32_t start_idx = GET_START_POS(*_current_ip_selection_mask);
-        int32_t end_idx = GET_END_POS(*_current_ip_selection_mask);
-
-        // Ensure indices are within valid range
-        start_idx = std::max(start_idx, ip_vector_pos);
-        end_idx = std::min(end_idx, ip_vector_pos + ip_vector_size - 1);
-
-        // Update RLE for elements from 0 to start_idx-1 (if start_idx > 0)
-#ifdef MEMSET_TO_SET_VECTOR_SLICE
-        // In MEMSET_TO_SET_VECTOR_SLICE mode, set RLE values to 0 for the skipped range
-        const auto rle_range_size = start_idx * sizeof(_op_vector_rle[0]);
-        std::memset(&_op_vector_rle[op_vector_rle_size], 0, rle_range_size);
-        op_vector_rle_size += start_idx;
-#else
-        // In non-MEMSET mode, we can directly update the RLE start position
-        op_vector_rle_size += start_idx;
-        op_rle_start_pos = op_vector_rle_size;
-#endif
-
-        // We need to store the idx of the first and last valid idx of the bitmask
-        int32_t first_valid_idx = -1, last_valid_idx = -1;
+        // Initialize RLE[0] to 0
+        std::memset(_op_vector_rle, 0, State::MAX_VECTOR_SIZE * sizeof(uint32_t));
+        op_filled_idx = 0;
 
         // Process only the active bit range
         for (auto idx = start_idx; idx <= end_idx;) {
-            // curr_pos = ip_vector_pos + idx;
             curr_pos = idx;
+
+            // Skip if this index isn't valid in our selection mask
+            if (!TEST_BIT(*_current_ip_selection_mask, idx)) {
+                idx++;
+                continue;
+            }
+
+            // Get adjacency list for current value
             const auto &curr_adj_node = adj_list_ptr[_ip_vector_values[curr_pos]];
             output_elems_produced = curr_adj_node._size;
-            remaining_space = State::MAX_VECTOR_SIZE - op_filled_idx;
-            remaining_values = output_elems_produced - ip_values_idx;
-            elements_to_copy = std::min(remaining_space, remaining_values);
 
-            if (!TEST_BIT(*_current_ip_selection_mask, idx) || output_elems_produced == 0) {
+            // Skip if there are no elements to produce
+            if (output_elems_produced == 0) {
                 CLEAR_BIT(*_current_ip_selection_mask, idx);
-                elements_to_copy = 0;
+                idx++;
+                continue;
             }
 
-            // Track first and last valid indices
-            if (elements_to_copy > 0 && first_valid_idx == -1) {
-                first_valid_idx = idx;
-            }
-            if (elements_to_copy > 0) {
-                last_valid_idx = idx;
-            }
+            // Calculate how many elements we can copy
+            int32_t remaining_space = State::MAX_VECTOR_SIZE - op_filled_idx;
+            int32_t remaining_values = output_elems_produced - ip_values_idx;
+            const int32_t elements_to_copy = std::min(remaining_space, remaining_values);
 
-            // Update positions in the bitmask
-            if (elements_to_copy > 0) {
-                SET_START_POS(*_current_ip_selection_mask, first_valid_idx);
-                SET_END_POS(*_current_ip_selection_mask, last_valid_idx);
-            }
-
+            // Copy values to output
             copy_adjacency_values(_op_vector_values, curr_adj_node._values, op_filled_idx, ip_values_idx,
                                   elements_to_copy);
 
+            // Update state
             op_filled_idx += elements_to_copy;
             ip_values_idx += elements_to_copy;
 
-            // Update RLE
-#ifdef MEMSET_TO_SET_VECTOR_SLICE
-            update_rle(_op_vector_rle, op_vector_rle_size, elements_to_copy);
-#else
-            update_rle(_op_vector_rle, op_vector_rle_size, elements_to_copy, op_rle_start_pos);
-#endif
-            op_vector_size += elements_to_copy;
+            // Update RLE directly at the index based on the element count
+            if (elements_to_copy > 0) {
+                update_rle(_op_vector_rle, idx + 1, elements_to_copy);
+            }
 
+            // Check if we've processed all elements for this index
             is_chunk_complete = (ip_values_idx >= output_elems_produced);
-            idx += is_chunk_complete;
-            ip_values_idx *= !is_chunk_complete;
 
-            if ((op_filled_idx >= State::MAX_VECTOR_SIZE) || (idx >= ip_vector_size)) {
-                window_size = curr_pos - prev_ip_vector_pos + 1;
-                process_data_chunk(input_state, output_state, prev_ip_vector_pos, window_size, ip_vector_pos,
-                                   ip_vector_size, op_filled_idx, _op_vector_rle, curr_pos, idx, fn_name);
-                prev_ip_vector_pos = curr_pos + (ip_values_idx == 0);
+            // Move to next index if chunk is complete, otherwise keep working on this index
+            if (is_chunk_complete) {
+                idx++;
+                ip_values_idx = 0;
+            }
+
+            // If output buffer is full or we're at the end of our input range, process the chunk
+            if (op_filled_idx >= State::MAX_VECTOR_SIZE || (is_chunk_complete && idx > end_idx)) {
+                process_data_chunk(start_idx, // New start position for selection vector
+                                   end_idx, // New end position for selection vector
+                                   curr_pos, // Current index being processed
+                                   is_chunk_complete, // Whether we completed this chunk
+                                   op_filled_idx, // Number of items in output buffer
+                                   _op_vector_rle, // Output RLE array
+                                   fn_name // Function name for debug
+                );
             }
         }
 
-        // After processing the active bit range, update RLE for remaining elements
-        if (end_idx < ip_vector_pos + ip_vector_size) {
-            // Calculate number of remaining elements
-            int32_t remaining_elements = (ip_vector_pos + ip_vector_size) - end_idx;
-
-#ifdef MEMSET_TO_SET_VECTOR_SLICE
-            // In MEMSET_TO_SET_VECTOR_SLICE mode, set RLE values to 0 for the remaining range
-            const auto rle_range_size = remaining_elements * sizeof(_op_vector_rle[0]);
-            std::memset(&_op_vector_rle[op_vector_rle_size], 0, rle_range_size);
-            op_vector_rle_size += remaining_elements;
-#else
-            // In non-MEMSET mode, we can directly update the RLE start position
-            op_vector_rle_size += remaining_elements;
-            op_rle_start_pos = op_vector_rle_size;
-#endif
-        }
-
         // Final cleanup
-        op_vector_rle_size = 1;
-        op_vector_size = 0;
-#ifndef MEMSET_TO_SET_VECTOR_SLICE
-        op_rle_start_pos = 0;
-#endif
+        std::memset(_op_vector_rle, 0, State::MAX_VECTOR_SIZE * sizeof(uint32_t));
+        op_filled_idx = 0;
+
         // Always restore original selection mask at the end of execution
         input_state->_selection_mask = _original_ip_selection_mask;
     }
@@ -302,12 +227,7 @@ namespace VFEngine {
         _working_ip_selection_mask_uptr = std::make_unique<BitMask<State::MAX_VECTOR_SIZE>>();
         _original_ip_selection_mask = _original_ip_selection_mask_uptr.get();
         _current_ip_selection_mask = _working_ip_selection_mask_uptr.get();
-
-        // Store a copy of the original input selection mask
-        RESET_BITMASK(State::MAX_VECTOR_SIZE, *_original_ip_selection_mask, *(_input_vector->_state->_selection_mask));
-        // Initialize the working mask with the same values
-        RESET_BITMASK(State::MAX_VECTOR_SIZE, *_current_ip_selection_mask, *_original_ip_selection_mask);
-
+        // Grab address of the output vector's selection mask
         _output_selection_mask = _output_vector->_state->_selection_mask;
 
         if (_is_join_index_fwd)

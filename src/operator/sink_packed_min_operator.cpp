@@ -33,8 +33,24 @@ namespace VFEngine {
         const auto &data = vec->_values;
         const auto attr_idx = op->_attribute[0] - 'a'; // Convert attribute name to index
         const auto &rle = vec->_state->_rle;
-        const auto end = rle[parent_idx + 1];
-        const auto start = rle[parent_idx];
+        const auto &selection_mask = *(vec->_state->_selection_mask);
+
+        // Check if parent_idx is valid
+        if (!TEST_BIT(selection_mask, parent_idx)) {
+            return;
+        }
+
+        // Use RLE to determine the range
+        uint32_t start, end;
+        if (parent_idx == 0) {
+            start = 0;
+            end = rle[parent_idx + 1];
+        } else {
+            start = rle[parent_idx - 1];
+            end = rle[parent_idx];
+        }
+
+        // Update min values for this attribute within the range
         for (size_t i = start; i < end; i++) {
             min_values[attr_idx] = std::min(min_values[attr_idx], data[i]);
         }
@@ -45,27 +61,33 @@ namespace VFEngine {
                                     ulong *min_values) {
         const auto &vec = op->_value;
         const auto &children = op->_children;
-        const auto &start_pos = vec->_state->_state_info._curr_start_pos;
-        const auto &size = vec->_state->_state_info._size;
-        const auto &rle = vec->_state->_rle;
-        const auto attr_idx = op->_attribute[0] - 'a'; // Convert attribute name to index
         const auto &values = vec->_values;
-        const BitMask<State::MAX_VECTOR_SIZE> &_ip_selection_mask = *(vec->_state->_selection_mask);
+        const auto &selection_mask = *(vec->_state->_selection_mask);
+        const auto attr_idx = op->_attribute[0] - 'a'; // Convert attribute name to index
 
-        const auto start = std::max(rle[parent_idx], static_cast<uint32_t>(start_pos));
-        const auto end = std::min(rle[parent_idx + 1], static_cast<uint32_t>(start_pos) + size);
+        // Get the valid range from the selection mask
+        const auto start_pos = GET_START_POS(selection_mask);
+        const auto end_pos = GET_END_POS(selection_mask);
 
-        for (auto i = start; i < end; i++) {
-            // if (!TEST_BIT(_ip_selection_mask, i)) {
-            //     continue;
-            // }
-            min_values[attr_idx] = std::min(min_values[attr_idx], values[i]);
-            for (const auto &node: children) {
-                if (node->_children.empty()) {
-                    update_min_leaf(node, i, min_values);
-                } else {
-                    update_min_internal(node, i, min_values);
-                }
+        // Check if there's any valid range
+        if (start_pos > end_pos) {
+            return;
+        }
+
+        // Check if parent_idx is valid and in range
+        if (parent_idx < start_pos || parent_idx > end_pos || !TEST_BIT(selection_mask, parent_idx)) {
+            return;
+        }
+
+        // Update min value for this attribute
+        min_values[attr_idx] = std::min(min_values[attr_idx], values[parent_idx]);
+
+        // Process all children
+        for (const auto &node: children) {
+            if (node->_children.empty()) {
+                update_min_leaf(node, parent_idx, min_values);
+            } else {
+                update_min_internal(node, parent_idx, min_values);
             }
         }
     }
@@ -73,23 +95,35 @@ namespace VFEngine {
     static void update_min_values(const std::shared_ptr<FactorizedTreeElement> &root, ulong *min_values) {
         const auto &vec = root->_value;
         const auto &children = root->_children;
-        const auto &start_pos = vec->_state->_state_info._curr_start_pos;
-        const auto &curr_size = vec->_state->_state_info._size;
-        const auto attr_idx = root->_attribute[0] - 'a'; // Convert attribute name to index
         const auto &values = vec->_values;
-        const BitMask<State::MAX_VECTOR_SIZE> &_ip_selection_mask = *(vec->_state->_selection_mask);
+        const auto &selection_mask = *(vec->_state->_selection_mask);
+        const auto attr_idx = root->_attribute[0] - 'a'; // Convert attribute name to index
 
-        for (auto i = 0; i < curr_size; i++) {
-            const auto parent_idx = static_cast<uint32_t>(start_pos + i);
-            // if (!TEST_BIT(_ip_selection_mask, parent_idx)) {
-            //     continue;
-            // }
-            min_values[attr_idx] = std::min(min_values[attr_idx], values[parent_idx]);
+        // Get the valid range from the selection mask
+        const auto start_pos = GET_START_POS(selection_mask);
+        const auto end_pos = GET_END_POS(selection_mask);
+
+        // Check if there's any valid range
+        if (start_pos > end_pos) {
+            return;
+        }
+
+        // Process all valid indices in the range
+        for (auto idx = start_pos; idx <= end_pos; idx++) {
+            // Skip invalid indices
+            if (!TEST_BIT(selection_mask, idx)) {
+                continue;
+            }
+
+            // Update min value for this attribute
+            min_values[attr_idx] = std::min(min_values[attr_idx], values[idx]);
+
+            // Process all children
             for (const auto &node: children) {
                 if (node->_children.empty()) {
-                    update_min_leaf(node, parent_idx, min_values);
+                    update_min_leaf(node, idx, min_values);
                 } else {
-                    update_min_internal(node, parent_idx, min_values);
+                    update_min_internal(node, idx, min_values);
                 }
             }
         }

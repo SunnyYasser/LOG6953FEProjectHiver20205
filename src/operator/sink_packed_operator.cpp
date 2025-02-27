@@ -18,125 +18,106 @@ namespace VFEngine {
         update_total_row_size_if_materialized();
     }
 
-#ifdef ENABLE_BRANCHLESS_SINK_PACKED
     ulong count_leaf(const std::shared_ptr<FactorizedTreeElement> &op, const uint32_t parent_idx) {
 #ifdef STORAGE_TO_VECTOR_MEMCPY_PTR_ALIAS
 #ifdef VECTOR_STATE_ARENA_ALLOCATOR
         const Vector *const __restrict__ vec = op->_value;
         const State *const __restrict__ state = vec->_state;
         const uint32_t *const __restrict__ rle = state->_rle;
+        const BitMask<State::MAX_VECTOR_SIZE> *const __restrict__ selection_mask = state->_selection_mask;
 #else
         const Vector *const __restrict__ vec = op->_value;
         const State *const __restrict__ state = vec->_state.get();
         const uint32_t *const __restrict__ rle = state->_rle.get();
+        const BitMask<State::MAX_VECTOR_SIZE> *const __restrict__ selection_mask = state->_selection_mask;
 #endif
 #else
 #ifdef VECTOR_STATE_ARENA_ALLOCATOR
         const Vector *const vec = op->_value;
         const State *const state = vec->_state;
         const uint32_t *const rle = state->_rle;
+        const BitMask<State::MAX_VECTOR_SIZE> *const selection_mask = state->_selection_mask;
 #else
         const Vector *const vec = op->_value;
         const State *const state = vec->_state.get();
         const uint32_t *const rle = state->_rle.get();
+        const BitMask<State::MAX_VECTOR_SIZE> *const selection_mask = state->_selection_mask;
 #endif
 #endif
 
-#ifdef MEMSET_TO_SET_VECTOR_SLICE
-        return rle[parent_idx + 1] - rle[parent_idx];
-#else
-        const auto rle_start_pos = state->_rle_start_pos;
-        return (parent_idx + 1 >= rle_start_pos) *
-               (rle[parent_idx + 1] - rle[parent_idx] * (parent_idx + 1 > rle_start_pos));
-#endif
-    }
-#else
-    ulong count_leaf(const std::shared_ptr<FactorizedTreeElement> &op, const uint32_t parent_idx) {
-#ifdef STORAGE_TO_VECTOR_MEMCPY_PTR_ALIAS
-#ifdef VECTOR_STATE_ARENA_ALLOCATOR
-        const Vector *const __restrict__ vec = op->_value;
-        const State *const __restrict__ state = vec->_state;
-        const uint32_t *const __restrict__ rle = state->_rle;
-#else
-        const Vector *const __restrict__ vec = op->_value;
-        const State *const __restrict__ state = vec->_state.get();
-        const uint32_t *const __restrict__ rle = state->_rle.get();
-#endif
-#else
-#ifdef VECTOR_STATE_ARENA_ALLOCATOR
-        const Vector *const vec = op->_value;
-        const State *const state = vec->_state;
-        const uint32_t *const rle = state->_rle;
-#else
-        const Vector *const vec = op->_value;
-        const State *const state = vec->_state.get();
-        const uint32_t *const rle = state->_rle.get();
-#endif
-#endif
-
-#ifdef MEMSET_TO_SET_VECTOR_SLICE
-        return rle[parent_idx + 1] - rle[parent_idx];
-#else
-        const auto rle_start_pos = state->_rle_start_pos;
-        if (parent_idx + 1 < rle_start_pos)
+        // For sparse RLE, we only count valid elements
+        if (!TEST_BIT(*selection_mask, parent_idx)) {
             return 0;
-        return parent_idx + 1 > rle_start_pos ? rle[parent_idx + 1] - rle[parent_idx] : rle[parent_idx + 1];
-#endif
+        }
+
+        // Get the RLE value for this index - number of elements
+        // For index i, the number of elements is rle[i+1] - rle[i]
+        if (parent_idx == 0) {
+            return rle[parent_idx + 1];
+        } else {
+            return rle[parent_idx + 1] - rle[parent_idx];
+        }
     }
-#endif
 
     ulong count_internal(const std::shared_ptr<FactorizedTreeElement> &op, const uint32_t parent_idx) {
 #ifdef STORAGE_TO_VECTOR_MEMCPY_PTR_ALIAS
 #ifdef VECTOR_STATE_ARENA_ALLOCATOR
         const Vector *const __restrict__ vec = op->_value;
         const State *const __restrict__ state = vec->_state;
-        const uint32_t *const __restrict__ rle = state->_rle;
+        const BitMask<State::MAX_VECTOR_SIZE> *const __restrict__ selection_mask = state->_selection_mask;
 #else
         const Vector *const __restrict__ vec = op->_value;
         const State *const __restrict__ state = vec->_state.get();
-        const uint32_t *const __restrict__ rle = state->_rle.get();
+        const BitMask<State::MAX_VECTOR_SIZE> *const __restrict__ selection_mask = state->_selection_mask;
 #endif
 #else
 #ifdef VECTOR_STATE_ARENA_ALLOCATOR
         const Vector *const vec = op->_value;
         const State *const state = vec->_state;
-        const uint32_t *const rle = state->_rle;
+        const BitMask<State::MAX_VECTOR_SIZE> *const selection_mask = state->_selection_mask;
 #else
         const Vector *const vec = op->_value;
         const State *const state = vec->_state.get();
-        const uint32_t *const rle = state->_rle.get();
+        const BitMask<State::MAX_VECTOR_SIZE> *const selection_mask = state->_selection_mask;
 #endif
 #endif
         const auto &children = op->_children;
 
-        const auto start_pos = state->_state_info._curr_start_pos;
-        const auto size = state->_state_info._size;
+        // Get the valid range from the selection mask
+        const auto start_pos = GET_START_POS(*selection_mask);
+        const auto end_pos = GET_END_POS(*selection_mask);
 
-#ifdef MEMSET_TO_SET_VECTOR_SLICE
-        const auto start = std::max(rle[parent_idx], static_cast<uint32_t>(start_pos));
-        const auto end = std::min(rle[parent_idx + 1], static_cast<uint32_t>(start_pos) + size);
-#else
-        const auto rle_start_pos = state->_rle_start_pos;
-        const auto rle_val = parent_idx == rle_start_pos - 1 ? 0 : rle[parent_idx];
-        const auto start = std::max(rle_val, static_cast<uint32_t>(start_pos));
-        const auto end = std::min(rle[parent_idx + 1], static_cast<uint32_t>(start_pos) + size);
-#endif
+        // Check if there's anything to process
+        if (start_pos > end_pos) {
+            return 0;
+        }
 
+        // Process all values for this specific parent_idx
         ulong sum = 0;
         const auto children_size = children.size();
-        const auto selection_mask = state->_selection_mask;
 
-        for (auto i = start; i < end; i++) {
-            ulong value = 1;
-            for (size_t child_idx = 0; child_idx < children_size; child_idx++) {
-                if (!TEST_BIT(*selection_mask, child_idx)) {
-                    continue;
-                }
-                const auto &node = children[child_idx];
-                value *= node->_children.empty() ? count_leaf(node, i) : count_internal(node, i);
-            }
-            sum += value;
+        // First check if parent_idx is valid and in range
+        if (parent_idx < start_pos || parent_idx > end_pos || !TEST_BIT(*selection_mask, parent_idx)) {
+            return 0;
         }
+
+        // For this valid parent, calculate product of all children
+        ulong value = 1;
+        for (size_t child_idx = 0; child_idx < children_size; child_idx++) {
+            const auto &node = children[child_idx];
+            if (node->_children.empty()) {
+                value *= count_leaf(node, parent_idx);
+            } else {
+                value *= count_internal(node, parent_idx);
+            }
+
+            // Early termination if any child yields zero
+            if (value == 0) {
+                break;
+            }
+        }
+        sum += value;
+
         return sum;
     }
 
@@ -145,42 +126,66 @@ namespace VFEngine {
 #ifdef VECTOR_STATE_ARENA_ALLOCATOR
         const Vector *const __restrict__ vec = root->_value;
         const State *const __restrict__ state = vec->_state;
+        const BitMask<State::MAX_VECTOR_SIZE> *const __restrict__ selection_mask = state->_selection_mask;
 #else
         const Vector *const __restrict__ vec = root->_value;
         const State *const __restrict__ state = vec->_state.get();
+        const BitMask<State::MAX_VECTOR_SIZE> *const __restrict__ selection_mask = state->_selection_mask;
 #endif
 #else
 #ifdef VECTOR_STATE_ARENA_ALLOCATOR
         const Vector *const vec = root->_value;
         const State *const state = vec->_state;
+        const BitMask<State::MAX_VECTOR_SIZE> *const selection_mask = state->_selection_mask;
 #else
         const Vector *const vec = root->_value;
         const State *const state = vec->_state.get();
+        const BitMask<State::MAX_VECTOR_SIZE> *const selection_mask = state->_selection_mask;
 #endif
 #endif
         const auto &children = root->_children;
 
-        const auto start_pos = state->_state_info._curr_start_pos;
-        const auto curr_size = state->_state_info._size;
+        // Get the valid range from the selection mask
+        const auto start_pos = GET_START_POS(*selection_mask);
+        const auto end_pos = GET_END_POS(*selection_mask);
 
-        if (children.empty())
-            return curr_size;
+        // Check if there's anything to process
+        if (start_pos > end_pos) {
+            return 0;
+        }
 
+        // No children means we just count valid elements between start and end
+        if (children.empty()) {
+            ulong count = 0;
+            for (auto i = start_pos; i <= end_pos; i++) {
+                if (TEST_BIT(*selection_mask, i)) {
+                    count++;
+                }
+            }
+            return count;
+        }
+
+        // Process each valid index and its children
         ulong sum = 0;
         const auto children_size = children.size();
-        const auto selection_mask = state->_selection_mask;
-        for (auto i = 0; i < curr_size; i++) {
-            ulong value = 1;
-            const auto parent_idx = static_cast<uint32_t>(start_pos + i);
-            if (!TEST_BIT(*selection_mask, parent_idx)) {
+
+        for (auto i = start_pos; i <= end_pos; i++) {
+            if (!TEST_BIT(*selection_mask, i)) {
                 continue;
             }
+
+            ulong value = 1;
             for (size_t child_idx = 0; child_idx < children_size; child_idx++) {
                 const auto &node = children[child_idx];
-                value *= node->_children.empty() ? count_leaf(node, parent_idx) : count_internal(node, parent_idx);
+                if (node->_children.empty()) {
+                    value *= count_leaf(node, i);
+                } else {
+                    value *= count_internal(node, i);
+                }
             }
             sum += value;
         }
+
         return sum;
     }
 
@@ -215,5 +220,5 @@ namespace VFEngine {
 
     ulong SinkPacked::get_total_row_size_if_materialized() { return total_row_size_if_materialized; }
 
-    ulong SinkPacked::get_exec_call_counter() const { return _exec_call_counter; }
+    unsigned long SinkPacked::get_exec_call_counter() const { return _exec_call_counter; }
 } // namespace VFEngine

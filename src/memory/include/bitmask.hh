@@ -17,17 +17,17 @@ namespace VFEngine {
         ~BitMask() = default;
         BitMask(const BitMask &other);
         BitMask &operator=(const BitMask &other);
-        void setBit(const std::size_t index);
-        void clearBit(const std::size_t index);
-        [[nodiscard]] bool testBit(const std::size_t index) const;
-        void toggleBit(const std::size_t index);
-        void clearAllBits();
-        void setAllBits();
+        void setBit(std::size_t index) const;
+        void clearBit(std::size_t index) const;
+        [[nodiscard]] bool testBit(std::size_t index) const;
+        void toggleBit(std::size_t index) const;
+        void clearBitsTillIdx(size_t index) const;
+        void setBitsTillIdx(size_t index) const;
         void andWith(const BitMask &other);
         void copyFrom(const BitMask &other);
         static constexpr std::size_t size() { return N; }
-        int32_t getStartPos() const;
-        int32_t getEndPos() const;
+        [[nodiscard]] int32_t getStartPos() const;
+        [[nodiscard]] int32_t getEndPos() const;
         void updatePositions();
         void setStartPos(int32_t idx_value);
         void setEndPos(int32_t idx_value);
@@ -58,22 +58,21 @@ namespace VFEngine {
         BitMask();
         BitMask(const BitMask &other);
         BitMask &operator=(const BitMask &other);
-        void setBit(std::size_t index);
-        void clearBit(std::size_t index);
+        void setBit(std::size_t index) const;
+        void clearBit(std::size_t index) const;
         [[nodiscard]] bool testBit(std::size_t index) const;
-        void toggleBit(std::size_t index);
-        void clearAllBits();
-        void setAllBits();
+        void toggleBit(std::size_t index) const;
+        void clearBitsTillIdx(size_t index) const;
+        void setBitsTillIdx(size_t index) const;
         void andWith(const BitMask &other);
         void copyFrom(const BitMask &other);
-        void updatePositionsOnSet(int32_t index);
         void updatePositions();
         static constexpr std::size_t getBitPosition(const std::size_t index) { return index & BIT_MASK_63; }
         static constexpr std::size_t getUint64Index(const std::size_t index) { return index >> 6; }
         static constexpr uint64_t getBitMask(const std::size_t index) { return 1ULL << getBitPosition(index); }
         static constexpr std::size_t size() { return N; }
-        int32_t getStartPos() const;
-        int32_t getEndPos() const;
+        [[nodiscard]] int32_t getStartPos() const;
+        [[nodiscard]] int32_t getEndPos() const;
         void setStartPos(int32_t idx_value);
         void setEndPos(int32_t idx_value);
 
@@ -94,12 +93,15 @@ namespace VFEngine {
 #define CLEAR_BIT(bitmask, index) ((bitmask).clearBit(index))
 #define TEST_BIT(bitmask, index) ((bitmask).testBit(index))
 #define TOGGLE_BIT(bitmask, index) ((bitmask).toggleBit(index))
-#define CLEAR_ALL_BITS(bitmask) ((bitmask).clearAllBits())
-#define SET_ALL_BITS(bitmask) ((bitmask).setAllBits())
+#define CLEAR_ALL_BITS(bitmask) ((bitmask).clearBitsTillIdx((bitmask).size() - 1))
+#define SET_ALL_BITS(bitmask) ((bitmask).setBitsTillIdx((bitmask).size() - 1))
+#define SET_BITS_TILL_IDX(bitmask, idx) ((bitmask).setBitsTillIdx(idx))
+#define CLEAR_BITS_TILL_IDX(bitmask, idx) ((bitmask).clearBitsTillIdx(idx))
 #define AND_BITMASKS(N, first, second) ((first).andWith(second))
 #define RESET_BITMASK(N, first, second) ((first).copyFrom(second))
 #define GET_START_POS(bitmask) ((bitmask).getStartPos())
 #define GET_END_POS(bitmask) ((bitmask).getEndPos())
 #define SET_START_POS(bitmask, index) ((bitmask).setStartPos(index))
 #define SET_END_POS(bitmask, index) ((bitmask).setEndPos(index))
+#define UPDATE_POSITIONS(bitmask) ((bitmask).updatePositions())
 #endif

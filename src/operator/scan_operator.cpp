@@ -48,8 +48,13 @@ namespace VFEngine {
             _output_vector->_state->_state_info._pos = -1;
 
             // only needed for INLJ Packed
-            _output_vector->_state->_state_info._curr_start_pos = 0;
+            // Set start and end position in the selection mask
+            // Mark all bits as valid
+            SET_START_POS(*_output_selection_mask, 0);
+            SET_END_POS(*_output_selection_mask, _curr_chunk_size - 1);
             SET_ALL_BITS(*_output_selection_mask);
+            // Initialize RLE[0] to 0
+            _output_vector->_state->_rle[0] = 0;
 
 #ifdef MY_DEBUG
             // log updated output vector
@@ -58,12 +63,16 @@ namespace VFEngine {
             // call next operator
             get_next_operator()->execute();
 
-            // these two only needed for bkwrd compatibilty with INLJ base
+            // these two only needed for backward compatibility with Base INLJ
             _output_vector->_state->_state_info._size = 0;
             _output_vector->_state->_state_info._pos = -1;
 
-            // only needed for INLJ Packed
-            _output_vector->_state->_state_info._curr_start_pos = 0;
+            // only needed for Packed INLJ
+            SET_ALL_BITS(*_output_selection_mask);
+            SET_START_POS(*_output_selection_mask, 0);
+            SET_END_POS(*_output_selection_mask, State::MAX_VECTOR_SIZE - 1);
+            // Reset RLE[0] to 0
+            _output_vector->_state->_rle[0] = 0;
         }
     }
 
