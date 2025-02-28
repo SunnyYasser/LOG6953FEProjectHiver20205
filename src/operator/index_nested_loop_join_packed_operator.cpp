@@ -48,11 +48,22 @@ namespace VFEngine {
         // the function stack returns
         const auto working_ip_bitmask_copy = *_current_ip_selection_mask;
 
-        // Update selection mask with the correct slice range, we do not need to clear
-        // indices outside the range since they are by default invalid
-        SET_START_POS(*_current_ip_selection_mask, new_ip_selection_vector_start_pos);
+        // Only update the START position if this is a complete chunk - otherwise
+        // keep the previous start position (which might be for a specific index we're
+        // still processing)
+        if (is_chunk_complete) {
+            SET_START_POS(*_current_ip_selection_mask, new_ip_selection_vector_start_pos);
+        }
+
+        // Always update the end position
         SET_END_POS(*_current_ip_selection_mask, new_ip_selection_vector_end_pos);
 
+        // Set input vector's selection mask to updated current mask before calling next operator
+#ifdef VECTOR_STATE_ARENA_ALLOCATOR
+        _input_vector->_state->_selection_mask = _current_ip_selection_mask;
+#else
+        _input_vector->_state.get()->_selection_mask = _current_ip_selection_mask;
+#endif
 
 #ifdef MY_DEBUG
         _debug->log_vector(_input_vector, _output_vector, fn_name);
@@ -60,18 +71,25 @@ namespace VFEngine {
 
         get_next_operator()->execute();
 
-        // reset input bitmask to original working ip bitmask, start and end pos are also restored
+        // Reset input bitmask to original working ip bitmask, start and end pos are also restored
         RESET_BITMASK(State::MAX_VECTOR_SIZE, *_current_ip_selection_mask, working_ip_bitmask_copy);
 
-        // We need to set all the values upto the current ip_vector_idx to be marked invalid, since they
-        // have already been processed .This operation is similar to marking the RLE slices for each new
-        // call to the next operator. An easier operation is to mark the entire bitmask as invalid, and
-        // then for the current ip vector idx mark it valid if it has more elements to produce.
+        // We need to set all the values upto the current ip_vector_idx to be marked invalid
         CLEAR_ALL_BITS(*_current_ip_selection_mask);
-        if (!is_chunk_complete)
-            SET_BIT(*_current_ip_selection_mask, current_ip_vector_idx);
 
-        // finally clean the output vector rle for new batch
+        // Set invalid start/end positions by default
+        SET_START_POS(*_current_ip_selection_mask, State::MAX_VECTOR_SIZE - 1);
+        SET_END_POS(*_current_ip_selection_mask, 0);
+
+        // Only if we're still processing this index (chunk not complete),
+        // set this bit and update positions
+        if (!is_chunk_complete) {
+            SET_BIT(*_current_ip_selection_mask, current_ip_vector_idx);
+            SET_START_POS(*_current_ip_selection_mask, current_ip_vector_idx);
+            SET_END_POS(*_current_ip_selection_mask, current_ip_vector_idx);
+        }
+
+        // Finally clean the output vector rle for new batch
         std::memset(op_vector_rle, 0, State::MAX_VECTOR_SIZE * sizeof(uint32_t));
         op_filled_idx = 0;
     }
@@ -88,6 +106,21 @@ namespace VFEngine {
         _exec_call_counter++;
         const std::string fn_name = "IndexNestedLoopJoinPacked::execute_internal()";
 
+#if defined(STORAGE_TO_VECTOR_MEMCPY_PTR_ALIAS)
+#if defined(VECTOR_STATE_ARENA_ALLOCATOR)
+        State *__restrict__ input_state = _input_vector->_state;
+        State *__restrict__ output_state = _output_vector->_state;
+        const uint64_t *__restrict__ _ip_vector_values = _input_vector->_values;
+        uint64_t *__restrict__ _op_vector_values = _output_vector->_values;
+        uint32_t *__restrict__ _op_vector_rle = output_state->_rle;
+#else
+        State *__restrict__ input_state = _input_vector->_state.get();
+        State *__restrict__ output_state = _output_vector->_state.get();
+        const uint64_t *__restrict__ _ip_vector_values = _input_vector->_values;
+        uint64_t *__restrict__ _op_vector_values = _output_vector->_values;
+        uint32_t *__restrict__ _op_vector_rle = output_state->_rle.get();
+#endif
+#else
 #if defined(VECTOR_STATE_ARENA_ALLOCATOR)
         State *input_state = _input_vector->_state;
         State *output_state = _output_vector->_state;
@@ -100,6 +133,7 @@ namespace VFEngine {
         const uint64_t *_ip_vector_values = _input_vector->_values;
         uint64_t *_op_vector_values = _output_vector->_values;
         uint32_t *_op_vector_rle = output_state->_rle.get();
+#endif
 #endif
 
 #ifdef MY_DEBUG
@@ -160,7 +194,7 @@ namespace VFEngine {
             copy_adjacency_values(_op_vector_values, curr_adj_node._values, op_filled_idx, ip_values_idx,
                                   elements_to_copy);
 
-            // Update state
+            // Update
             op_filled_idx += elements_to_copy;
             ip_values_idx += elements_to_copy;
 
@@ -190,6 +224,16 @@ namespace VFEngine {
                 );
             }
         }
+
+        // Add this check after the loop to process any remaining elements
+        if (op_filled_idx > 0) {
+            // We have elements in the output buffer that need to be processed
+            process_data_chunk(start_idx, end_idx,
+                               end_idx, // Use end_idx as the current position
+                               true, // Mark as complete
+                               op_filled_idx, _op_vector_rle, fn_name);
+        }
+
 
         // Final cleanup
         std::memset(_op_vector_rle, 0, State::MAX_VECTOR_SIZE * sizeof(uint32_t));

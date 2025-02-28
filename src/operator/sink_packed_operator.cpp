@@ -1,4 +1,6 @@
 #include "include/sink_packed_operator.hh"
+
+#include <cassert>
 #include <unordered_set>
 #include <vector>
 
@@ -65,59 +67,62 @@ namespace VFEngine {
         const Vector *const __restrict__ vec = op->_value;
         const State *const __restrict__ state = vec->_state;
         const BitMask<State::MAX_VECTOR_SIZE> *const __restrict__ selection_mask = state->_selection_mask;
+        const uint32_t *const rle = state->_rle;
 #else
         const Vector *const __restrict__ vec = op->_value;
         const State *const __restrict__ state = vec->_state.get();
         const BitMask<State::MAX_VECTOR_SIZE> *const __restrict__ selection_mask = state->_selection_mask;
+        const uint32_t *const rle = state->_rle.get();
 #endif
 #else
 #ifdef VECTOR_STATE_ARENA_ALLOCATOR
         const Vector *const vec = op->_value;
         const State *const state = vec->_state;
         const BitMask<State::MAX_VECTOR_SIZE> *const selection_mask = state->_selection_mask;
+        const uint32_t *const rle = state->_rle;
 #else
         const Vector *const vec = op->_value;
         const State *const state = vec->_state.get();
         const BitMask<State::MAX_VECTOR_SIZE> *const selection_mask = state->_selection_mask;
+        const uint32_t *const rle = state->_rle.get();
 #endif
 #endif
         const auto &children = op->_children;
 
         // Get the valid range from the selection mask
-        const auto start_pos = GET_START_POS(*selection_mask);
-        const auto end_pos = GET_END_POS(*selection_mask);
-
-        // Check if there's anything to process
-        if (start_pos > end_pos) {
-            return 0;
-        }
+        const auto selection_start_pos = GET_START_POS(*selection_mask);
+        const auto selection_end_pos = GET_END_POS(*selection_mask);
+        const auto start_pos = rle[parent_idx];
+        const auto num_elems = rle[parent_idx + 1] - rle[parent_idx];
+        const auto end_pos = start_pos + num_elems - 1;
+#ifdef MY_DEBUG
+        assert(selection_start_pos <= selection_end_pos);
+        assert(selection_start_pos >= 0 && selection_start_pos < State::MAX_VECTOR_SIZE);
+        assert(selection_end_pos >= 0 && selection_end_pos < State::MAX_VECTOR_SIZE);
+        assert(start_pos <= end_pos);
+        assert(start_pos >= 0 && start_pos < State::MAX_VECTOR_SIZE);
+        assert(end_pos >= 0 && end_pos < State::MAX_VECTOR_SIZE);
+        assert(start_pos >= selection_start_pos && start_pos <= selection_end_pos);
+        assert(end_pos >= selection_start_pos && end_pos <= selection_end_pos);
+#endif
 
         // Process all values for this specific parent_idx
         ulong sum = 0;
         const auto children_size = children.size();
 
-        // First check if parent_idx is valid and in range
-        if (parent_idx < start_pos || parent_idx > end_pos || !TEST_BIT(*selection_mask, parent_idx)) {
-            return 0;
-        }
-
         // For this valid parent, calculate product of all children
-        ulong value = 1;
-        for (size_t child_idx = 0; child_idx < children_size; child_idx++) {
-            const auto &node = children[child_idx];
-            if (node->_children.empty()) {
-                value *= count_leaf(node, parent_idx);
-            } else {
-                value *= count_internal(node, parent_idx);
+        for (auto idx = start_pos; idx <= end_pos; idx++) {
+            ulong value = 1;
+            for (size_t child_idx = 0; child_idx < children_size; child_idx++) {
+                const auto &node = children[child_idx];
+                if (node->_children.empty()) {
+                    value *= count_leaf(node, idx);
+                } else {
+                    value *= count_internal(node, idx);
+                }
             }
-
-            // Early termination if any child yields zero
-            if (value == 0) {
-                break;
-            }
+            sum += value;
         }
-        sum += value;
-
         return sum;
     }
 
@@ -149,12 +154,14 @@ namespace VFEngine {
         const auto start_pos = GET_START_POS(*selection_mask);
         const auto end_pos = GET_END_POS(*selection_mask);
 
-        // Check if there's anything to process
-        if (start_pos > end_pos) {
-            return 0;
-        }
+#ifdef MY_DEBUG
+        assert(start_pos <= end_pos);
+        assert(start_pos >= 0 && end_pos >= 0 && start_pos < State::MAX_VECTOR_SIZE &&
+               end_pos < State::MAX_VECTOR_SIZE);
+#endif
 
         // No children means we just count valid elements between start and end
+        // Will be replaced by a faster implementation
         if (children.empty()) {
             ulong count = 0;
             for (auto i = start_pos; i <= end_pos; i++) {
