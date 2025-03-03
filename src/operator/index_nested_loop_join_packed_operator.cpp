@@ -21,13 +21,14 @@ namespace VFEngine {
 
     operator_type_t IndexNestedLoopJoinPacked::get_operator_type() const { return OP_INLJ_PACKED; }
 
-    static inline void update_rle(uint32_t *rle, const uint32_t index, const uint32_t value) {
+    static inline void update_rle(uint32_t *rle, const uint32_t index, const int32_t start_idx, const uint32_t size) {
 #ifdef MY_DEBUG
-        assert(index > 0 && index < State::MAX_VECTOR_SIZE);
+        assert(index >= 0 && index < State::MAX_VECTOR_SIZE);
 #endif
 
         // Set RLE value directly at the index
-        rle[index] = rle[index - 1] + value;
+        rle[index] = start_idx;
+        rle[index + 1] = start_idx + size;
     }
 
     __attribute__((always_inline)) inline void IndexNestedLoopJoinPacked::process_data_chunk(
@@ -43,6 +44,8 @@ namespace VFEngine {
         // Set all idx upto op_filled_idx as valid, rest as invalid
         CLEAR_ALL_BITS(*_output_selection_mask);
         SET_BITS_TILL_IDX(*_output_selection_mask, op_filled_idx - 1);
+        SET_START_POS(*_output_selection_mask, 0);
+        SET_END_POS(*_output_selection_mask, op_filled_idx - 1);
 
         // First get a copy of the current ip bitmask, since we need to restore it after
         // the function stack returns
@@ -51,19 +54,16 @@ namespace VFEngine {
         // Only update the START position if this is a complete chunk - otherwise
         // keep the previous start position (which might be for a specific index we're
         // still processing)
-        if (is_chunk_complete) {
-            SET_START_POS(*_current_ip_selection_mask, new_ip_selection_vector_start_pos);
-        }
+        // if (is_chunk_complete) {
+        //     SET_START_POS(*_current_ip_selection_mask, new_ip_selection_vector_start_pos);
+        // }
 
         // Always update the end position
+        SET_START_POS(*_current_ip_selection_mask, new_ip_selection_vector_start_pos);
         SET_END_POS(*_current_ip_selection_mask, new_ip_selection_vector_end_pos);
 
         // Set input vector's selection mask to updated current mask before calling next operator
-#ifdef VECTOR_STATE_ARENA_ALLOCATOR
         _input_vector->_state->_selection_mask = _current_ip_selection_mask;
-#else
-        _input_vector->_state.get()->_selection_mask = _current_ip_selection_mask;
-#endif
 
 #ifdef MY_DEBUG
         _debug->log_vector(_input_vector, _output_vector, fn_name);
@@ -153,6 +153,13 @@ namespace VFEngine {
         const int32_t end_idx = GET_END_POS(*_current_ip_selection_mask);
         const auto &adj_list_ptr = *_adj_list;
 
+#ifdef MY_DEBUG
+        assert(start_idx <= end_idx);
+        assert(start_idx >= 0 && start_idx < State::MAX_VECTOR_SIZE);
+        assert(end_idx >= 0 && end_idx < State::MAX_VECTOR_SIZE);
+#endif
+
+
         // Process input vector
         int32_t op_filled_idx = 0;
         int32_t ip_values_idx = 0;
@@ -165,8 +172,8 @@ namespace VFEngine {
         op_filled_idx = 0;
 
         // Process only the active bit range
+        int32_t new_start_idx = -1, new_end_idx = -1;
         for (auto idx = start_idx; idx <= end_idx;) {
-            curr_pos = idx;
 
             // Skip if this index isn't valid in our selection mask
             if (!TEST_BIT(*_current_ip_selection_mask, idx)) {
@@ -175,7 +182,7 @@ namespace VFEngine {
             }
 
             // Get adjacency list for current value
-            const auto &curr_adj_node = adj_list_ptr[_ip_vector_values[curr_pos]];
+            const auto &curr_adj_node = adj_list_ptr[_ip_vector_values[idx]];
             output_elems_produced = curr_adj_node._size;
 
             // Skip if there are no elements to produce
@@ -184,6 +191,14 @@ namespace VFEngine {
                 idx++;
                 continue;
             }
+
+            // Start idx to be updated once for each chunk
+            if (new_start_idx == -1) {
+                new_start_idx = idx;
+            }
+
+            // End idx to be updated always inside the loop
+            new_end_idx = idx;
 
             // Calculate how many elements we can copy
             int32_t remaining_space = State::MAX_VECTOR_SIZE - op_filled_idx;
@@ -194,41 +209,44 @@ namespace VFEngine {
             copy_adjacency_values(_op_vector_values, curr_adj_node._values, op_filled_idx, ip_values_idx,
                                   elements_to_copy);
 
+
+            // Update RLE directly at the index based on the element count
+            if (elements_to_copy > 0) {
+                update_rle(_op_vector_rle, idx, op_filled_idx, elements_to_copy);
+            }
+
             // Update
             op_filled_idx += elements_to_copy;
             ip_values_idx += elements_to_copy;
 
-            // Update RLE directly at the index based on the element count
-            if (elements_to_copy > 0) {
-                update_rle(_op_vector_rle, idx + 1, elements_to_copy);
-            }
-
             // Check if we've processed all elements for this index
             is_chunk_complete = (ip_values_idx >= output_elems_produced);
 
-            // Move to next index if chunk is complete, otherwise keep working on this index
-            if (is_chunk_complete) {
-                idx++;
-                ip_values_idx = 0;
-            }
-
             // If output buffer is full or we're at the end of our input range, process the chunk
-            if (op_filled_idx >= State::MAX_VECTOR_SIZE || (is_chunk_complete && idx > end_idx)) {
-                process_data_chunk(start_idx, // New start position for selection vector
-                                   end_idx, // New end position for selection vector
+            if (op_filled_idx >= State::MAX_VECTOR_SIZE || (idx > end_idx)) {
+                process_data_chunk(new_start_idx, // New start position for selection vector
+                                   new_end_idx, // New end position for selection vector
                                    curr_pos, // Current index being processed
                                    is_chunk_complete, // Whether we completed this chunk
                                    op_filled_idx, // Number of items in output buffer
                                    _op_vector_rle, // Output RLE array
                                    fn_name // Function name for debug
                 );
+                // prev_start_idx = idx + is_chunk_complete;
+                new_start_idx = -1;
+            }
+
+            // Move to next index if chunk is complete, otherwise keep working on this index
+            if (is_chunk_complete) {
+                idx++;
+                ip_values_idx = 0;
             }
         }
 
         // Add this check after the loop to process any remaining elements
         if (op_filled_idx > 0) {
             // We have elements in the output buffer that need to be processed
-            process_data_chunk(start_idx, end_idx,
+            process_data_chunk(new_start_idx, new_end_idx,
                                end_idx, // Use end_idx as the current position
                                true, // Mark as complete
                                op_filled_idx, _op_vector_rle, fn_name);

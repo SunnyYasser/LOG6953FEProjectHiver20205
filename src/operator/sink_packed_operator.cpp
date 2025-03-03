@@ -95,23 +95,26 @@ namespace VFEngine {
         const auto start_pos = rle[parent_idx];
         const auto num_elems = rle[parent_idx + 1] - rle[parent_idx];
         const auto end_pos = start_pos + num_elems - 1;
+
 #ifdef MY_DEBUG
         assert(selection_start_pos <= selection_end_pos);
         assert(selection_start_pos >= 0 && selection_start_pos < State::MAX_VECTOR_SIZE);
         assert(selection_end_pos >= 0 && selection_end_pos < State::MAX_VECTOR_SIZE);
-        assert(start_pos <= end_pos);
         assert(start_pos >= 0 && start_pos < State::MAX_VECTOR_SIZE);
         assert(end_pos >= 0 && end_pos < State::MAX_VECTOR_SIZE);
-        assert(start_pos >= selection_start_pos && start_pos <= selection_end_pos);
-        assert(end_pos >= selection_start_pos && end_pos <= selection_end_pos);
 #endif
 
         // Process all values for this specific parent_idx
         ulong sum = 0;
         const auto children_size = children.size();
 
+        // set iteration limits
+        const auto start_val = std::max(static_cast<int32_t>(start_pos), selection_start_pos);
+        const auto end_val = std::min(static_cast<int32_t>(end_pos), selection_end_pos);
+
+
         // For this valid parent, calculate product of all children
-        for (auto idx = start_pos; idx <= end_pos; idx++) {
+        for (auto idx = start_val; idx <= end_val; idx++) {
             ulong value = 1;
             for (size_t child_idx = 0; child_idx < children_size; child_idx++) {
                 const auto &node = children[child_idx];
@@ -156,21 +159,10 @@ namespace VFEngine {
 
 #ifdef MY_DEBUG
         assert(start_pos <= end_pos);
-        assert(start_pos >= 0 && end_pos >= 0 && start_pos < State::MAX_VECTOR_SIZE &&
-               end_pos < State::MAX_VECTOR_SIZE);
-#endif
+        assert(start_pos >= 0 && start_pos < State::MAX_VECTOR_SIZE);
+        assert(end_pos >= 0 && end_pos < State::MAX_VECTOR_SIZE);
 
-        // No children means we just count valid elements between start and end
-        // Will be replaced by a faster implementation
-        if (children.empty()) {
-            ulong count = 0;
-            for (auto i = start_pos; i <= end_pos; i++) {
-                if (TEST_BIT(*selection_mask, i)) {
-                    count++;
-                }
-            }
-            return count;
-        }
+#endif
 
         // Process each valid index and its children
         ulong sum = 0;
