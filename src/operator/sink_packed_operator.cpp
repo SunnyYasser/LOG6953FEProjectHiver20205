@@ -47,11 +47,6 @@ namespace VFEngine {
 #endif
 #endif
 
-        // For sparse RLE, we only count valid elements
-        if (!TEST_BIT(*selection_mask, parent_idx)) {
-            return 0;
-        }
-
         // Get the RLE value for this index - number of elements
         // For index i, the number of elements is rle[i+1] - rle[i]
         if (parent_idx == 0) {
