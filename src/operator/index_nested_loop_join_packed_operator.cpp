@@ -49,7 +49,7 @@ namespace VFEngine {
 
         // First get a copy of the current ip bitmask, since we need to restore it after
         // the function stack returns
-        const auto working_ip_bitmask_copy = *_current_ip_selection_mask;
+        const auto working_ip_bitmask_copy = **_current_ip_selection_mask;
 
         // Only update the START position if this is a complete chunk - otherwise
         // keep the previous start position (which might be for a specific index we're
@@ -59,11 +59,8 @@ namespace VFEngine {
         // }
 
         // Always update the end position
-        SET_START_POS(*_current_ip_selection_mask, new_ip_selection_vector_start_pos);
-        SET_END_POS(*_current_ip_selection_mask, new_ip_selection_vector_end_pos);
-
-        // Set input vector's selection mask to updated current mask before calling next operator
-        _input_vector->_state->_selection_mask = _current_ip_selection_mask;
+        SET_START_POS(**_current_ip_selection_mask, new_ip_selection_vector_start_pos);
+        SET_END_POS(**_current_ip_selection_mask, new_ip_selection_vector_end_pos);
 
 #ifdef MY_DEBUG
         _debug->log_vector(_input_vector, _output_vector, fn_name);
@@ -72,21 +69,21 @@ namespace VFEngine {
         get_next_operator()->execute();
 
         // Reset input bitmask to original working ip bitmask, start and end pos are also restored
-        RESET_BITMASK(State::MAX_VECTOR_SIZE, *_current_ip_selection_mask, working_ip_bitmask_copy);
+        RESET_BITMASK(State::MAX_VECTOR_SIZE, **_current_ip_selection_mask, working_ip_bitmask_copy);
 
         // We need to set all the values upto the current ip_vector_idx to be marked invalid
-        CLEAR_BITS_TILL_IDX(*_current_ip_selection_mask, current_ip_vector_idx);
+        CLEAR_BITS_TILL_IDX(**_current_ip_selection_mask, current_ip_vector_idx);
 
         // Set invalid start/end positions by default
-        SET_START_POS(*_current_ip_selection_mask, State::MAX_VECTOR_SIZE - 1);
-        SET_END_POS(*_current_ip_selection_mask, 0);
+        SET_START_POS(**_current_ip_selection_mask, State::MAX_VECTOR_SIZE - 1);
+        SET_END_POS(**_current_ip_selection_mask, 0);
 
         // Only if we're still processing this index (chunk not complete),
         // set this bit and update positions
         if (!is_chunk_complete) {
-            SET_BIT(*_current_ip_selection_mask, current_ip_vector_idx);
-            SET_START_POS(*_current_ip_selection_mask, current_ip_vector_idx);
-            SET_END_POS(*_current_ip_selection_mask, current_ip_vector_idx);
+            SET_BIT(**_current_ip_selection_mask, current_ip_vector_idx);
+            SET_START_POS(**_current_ip_selection_mask, current_ip_vector_idx);
+            SET_END_POS(**_current_ip_selection_mask, current_ip_vector_idx);
         }
 
         // Finally clean the output vector rle for new batch
@@ -146,11 +143,10 @@ namespace VFEngine {
 
         // Reset the working mask with the original mask values at the start of execution
         RESET_BITMASK(State::MAX_VECTOR_SIZE, *_original_ip_selection_mask, *(input_state->_selection_mask));
-        RESET_BITMASK(State::MAX_VECTOR_SIZE, *_current_ip_selection_mask, *_original_ip_selection_mask);
 
         // Get the active bit range from the bitmask
-        const int32_t start_idx = GET_START_POS(*_current_ip_selection_mask);
-        const int32_t end_idx = GET_END_POS(*_current_ip_selection_mask);
+        const int32_t start_idx = GET_START_POS(**_current_ip_selection_mask);
+        const int32_t end_idx = GET_END_POS(**_current_ip_selection_mask);
         const auto &adj_list_ptr = *_adj_list;
 
 #ifdef MY_DEBUG
@@ -176,7 +172,7 @@ namespace VFEngine {
         for (auto idx = start_idx; idx <= end_idx;) {
 
             // Skip if this index isn't valid in our selection mask
-            if (!TEST_BIT(*_current_ip_selection_mask, idx)) {
+            if (!TEST_BIT(**_current_ip_selection_mask, idx)) {
                 idx++;
                 continue;
             }
@@ -187,7 +183,7 @@ namespace VFEngine {
 
             // Skip if there are no elements to produce
             if (output_elems_produced == 0) {
-                CLEAR_BIT(*_current_ip_selection_mask, idx);
+                CLEAR_BIT(**_current_ip_selection_mask, idx);
                 idx++;
                 continue;
             }
@@ -283,12 +279,11 @@ namespace VFEngine {
         _output_vector->allocate_rle();
         _output_vector->allocate_selection_bitmask();
 
-        // Always create a unique pointer for the original mask
+        // Always create a copy for the original mask
         _original_ip_selection_mask_uptr = std::make_unique<BitMask<State::MAX_VECTOR_SIZE>>();
-        // Create a separate mask for working operations
-        _working_ip_selection_mask_uptr = std::make_unique<BitMask<State::MAX_VECTOR_SIZE>>();
         _original_ip_selection_mask = _original_ip_selection_mask_uptr.get();
-        _current_ip_selection_mask = _working_ip_selection_mask_uptr.get();
+        // Grab address of the input vector's selection mask
+        _current_ip_selection_mask = &(_input_vector->_state->_selection_mask);
         // Grab address of the output vector's selection mask
         _output_selection_mask = &(_output_vector->_state->_selection_mask);
 
