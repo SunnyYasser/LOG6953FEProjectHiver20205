@@ -14,17 +14,17 @@ namespace VFEngine {
     template<typename T>
     class SerializeDeserialize {
     public:
-        SerializeDeserialize(const std::string &filename, const VFEngine::DataSourceTable *table);
+        SerializeDeserialize(const std::string &dataset_path, const VFEngine::DataSourceTable *table);
         SerializeDeserialize() = delete;
         SerializeDeserialize(const SerializeDeserialize &) = delete;
         SerializeDeserialize &operator=(const SerializeDeserialize &) = delete;
         SerializeDeserialize &&operator=(SerializeDeserialize &&) = delete;
 
-        void serialize() const;
+        void serialize(const std::string &output_dir) const;
         void deserialize() const;
 
     private:
-        const std::string _filename;
+        const std::string _dataset_path;
         const DataSourceTable *_table;
         void deserialize_adj_list(const std::string &folder, const std::unique_ptr<AdjList[]> &adj_list,
                                   bool reverse = false) const;

@@ -15,21 +15,25 @@
 #include <vector>
 #include "adjlist.hh"
 
-
 namespace VFEngine {
     class DataSourceTable {
     public:
         explicit DataSourceTable(const std::string &name, const std::vector<std::string> &columns);
+        explicit DataSourceTable(const std::string& name, const std::vector<std::string> &columns, const std::string &dataset_path);
         DataSourceTable(const DataSourceTable &) = delete;
         uint64_t get_rows_size() const;
         void populate_datasource();
-        void write_table_as_data_on_disk() const;
+        void write_table_as_data_on_disk(const std::string& output_dir);
         void read_table_from_data_on_disk();
         uint64_t get_max_id_value() const;
+        static void set_dataset_path(const std::string &path);
+        static void set_serialized_dataset_path(const std::string &path);
 
         const std::unique_ptr<AdjList[]> &get_fwd_adj_list() const;
         const std::unique_ptr<AdjList[]> &get_bwd_adj_list() const;
 
+        static std::string _dataset_path;
+        static std::string _serialized_dataset_path;
         /*name*/
         std::string _name;
         // std::vector<std::vector<uint64_t>> _table;

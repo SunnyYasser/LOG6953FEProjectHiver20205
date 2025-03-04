@@ -28,7 +28,9 @@ add_subdirectory(src/parser)
 find_package(Threads REQUIRED)
 
 add_executable(mydb2 main.cpp)
+add_executable(serializer serializer.cpp)
 target_link_libraries(mydb2 PUBLIC libparser libgraph liboperator libmem libengine libutils libdebug)
+target_link_libraries(serializer PUBLIC libparser libgraph liboperator libmem libengine libutils libdebug)
 
 function(enable_optimizations target)
     option(STORAGE_TO_VECTOR_MEMCPY_PTR_ALIAS "Disable pointer aliasing" OFF)
@@ -58,8 +60,13 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_definitions(mydb2 PRIVATE MY_DEBUG)
     target_compile_options(mydb2 PRIVATE -fsanitize=address -fsanitize=leak -g3 -Wall -Wextra -Wpedantic -Werror)
     target_link_options(mydb2 PRIVATE -fsanitize=address -fsanitize=leak)
+
+    target_compile_definitions(serializer PRIVATE MY_DEBUG)
+    target_compile_options(serializer PRIVATE -fsanitize=address -fsanitize=leak -g3 -Wall -Wextra -Wpedantic -Werror)
+    target_link_options(serializer PRIVATE -fsanitize=address -fsanitize=leak)
 elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
     target_compile_options(mydb2 PRIVATE -Ofast -march=native)
+    target_compile_options(serializer PRIVATE -Ofast -march=native)
 endif ()
 
 enable_optimizations(mydb2)

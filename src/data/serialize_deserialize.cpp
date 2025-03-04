@@ -12,22 +12,28 @@
 
 namespace VFEngine {
     template<typename T>
-    SerializeDeserialize<T>::SerializeDeserialize(const std::string &filename, const VFEngine::DataSourceTable *table) :
-        _filename(filename), _table(table) {}
+    SerializeDeserialize<T>::SerializeDeserialize(const std::string &dataset_path, const VFEngine::DataSourceTable *table) :
+        _dataset_path(dataset_path), _table(table) {}
 
     template<typename T>
-    void SerializeDeserialize<T>::serialize() const {
+    void SerializeDeserialize<T>::serialize(const std::string &output_dir) const {
+        std::cout << "Starting serialization..." << std::endl;
+
         const auto &fwd_adj_list = _table->get_fwd_adj_list();
         const auto &bwd_adj_list = _table->get_bwd_adj_list();
-        const char *data_folder = get_dataset_serialized_data_writing_path();
 
-        if (!data_folder) {
-            std::cerr << "Failed to read path for serializing Amazon0601" << std::endl;
+        if (output_dir.empty()) {
+            std::cerr << "Failed to read path for serializing the dataset." << std::endl;
             return;
         }
 
-        serialize_adj_list(data_folder, fwd_adj_list);
-        serialize_adj_list(data_folder, bwd_adj_list, true);
+        std::cout << "Serializing forward adjacency list to: " << output_dir << std::endl;
+        serialize_adj_list(output_dir, fwd_adj_list);
+
+        std::cout << "Serializing backward adjacency list to: " << output_dir << std::endl;
+        serialize_adj_list(output_dir, bwd_adj_list, true);
+
+        std::cout << "Serialization completed." << std::endl;
     }
 
     template<typename T>
@@ -84,15 +90,14 @@ namespace VFEngine {
     void SerializeDeserialize<T>::deserialize() const {
         const auto &fwd_adj_list = _table->get_fwd_adj_list();
         const auto &bwd_adj_list = _table->get_bwd_adj_list();
-        const char *data_folder = get_dataset_serialized_data_reading_path();
 
-        if (!data_folder) {
-            std::cerr << "Failed to read path for deserializing Amazon0601" << std::endl;
+        if (_dataset_path.empty()) {
+            std::cerr << "Failed to read path for deserializing the dataset" << std::endl;
             return;
         }
 
-        deserialize_adj_list(data_folder, fwd_adj_list);
-        deserialize_adj_list(data_folder, bwd_adj_list, true);
+        deserialize_adj_list(_dataset_path, fwd_adj_list);
+        deserialize_adj_list(_dataset_path, bwd_adj_list, true);
     }
 
     template<typename T>
