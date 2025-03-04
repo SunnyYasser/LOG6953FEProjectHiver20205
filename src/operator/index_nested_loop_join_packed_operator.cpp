@@ -42,10 +42,10 @@ namespace VFEngine {
 #endif
 
         // Set all idx upto op_filled_idx as valid, rest as invalid
-        CLEAR_ALL_BITS(*_output_selection_mask);
-        SET_BITS_TILL_IDX(*_output_selection_mask, op_filled_idx - 1);
-        SET_START_POS(*_output_selection_mask, 0);
-        SET_END_POS(*_output_selection_mask, op_filled_idx - 1);
+        CLEAR_ALL_BITS(**_output_selection_mask);
+        SET_BITS_TILL_IDX(**_output_selection_mask, op_filled_idx - 1);
+        SET_START_POS(**_output_selection_mask, 0);
+        SET_END_POS(**_output_selection_mask, op_filled_idx - 1);
 
         // First get a copy of the current ip bitmask, since we need to restore it after
         // the function stack returns
@@ -290,7 +290,7 @@ namespace VFEngine {
         _original_ip_selection_mask = _original_ip_selection_mask_uptr.get();
         _current_ip_selection_mask = _working_ip_selection_mask_uptr.get();
         // Grab address of the output vector's selection mask
-        _output_selection_mask = _output_vector->_state->_selection_mask;
+        _output_selection_mask = &(_output_vector->_state->_selection_mask);
 
         if (_is_join_index_fwd)
             _adj_list = &(datastore->get_fwd_adj_lists());

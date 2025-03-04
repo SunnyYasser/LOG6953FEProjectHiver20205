@@ -57,9 +57,9 @@ namespace VFEngine {
             // only needed for INLJ Packed
             // Set start and end position in the selection mask
             // Mark all bits as valid
-            SET_START_POS(*_output_selection_mask, 0);
-            SET_END_POS(*_output_selection_mask, _curr_chunk_size - 1);
-            SET_BITS_TILL_IDX(*_output_selection_mask, _curr_chunk_size - 1);
+            SET_START_POS(**_output_selection_mask, 0);
+            SET_END_POS(**_output_selection_mask, _curr_chunk_size - 1);
+            SET_BITS_TILL_IDX(**_output_selection_mask, _curr_chunk_size - 1);
             // Initialize output RLE
             std::memset(_output_vector->_state->_rle.get(), 0, State::MAX_VECTOR_SIZE * sizeof(uint32_t));
 
@@ -76,9 +76,9 @@ namespace VFEngine {
             _output_vector->_state->_state_info._pos = -1;
 
             // only needed for Packed INLJ
-            SET_ALL_BITS(*_output_selection_mask);
-            SET_START_POS(*_output_selection_mask, 0);
-            SET_END_POS(*_output_selection_mask, State::MAX_VECTOR_SIZE - 1);
+            SET_ALL_BITS(**_output_selection_mask);
+            SET_START_POS(**_output_selection_mask, 0);
+            SET_END_POS(**_output_selection_mask, State::MAX_VECTOR_SIZE - 1);
             // Reset output RLE
             std::memset(_output_vector->_state->_rle.get(), 0, State::MAX_VECTOR_SIZE * sizeof(uint32_t));
         }
@@ -96,7 +96,7 @@ namespace VFEngine {
         _output_vector = context->read_vector_for_column(_attribute);
         _output_vector->allocate_rle();
         _output_vector->allocate_selection_bitmask();
-        _output_selection_mask = _output_vector->_state->_selection_mask;
+        _output_selection_mask = &(_output_vector->_state->_selection_mask);
         _max_id_value = datastore->get_max_id_value();
         get_next_operator()->init(context, datastore);
     }
