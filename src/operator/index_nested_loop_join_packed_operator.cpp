@@ -51,13 +51,6 @@ namespace VFEngine {
         // the function stack returns
         const auto working_ip_bitmask_copy = **_current_ip_selection_mask;
 
-        // Only update the START position if this is a complete chunk - otherwise
-        // keep the previous start position (which might be for a specific index we're
-        // still processing)
-        // if (is_chunk_complete) {
-        //     SET_START_POS(*_current_ip_selection_mask, new_ip_selection_vector_start_pos);
-        // }
-
         // Always update the end position
         SET_START_POS(**_current_ip_selection_mask, new_ip_selection_vector_start_pos);
         SET_END_POS(**_current_ip_selection_mask, new_ip_selection_vector_end_pos);
@@ -87,7 +80,7 @@ namespace VFEngine {
         }
 
         // Finally clean the output vector rle for new batch
-        std::memset(op_vector_rle, 0, State::MAX_VECTOR_SIZE * sizeof(uint32_t));
+        std::memset(op_vector_rle, 0, (State::MAX_VECTOR_SIZE + 1) * sizeof(uint32_t));
         op_filled_idx = 0;
     }
 
@@ -159,7 +152,6 @@ namespace VFEngine {
         // Process input vector
         int32_t op_filled_idx = 0;
         int32_t ip_values_idx = 0;
-        int32_t curr_pos = 0;
         int32_t output_elems_produced = 0;
         bool is_chunk_complete = false;
 
@@ -250,8 +242,8 @@ namespace VFEngine {
 
 
         // Final cleanup
-        std::memset(_op_vector_rle, 0, State::MAX_VECTOR_SIZE * sizeof(uint32_t));
-        op_filled_idx = 0;
+        std::memset(_op_vector_rle, 0, (State::MAX_VECTOR_SIZE + 1) * sizeof(uint32_t));
+
 
         // Always restore original selection mask at the end of execution
         input_state->_selection_mask = _original_ip_selection_mask;

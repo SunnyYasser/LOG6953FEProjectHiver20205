@@ -14,8 +14,6 @@ namespace VFEngine {
         _rle = static_cast<uint32_t *>(
                 ArenaAllocator::getInstance().allocate((MAX_VECTOR_SIZE + 1) * sizeof(uint32_t)));
         std::memset(_rle, 0, (MAX_VECTOR_SIZE + 1) * sizeof(uint32_t));
-        // Initialize RLE[0] to 0
-        _rle[0] = 0;
     }
 
     void State::allocate_selection_bitmask() {
@@ -86,8 +84,6 @@ namespace VFEngine {
         }
         _rle = std::make_unique<uint32_t[]>(State::MAX_VECTOR_SIZE + 1);
         std::memset(_rle.get(), 0, (MAX_VECTOR_SIZE + 1) * sizeof(uint32_t));
-        // Initialize RLE[0] to 0
-        _rle[0] = 0;
     }
 
     void State::allocate_selection_bitmask() {
