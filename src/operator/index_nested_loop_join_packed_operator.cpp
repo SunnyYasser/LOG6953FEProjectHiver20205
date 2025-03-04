@@ -75,7 +75,7 @@ namespace VFEngine {
         RESET_BITMASK(State::MAX_VECTOR_SIZE, *_current_ip_selection_mask, working_ip_bitmask_copy);
 
         // We need to set all the values upto the current ip_vector_idx to be marked invalid
-        CLEAR_ALL_BITS(*_current_ip_selection_mask);
+        CLEAR_BITS_TILL_IDX(*_current_ip_selection_mask, current_ip_vector_idx);
 
         // Set invalid start/end positions by default
         SET_START_POS(*_current_ip_selection_mask, State::MAX_VECTOR_SIZE - 1);
@@ -226,7 +226,7 @@ namespace VFEngine {
             if (op_filled_idx >= State::MAX_VECTOR_SIZE || (idx > end_idx)) {
                 process_data_chunk(new_start_idx, // New start position for selection vector
                                    new_end_idx, // New end position for selection vector
-                                   curr_pos, // Current index being processed
+                                   idx, // Current index being processed
                                    is_chunk_complete, // Whether we completed this chunk
                                    op_filled_idx, // Number of items in output buffer
                                    _op_vector_rle, // Output RLE array
