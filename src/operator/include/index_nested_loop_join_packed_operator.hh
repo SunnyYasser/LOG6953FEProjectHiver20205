@@ -40,9 +40,9 @@ namespace VFEngine {
         const std::string _input_attribute, _output_attribute;
         Vector *_input_vector;
         Vector *_output_vector;
-        std::unique_ptr<BitMask<State::MAX_VECTOR_SIZE>> _original_ip_selection_mask_uptr;
-        std::unique_ptr<BitMask<State::MAX_VECTOR_SIZE>> _working_ip_selection_mask_uptr;
-        BitMask<State::MAX_VECTOR_SIZE> *_original_ip_selection_mask;
+        std::unique_ptr<BitMask<State::MAX_VECTOR_SIZE>> _active_mask_uptr; // For active selection mask
+        std::unique_ptr<BitMask<State::MAX_VECTOR_SIZE>>
+                _backup_mask_uptr; // For temporary backup in process_data_chunk
         BitMask<State::MAX_VECTOR_SIZE> **_current_ip_selection_mask;
         BitMask<State::MAX_VECTOR_SIZE> **_output_selection_mask;
         bool _is_join_index_fwd;

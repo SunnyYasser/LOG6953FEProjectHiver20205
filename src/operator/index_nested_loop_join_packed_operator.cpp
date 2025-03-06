@@ -13,7 +13,8 @@ namespace VFEngine {
                                                          const std::shared_ptr<Operator> &next_operator) :
         Operator(next_operator), _input_vector(nullptr), _output_vector(nullptr), _is_join_index_fwd(is_join_index_fwd),
         _relation_type(relation_type), _input_attribute(input_attribute), _output_attribute(output_attribute),
-        _original_ip_selection_mask(nullptr), _current_ip_selection_mask(nullptr), _output_selection_mask(nullptr) {
+        _active_mask_uptr(nullptr), _backup_mask_uptr(nullptr), _current_ip_selection_mask(nullptr),
+        _output_selection_mask(nullptr) {
 #ifdef MY_DEBUG
         _debug = std::make_unique<OperatorDebugUtility>(this);
 #endif
@@ -49,7 +50,7 @@ namespace VFEngine {
 
         // First get a copy of the current ip bitmask, since we need to restore it after
         // the function stack returns
-        RESET_BITMASK(State::MAX_VECTOR_SIZE, *_working_ip_selection_mask_uptr, **_current_ip_selection_mask);
+        RESET_BITMASK(State::MAX_VECTOR_SIZE, *_backup_mask_uptr, **_current_ip_selection_mask);
 
         // Always update the end position
         SET_START_POS(**_current_ip_selection_mask, new_ip_selection_vector_start_pos);
@@ -62,7 +63,7 @@ namespace VFEngine {
         get_next_operator()->execute();
 
         // Reset input bitmask to original working ip bitmask, start and end pos are also restored
-        RESET_BITMASK(State::MAX_VECTOR_SIZE, **_current_ip_selection_mask, *_working_ip_selection_mask_uptr);
+        RESET_BITMASK(State::MAX_VECTOR_SIZE, **_current_ip_selection_mask, *_backup_mask_uptr);
 
         // We need to set all the values upto the current ip_vector_idx to be marked invalid
         CLEAR_BITS_TILL_IDX(**_current_ip_selection_mask, current_ip_vector_idx);
@@ -83,7 +84,6 @@ namespace VFEngine {
         std::memset(op_vector_rle, 0, (State::MAX_VECTOR_SIZE + 1) * sizeof(uint32_t));
         op_filled_idx = 0;
     }
-
     __attribute__((always_inline)) inline void
     IndexNestedLoopJoinPacked::copy_adjacency_values(uint64_t *op_vector_values, const uint64_t *adj_values,
                                                      const int32_t op_filled_idx, const int32_t ip_values_idx,
@@ -134,8 +134,14 @@ namespace VFEngine {
         assert(_op_vector_rle != nullptr);
 #endif
 
-        // Reset the working mask with the original mask values at the start of execution
-        RESET_BITMASK(State::MAX_VECTOR_SIZE, *_original_ip_selection_mask, *(input_state->_selection_mask));
+        // Save the original input selection mask pointer directly on the stack
+        BitMask<State::MAX_VECTOR_SIZE> *original_mask_ptr = input_state->_selection_mask;
+
+        // Copy the original mask data into our active mask (single deep copy)
+        *_active_mask_uptr = *original_mask_ptr;
+
+        // Use our pre-allocated active mask as the temporary selection mask
+        input_state->_selection_mask = _active_mask_uptr.get();
 
         // Get the active bit range from the bitmask
         const int32_t start_idx = GET_START_POS(**_current_ip_selection_mask);
@@ -147,7 +153,6 @@ namespace VFEngine {
         assert(start_idx >= 0 && start_idx < State::MAX_VECTOR_SIZE);
         assert(end_idx >= 0 && end_idx < State::MAX_VECTOR_SIZE);
 #endif
-
 
         // Process input vector
         int32_t op_filled_idx = 0;
@@ -197,7 +202,6 @@ namespace VFEngine {
             copy_adjacency_values(_op_vector_values, curr_adj_node._values, op_filled_idx, ip_values_idx,
                                   elements_to_copy);
 
-
             // Update RLE directly at the index based on the element count
             if (elements_to_copy > 0) {
                 update_rle(_op_vector_rle, idx, op_filled_idx, elements_to_copy);
@@ -220,7 +224,6 @@ namespace VFEngine {
                                    _op_vector_rle, // Output RLE array
                                    fn_name // Function name for debug
                 );
-                // prev_start_idx = idx + is_chunk_complete;
                 new_start_idx = -1;
             }
 
@@ -240,22 +243,22 @@ namespace VFEngine {
                                op_filled_idx, _op_vector_rle, fn_name);
         }
 
-
         // Final cleanup
         std::memset(_op_vector_rle, 0, (State::MAX_VECTOR_SIZE + 1) * sizeof(uint32_t));
 
-
-        // Always restore original selection mask at the end of execution
-        input_state->_selection_mask = _original_ip_selection_mask;
+        // Restore the original input selection mask pointer (no deep copy needed)
+        input_state->_selection_mask = original_mask_ptr;
     }
-
     void IndexNestedLoopJoinPacked::execute() {
 #ifdef MY_DEBUG
-        assert(_original_ip_selection_mask != nullptr);
         assert(_current_ip_selection_mask != nullptr);
         assert(_output_selection_mask != nullptr);
         assert(_input_vector != nullptr);
         assert(_output_vector != nullptr);
+        const auto start_pos = GET_START_POS(*_input_vector->_state->_selection_mask);
+        const auto end_pos = GET_END_POS(*_input_vector->_state->_selection_mask);
+        assert(start_pos >= 0 && start_pos < State::MAX_VECTOR_SIZE);
+        assert(end_pos >= 0 && end_pos < State::MAX_VECTOR_SIZE);
 #endif
         execute_internal();
     }
@@ -271,15 +274,18 @@ namespace VFEngine {
         _output_vector->allocate_rle();
         _output_vector->allocate_selection_bitmask();
 
-        // Always create a copy for the original mask
-        _original_ip_selection_mask_uptr = std::make_unique<BitMask<State::MAX_VECTOR_SIZE>>();
-        _working_ip_selection_mask_uptr = std::make_unique<BitMask<State::MAX_VECTOR_SIZE>>();
-        _original_ip_selection_mask = _original_ip_selection_mask_uptr.get();
-        // Grab address of the input vector's selection mask
+        // Create two separate working masks
+        _active_mask_uptr = std::make_unique<BitMask<State::MAX_VECTOR_SIZE>>();
+        _backup_mask_uptr = std::make_unique<BitMask<State::MAX_VECTOR_SIZE>>();
+
+        // _current_ip_selection_mask will still point to the input vector's selection mask
+        // but we'll swap the actual mask pointer during execution
         _current_ip_selection_mask = &(_input_vector->_state->_selection_mask);
+
         // Grab address of the output vector's selection mask
         _output_selection_mask = &(_output_vector->_state->_selection_mask);
 
+        // Set up adjacency lists
         if (_is_join_index_fwd)
             _adj_list = &(datastore->get_fwd_adj_lists());
         else
