@@ -110,6 +110,10 @@ namespace VFEngine {
 
         // For this valid parent, calculate product of all children
         for (auto idx = start_val; idx <= end_val; idx++) {
+            if (!TEST_BIT(*selection_mask, idx)) {
+                continue;
+            }
+
             ulong value = 1;
             for (size_t child_idx = 0; child_idx < children_size; child_idx++) {
                 const auto &node = children[child_idx];

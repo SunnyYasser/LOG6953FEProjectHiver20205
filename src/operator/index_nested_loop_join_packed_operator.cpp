@@ -64,7 +64,6 @@ namespace VFEngine {
         // Reset input bitmask to original working ip bitmask, start and end pos are also restored
         RESET_BITMASK(State::MAX_VECTOR_SIZE, **_current_ip_selection_mask, *_working_ip_selection_mask_uptr);
 
-
         // We need to set all the values upto the current ip_vector_idx to be marked invalid
         CLEAR_BITS_TILL_IDX(**_current_ip_selection_mask, current_ip_vector_idx);
 
@@ -157,7 +156,7 @@ namespace VFEngine {
         bool is_chunk_complete = false;
 
         // Initialize RLE[0] to 0
-        std::memset(_op_vector_rle, 0, State::MAX_VECTOR_SIZE * sizeof(uint32_t));
+        std::memset(_op_vector_rle, 0, (State::MAX_VECTOR_SIZE + 1) * sizeof(uint32_t));
         op_filled_idx = 0;
 
         // Process only the active bit range
