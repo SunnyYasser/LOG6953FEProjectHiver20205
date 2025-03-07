@@ -212,7 +212,7 @@ namespace VFEngine {
 
         // Set remaining bits in the partial block (including the idx bit)
         // Always create mask to ensure bit idx is set, even when idx=0
-        const uint64_t mask = (1ULL << (remainingBits + 1)) - 1;
+        const uint64_t mask = remainingBits == 63 ? ~0ULL : (1ULL << (remainingBits + 1)) - 1;
         bits[completeBlocks] |= mask;
     }
 
@@ -228,7 +228,7 @@ namespace VFEngine {
 
         // Clear remaining bits in the partial block (including the idx bit)
         // Always create mask to ensure bit idx is cleared, even when idx=0
-        const uint64_t mask = (1ULL << (remainingBits + 1)) - 1;
+        const uint64_t mask = remainingBits == 63 ? ~0ULL : (1ULL << (remainingBits + 1)) - 1;
         bits[completeBlocks] &= ~mask;
     }
 
