@@ -43,8 +43,6 @@ namespace VFEngine {
         std::unique_ptr<BitMask<State::MAX_VECTOR_SIZE>> _active_mask_uptr; // For active selection mask
         std::unique_ptr<BitMask<State::MAX_VECTOR_SIZE>>
                 _backup_mask_uptr; // For temporary backup in process_data_chunk
-        BitMask<State::MAX_VECTOR_SIZE> **_current_ip_selection_mask;
-        BitMask<State::MAX_VECTOR_SIZE> **_output_selection_mask;
         bool _is_join_index_fwd;
         const RelationType _relation_type;
         const std::unique_ptr<AdjList[]> *_adj_list{};

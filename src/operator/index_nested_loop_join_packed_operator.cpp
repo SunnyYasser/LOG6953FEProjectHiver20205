@@ -13,8 +13,7 @@ namespace VFEngine {
                                                          const std::shared_ptr<Operator> &next_operator) :
         Operator(next_operator), _input_vector(nullptr), _output_vector(nullptr), _is_join_index_fwd(is_join_index_fwd),
         _relation_type(relation_type), _input_attribute(input_attribute), _output_attribute(output_attribute),
-        _active_mask_uptr(nullptr), _backup_mask_uptr(nullptr), _current_ip_selection_mask(nullptr),
-        _output_selection_mask(nullptr) {
+        _active_mask_uptr(nullptr), _backup_mask_uptr(nullptr) {
 #ifdef MY_DEBUG
         _debug = std::make_unique<OperatorDebugUtility>(this);
 #endif
@@ -43,18 +42,18 @@ namespace VFEngine {
 #endif
 
         // Set all idx upto op_filled_idx as valid, rest as invalid
-        CLEAR_ALL_BITS(**_output_selection_mask);
-        SET_BITS_TILL_IDX(**_output_selection_mask, op_filled_idx - 1);
-        SET_START_POS(**_output_selection_mask, 0);
-        SET_END_POS(**_output_selection_mask, op_filled_idx - 1);
+        CLEAR_ALL_BITS(*_output_vector->_state->_selection_mask);
+        SET_BITS_TILL_IDX(*_output_vector->_state->_selection_mask, op_filled_idx - 1);
+        SET_START_POS(*_output_vector->_state->_selection_mask, 0);
+        SET_END_POS(*_output_vector->_state->_selection_mask, op_filled_idx - 1);
 
         // First get a copy of the current ip bitmask, since we need to restore it after
         // the function stack returns
-        RESET_BITMASK(State::MAX_VECTOR_SIZE, *_backup_mask_uptr, **_current_ip_selection_mask);
+        COPY_BITMASK(State::MAX_VECTOR_SIZE, *_backup_mask_uptr, *_active_mask_uptr);
 
         // Always update the end position
-        SET_START_POS(**_current_ip_selection_mask, new_ip_selection_vector_start_pos);
-        SET_END_POS(**_current_ip_selection_mask, new_ip_selection_vector_end_pos);
+        SET_START_POS(*_active_mask_uptr, new_ip_selection_vector_start_pos);
+        SET_END_POS(*_active_mask_uptr, new_ip_selection_vector_end_pos);
 
 #ifdef MY_DEBUG
         _debug->log_vector(_input_vector, _output_vector, fn_name);
@@ -63,24 +62,24 @@ namespace VFEngine {
         get_next_operator()->execute();
 
         // Reset input bitmask to original working ip bitmask, start and end pos are also restored
-        RESET_BITMASK(State::MAX_VECTOR_SIZE, **_current_ip_selection_mask, *_backup_mask_uptr);
+        COPY_BITMASK(State::MAX_VECTOR_SIZE, *_active_mask_uptr, *_backup_mask_uptr);
 
         // We need to set all the values upto the current ip_vector_idx to be marked invalid
-        CLEAR_BITS_TILL_IDX(**_current_ip_selection_mask, current_ip_vector_idx);
+        CLEAR_BITS_TILL_IDX(*_active_mask_uptr, current_ip_vector_idx);
 
         // Set invalid start/end positions by default
-        SET_START_POS(**_current_ip_selection_mask, State::MAX_VECTOR_SIZE - 1);
-        SET_END_POS(**_current_ip_selection_mask, 0);
+        SET_START_POS(*_active_mask_uptr, State::MAX_VECTOR_SIZE - 1);
+        SET_END_POS(*_active_mask_uptr, 0);
 
         // Only if we're still processing this index (chunk not complete),
         // set this bit and update positions
         if (!is_chunk_complete) {
-            SET_BIT(**_current_ip_selection_mask, current_ip_vector_idx);
-            SET_START_POS(**_current_ip_selection_mask, current_ip_vector_idx);
-            SET_END_POS(**_current_ip_selection_mask, current_ip_vector_idx);
+            SET_BIT(*_active_mask_uptr, current_ip_vector_idx);
+            SET_START_POS(*_active_mask_uptr, current_ip_vector_idx);
+            SET_END_POS(*_active_mask_uptr, current_ip_vector_idx);
         }
 
-        // Finally clean the output vector rle for new batch
+        // Finally clean the output vector rle for new chunk
         std::memset(op_vector_rle, 0, (State::MAX_VECTOR_SIZE + 1) * sizeof(uint32_t));
         op_filled_idx = 0;
     }
@@ -138,14 +137,14 @@ namespace VFEngine {
         BitMask<State::MAX_VECTOR_SIZE> *original_mask_ptr = input_state->_selection_mask;
 
         // Copy the original mask data into our active mask (single deep copy)
-        *_active_mask_uptr = *original_mask_ptr;
+        COPY_BITMASK(State::MAX_VECTOR_SIZE, *_active_mask_uptr, *original_mask_ptr);
 
         // Use our pre-allocated active mask as the temporary selection mask
         input_state->_selection_mask = _active_mask_uptr.get();
 
         // Get the active bit range from the bitmask
-        const int32_t start_idx = GET_START_POS(**_current_ip_selection_mask);
-        const int32_t end_idx = GET_END_POS(**_current_ip_selection_mask);
+        const int32_t start_idx = GET_START_POS(*original_mask_ptr);
+        const int32_t end_idx = GET_END_POS(*original_mask_ptr);
         const auto &adj_list_ptr = *_adj_list;
 
 #ifdef MY_DEBUG
@@ -169,7 +168,7 @@ namespace VFEngine {
         for (auto idx = start_idx; idx <= end_idx;) {
 
             // Skip if this index isn't valid in our selection mask
-            if (!TEST_BIT(**_current_ip_selection_mask, idx)) {
+            if (!TEST_BIT(*_active_mask_uptr, idx)) {
                 idx++;
                 continue;
             }
@@ -180,7 +179,7 @@ namespace VFEngine {
 
             // Skip if there are no elements to produce
             if (output_elems_produced == 0) {
-                CLEAR_BIT(**_current_ip_selection_mask, idx);
+                CLEAR_BIT(*_active_mask_uptr, idx);
                 idx++;
                 continue;
             }
@@ -277,13 +276,6 @@ namespace VFEngine {
         // Create two separate working masks
         _active_mask_uptr = std::make_unique<BitMask<State::MAX_VECTOR_SIZE>>();
         _backup_mask_uptr = std::make_unique<BitMask<State::MAX_VECTOR_SIZE>>();
-
-        // _current_ip_selection_mask will still point to the input vector's selection mask
-        // but we'll swap the actual mask pointer during execution
-        _current_ip_selection_mask = &(_input_vector->_state->_selection_mask);
-
-        // Grab address of the output vector's selection mask
-        _output_selection_mask = &(_output_vector->_state->_selection_mask);
 
         // Set up adjacency lists
         if (_is_join_index_fwd)

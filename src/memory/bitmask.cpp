@@ -291,6 +291,13 @@ namespace VFEngine {
 
     template class BitMask<2>;
     template class BitMask<4>;
+    template class BitMask<8>;
+    template class BitMask<16>;
+    template class BitMask<32>;
+    template class BitMask<64>;
+    template class BitMask<128>;
+    template class BitMask<256>;
+    template class BitMask<512>;
     template class BitMask<1024>;
     template class BitMask<2048>;
 

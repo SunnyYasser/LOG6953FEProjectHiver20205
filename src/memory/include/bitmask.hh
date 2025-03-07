@@ -98,7 +98,7 @@ namespace VFEngine {
 #define SET_BITS_TILL_IDX(bitmask, idx) ((bitmask).setBitsTillIdx(idx))
 #define CLEAR_BITS_TILL_IDX(bitmask, idx) ((bitmask).clearBitsTillIdx(idx))
 #define AND_BITMASKS(N, first, second) ((first).andWith(second))
-#define RESET_BITMASK(N, first, second) ((first).copyFrom(second))
+#define COPY_BITMASK(N, first, second) ((first).copyFrom(second))
 #define GET_START_POS(bitmask) ((bitmask).getStartPos())
 #define GET_END_POS(bitmask) ((bitmask).getEndPos())
 #define SET_START_POS(bitmask, index) ((bitmask).setStartPos(index))
