@@ -19,12 +19,4 @@ if (VECTOR_STATE_ARENA_ALLOCATOR)
     add_compile_definitions(VECTOR_STATE_ARENA_ALLOCATOR)
 endif ()
 
-if (MEMSET_TO_SET_VECTOR_SLICE)
-    add_compile_definitions(MEMSET_TO_SET_VECTOR_SLICE)
-endif ()
-
-if (ENABLE_BRANCHLESS_SINK_PACKED)
-    add_compile_definitions(ENABLE_BRANCHLESS_SINK_PACKED)
-endif ()
-
 

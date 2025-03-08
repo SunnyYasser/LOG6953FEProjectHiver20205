@@ -61,8 +61,12 @@ namespace VFEngine {
             SET_END_POS(**_output_selection_mask, _curr_chunk_size - 1);
             SET_BITS_TILL_IDX(**_output_selection_mask, _curr_chunk_size - 1);
             // Initialize output RLE
-            std::memset(_output_vector->_state->_rle.get(), 0, (State::MAX_VECTOR_SIZE + 1) * sizeof(uint32_t));
 
+#ifdef VECTOR_STATE_ARENA_ALLOCATOR
+            std::memset(_output_vector->_state->_rle, 0, (State::MAX_VECTOR_SIZE + 1) * sizeof(uint32_t));
+#else
+            std::memset(_output_vector->_state->_rle.get(), 0, (State::MAX_VECTOR_SIZE + 1) * sizeof(uint32_t));
+#endif
 
 #ifdef MY_DEBUG
             // log updated output vector
@@ -80,7 +84,11 @@ namespace VFEngine {
             SET_START_POS(**_output_selection_mask, 0);
             SET_END_POS(**_output_selection_mask, State::MAX_VECTOR_SIZE - 1);
             // Reset output RLE
+#ifdef VECTOR_STATE_ARENA_ALLOCATOR
+            std::memset(_output_vector->_state->_rle, 0, (State::MAX_VECTOR_SIZE + 1) * sizeof(uint32_t));
+#else
             std::memset(_output_vector->_state->_rle.get(), 0, (State::MAX_VECTOR_SIZE + 1) * sizeof(uint32_t));
+#endif
         }
     }
 

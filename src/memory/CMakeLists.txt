@@ -7,11 +7,6 @@ endif()
 if(VECTOR_STATE_ARENA_ALLOCATOR)
     add_compile_definitions(VECTOR_STATE_ARENA_ALLOCATOR)
 endif()
-
-if(MEMSET_TO_SET_VECTOR_SLICE)
-    add_compile_definitions(MEMSET_TO_SET_VECTOR_SLICE)
-endif()
-
 if(BIT_ARRAY_AS_FILTER)
     add_compile_definitions(BIT_ARRAY_AS_FILTER)
 endif()

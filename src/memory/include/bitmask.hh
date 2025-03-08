@@ -38,8 +38,8 @@ namespace VFEngine {
 #else
         std::unique_ptr<uint8_t[]> bits_uptr;
         uint8_t *bits;
-        int32_t start_pos, end_pos;
 #endif
+        int32_t start_pos, end_pos;
     };
 
 #else
