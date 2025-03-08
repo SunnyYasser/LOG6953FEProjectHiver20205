@@ -37,7 +37,8 @@
 
 //     // Scan
 //     const std::string scan_attribute = "a";
-//     auto scan = std::static_pointer_cast<VFEngine::Operator>(std::make_shared<VFEngine::Scan>(scan_attribute, extend1));
+//     auto scan = std::static_pointer_cast<VFEngine::Operator>(std::make_shared<VFEngine::Scan>(scan_attribute,
+//     extend1));
 
 //     return scan;
 // }
@@ -69,7 +70,8 @@
 //     int idx = 0;
 
 //     while (first_op) {
-//         std::cout << operator_names[idx++] << " " << first_op->get_uuid() << " : " << first_op->get_exec_call_counter()
+//         std::cout << operator_names[idx++] << " " << first_op->get_uuid() << " : " <<
+//         first_op->get_exec_call_counter()
 //                   << std::endl;
 //         first_op = first_op->get_next_operator();
 //     }
@@ -130,7 +132,8 @@
 //     pipeline2->init();
 //     pipeline2->execute();
 
-//     std::cout << "count (*) " << datalog << " = " << VFEngine::Sink::get_total_row_size_if_materialized() << std::endl;
+//     std::cout << "count (*) " << datalog << " = " << VFEngine::Sink::get_total_row_size_if_materialized() <<
+//     std::endl;
 
 //     const auto parser3 = std::make_unique<VFEngine::QueryParser>(
 //             datalog, column_ordering, true, VFEngine::SinkType::NO_OP, column_names, column_alias_map);
@@ -189,7 +192,8 @@
 //     pipeline2->init();
 //     pipeline2->execute();
 
-//     std::cout << "count (*) " << datalog << " = " << VFEngine::Sink::get_total_row_size_if_materialized() << std::endl;
+//     std::cout << "count (*) " << datalog << " = " << VFEngine::Sink::get_total_row_size_if_materialized() <<
+//     std::endl;
 
 //     const auto parser3 = std::make_unique<VFEngine::QueryParser>(
 //             datalog, column_ordering, true, VFEngine::SinkType::NO_OP, column_names, column_alias_map);
@@ -225,7 +229,8 @@
 //     pipeline->init();
 //     pipeline->execute();
 
-//     std::cout << "count (*) " << datalog << " = " << VFEngine::SinkLinearHardcoded::get_total_row_size_if_materialized()
+//     std::cout << "count (*) " << datalog << " = " <<
+//     VFEngine::SinkLinearHardcoded::get_total_row_size_if_materialized()
 //               << std::endl;
 
 
@@ -236,7 +241,8 @@
 //     pipeline2->init();
 //     pipeline2->execute();
 
-//     std::cout << "count (*) " << datalog << " = " << VFEngine::Sink::get_total_row_size_if_materialized() << std::endl;
+//     std::cout << "count (*) " << datalog << " = " << VFEngine::Sink::get_total_row_size_if_materialized() <<
+//     std::endl;
 // }
 
 // void min_sink_example() {
@@ -247,8 +253,8 @@
 
 //     // const std::string datalog = "a->b,b->c";
 //     // const std::vector<std::string> column_ordering = {"a", "b", "c"};
-//     // const std::unordered_map<std::string, std::string> column_alias_map{{"a", "src"}, {"b", "src"}, {"c", "dest"}};
-//     const std::vector<std::string> column_names{"src", "dest"};
+//     // const std::unordered_map<std::string, std::string> column_alias_map{{"a", "src"}, {"b", "src"}, {"c",
+//     "dest"}}; const std::vector<std::string> column_names{"src", "dest"};
 
 //     const auto parser = std::make_unique<VFEngine::QueryParser>(
 //             datalog, column_ordering, true, VFEngine::SinkType::PACKED_MIN, column_names, column_alias_map);
@@ -295,6 +301,7 @@
 #include <chrono>
 #include <iostream>
 #include <memory>
+#include "src/operator/include/sink_packed_operator.hh"
 #include <sys/resource.h>
 #include "src/engine/include/pipeline.hh"
 #include "src/operator/include/sink_operator.hh"
@@ -319,12 +326,13 @@ inline void benchmark_barrier() {
 std::chrono::steady_clock::time_point exec_start_time;
 std::chrono::steady_clock::time_point exec_end_time;
 
-ulong run_pipeline(const std::string &dataset_path, const std::string& serialized_dataset_path, const std::string &query, const std::vector<std::string> &column_ordering, const bool &is_packed) {
+ulong run_pipeline(const std::string &dataset_path, const std::string &serialized_dataset_path,
+                   const std::string &query, const std::vector<std::string> &column_ordering, const bool &is_packed) {
     std::vector<std::string> column_names{"src", "dest"};
 
     std::unordered_map<std::string, std::string> column_alias_map;
     for (int i = 0; i < static_cast<int>(column_ordering.size()); i++) {
-        if ( i == 0) {
+        if (i == 0) {
             column_alias_map[column_ordering[i]] = column_names[0];
         } else {
             column_alias_map[column_ordering[i]] = column_names[1];
@@ -333,13 +341,8 @@ ulong run_pipeline(const std::string &dataset_path, const std::string& serialize
 
     print_column_ordering(column_ordering);
     const auto parser = std::make_unique<VFEngine::QueryParser>(
-            query,
-            column_ordering,
-            is_packed,
-            is_packed ? VFEngine::SinkType::PACKED : VFEngine::SinkType::UNPACKED,
-            column_names,
-            column_alias_map
-        );
+            query, column_ordering, is_packed, is_packed ? VFEngine::SinkType::PACKED : VFEngine::SinkType::UNPACKED,
+            column_names, column_alias_map);
 
     VFEngine::DataSourceTable::set_dataset_path(dataset_path);
     VFEngine::DataSourceTable::set_serialized_dataset_path(serialized_dataset_path);
@@ -374,10 +377,11 @@ ulong run_pipeline(const std::string &dataset_path, const std::string& serialize
         first_op = first_op->get_next_operator();
     }
 
-    return VFEngine::Sink::get_total_row_size_if_materialized();
+    return is_packed ? VFEngine::SinkPacked::get_total_row_size_if_materialized()
+                     : VFEngine::Sink::get_total_row_size_if_materialized();
 }
 
-std::vector<std::string> split(const std::string& str, char delimiter) {
+std::vector<std::string> split(const std::string &str, char delimiter) {
     std::vector<std::string> result;
     size_t start = 0, end;
 
@@ -390,11 +394,13 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
     return result;
 }
 
-int execute(const std::string &dataset_path, const std::string& serialized_dataset_path, const std::string& query, const std::string& column_ordering, const ulong &expected_result, const bool &is_packed = false) {
+int execute(const std::string &dataset_path, const std::string &serialized_dataset_path, const std::string &query,
+            const std::string &column_ordering, const ulong &expected_result, const bool &is_packed = false) {
     std::cout << "Executed Query: " << query << std::endl;
     const auto start = std::chrono::steady_clock::now();
     const std::vector<std::string> column_ordering_vector = split(column_ordering, ',');
-    const auto actual_result = run_pipeline(dataset_path, serialized_dataset_path, query, column_ordering_vector, is_packed);
+    const auto actual_result =
+            run_pipeline(dataset_path, serialized_dataset_path, query, column_ordering_vector, is_packed);
     const auto end = std::chrono::steady_clock::now();
     const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     const auto exec_duration = std::chrono::duration_cast<std::chrono::microseconds>(exec_end_time - exec_start_time);
@@ -416,17 +422,18 @@ int execute(const std::string &dataset_path, const std::string& serialized_datas
     std::cout << "Is Valid: " << is_valid << std::endl;
 
     if (actual_result != expected_result) {
-        std::cerr << "Execution failed: Expected " << expected_result << " but got " << actual_result
-                  << std::endl;
+        std::cerr << "Execution failed: Expected " << expected_result << " but got " << actual_result << std::endl;
         return 1;
     }
 
     return 0;
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     if (argc != 6 && argc != 7) {
-        std::cerr << "Usage: " << argv[0] << "<dataset_path> <serialized_dataset_path> <query> <column_ordering> <expected_result> [is_packed]" << std::endl;
+        std::cerr << "Usage: " << argv[0]
+                  << " <dataset_path> <serialized_dataset_path> <query> <column_ordering> <expected_result> [is_packed]"
+                  << std::endl;
         return 1;
     }
     const bool is_packed = argc == 7 ? std::stoi(argv[6]) : false;
