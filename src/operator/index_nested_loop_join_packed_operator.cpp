@@ -250,8 +250,6 @@ namespace VFEngine {
     }
     void IndexNestedLoopJoinPacked::execute() {
 #ifdef MY_DEBUG
-        assert(_current_ip_selection_mask != nullptr);
-        assert(_output_selection_mask != nullptr);
         assert(_input_vector != nullptr);
         assert(_output_vector != nullptr);
         const auto start_pos = GET_START_POS(*_input_vector->_state->_selection_mask);

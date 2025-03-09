@@ -6,6 +6,8 @@
 #include <iostream>
 #include <sink_packed_min_operator.hh>
 #include <sstream>
+#include <unordered_set>
+
 #include "../operator/include/index_nested_loop_join_operator.hh"
 #include "../operator/include/index_nested_loop_join_packed_operator.hh"
 #include "../operator/include/operator_types.hh"
@@ -113,8 +115,30 @@ namespace VFEngine {
         return schema;
     }
 
+#ifdef MY_DEBUG
+    std::vector<std::string> get_attributes_from_joins(const std::vector<std::string> &joins,
+                                                       const std::string &delimiter) {
+        std::unordered_set<std::string> attributes;
+        for (const auto &join: joins) {
+            const size_t arrowPos = join.find(delimiter);
+            if (arrowPos != std::string::npos) {
+                std::string from = join.substr(0, arrowPos);
+                std::string to = join.substr(arrowPos + 2);
+                attributes.insert(from);
+                attributes.insert(to);
+            }
+        }
+
+        return {attributes.begin(), attributes.end()};
+    }
+#endif
+
     void QueryParser::build_direction_map() {
         std::vector<std::string> joins = split(_query, ',');
+#ifdef MY_DEBUG
+        const auto attributes = get_attributes_from_joins(joins, _delimiter);
+        assert(attributes.size() == _column_ordering.size());
+#endif
         for (const auto &join: joins) {
             const size_t arrowPos = join.find(_delimiter);
             if (arrowPos != std::string::npos) {
