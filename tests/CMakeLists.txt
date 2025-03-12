@@ -7,12 +7,28 @@ include_directories(${CMAKE_SOURCE_DIR}/src/engine)
 include_directories(${CMAKE_SOURCE_DIR}/src/utils)
 include_directories(${CMAKE_SOURCE_DIR}/src/parser)
 
+# Define dataset variables (user can change these before building)
+#set(DATASET_PATH "/home/sunny/work/scratch/Amazon0601.txt" CACHE PATH "Path to the dataset")
+#set(SERIALIZED_DATASET_PATH "/home/sunny/work/scratch/serialized_datasets/amazon_0601" CACHE PATH "Path to the serialized dataset")
+#set(DATASET_NAME "AMAZON0601" CACHE STRING "Name of the dataset")
+set(DATASET_PATH "/home/sunny/work/scratch/web-Google.txt")
+set(SERIALIZED_DATASET_PATH "/home/sunny/work/scratch/serialized_datasets/web_google")
+set(DATASET_NAME "WEB_GOOGLE")
+
+
 # Define a function to add tests with profiling enabled
 function(add_profiling_test name source)
     set(CMAKE_BUILD_TYPE Release)
     add_executable(${name} ${source})
     target_compile_options(${name} PRIVATE -Ofast -march=native)
     target_link_libraries(${name} PUBLIC libgraph liboperator libmem libengine libutils libparser)
+
+    # Apply the dataset definitions to each test
+    target_compile_definitions(${name} PRIVATE
+            DATASET_PATH="${DATASET_PATH}"
+            SERIALIZED_DATASET_PATH="${SERIALIZED_DATASET_PATH}"
+            DATASET_NAME="${DATASET_NAME}"
+    )
 
     if (RUN_WITH_PROFILING)
         target_compile_options(${name} PRIVATE -g)
@@ -21,7 +37,6 @@ function(add_profiling_test name source)
     else ()
         # Add -g only when profiling is disabled
         target_compile_options(${name} PRIVATE -fsanitize=address -fsanitize=leak -g3 -Wall -Wextra -Wpedantic -Werror)
-
         target_link_options(${name} PRIVATE -fsanitize=address -fsanitize=leak)
         add_test(NAME ${name} COMMAND ${CMAKE_BINARY_DIR}/tests/${name})
     endif ()
@@ -58,7 +73,6 @@ add_profiling_test(test27_4hop_unpacked_non_linear_ordering test27_4hop_unpacked
 add_profiling_test(test28_4hop_unpacked_noop_non_linear_ordering test28_4hop_unpacked_noop.cpp)
 add_profiling_test(test29_4hop_packed_noop_linear_ordering test29_4hop_packed_noop.cpp)
 add_profiling_test(test30_4hop_packed_noop_non_linear_ordering test30_4hop_packed_noop.cpp)
-
 
 # Copy the profiling script to the build directory
 configure_file(${CMAKE_SOURCE_DIR}/tests/run_with_profiling.sh ${CMAKE_BINARY_DIR}/run_with_profiling.sh COPYONLY)

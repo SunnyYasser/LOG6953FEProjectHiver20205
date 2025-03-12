@@ -429,7 +429,7 @@ int execute(const std::string &dataset_path, const std::string &serialized_datas
     return 0;
 }
 
-int main(int argc, char *argv[]) {
+int main(const int argc, const char *argv[]) {
     if (argc != 6 && argc != 7) {
         std::cerr << "Usage: " << argv[0]
                   << " <dataset_path> <serialized_dataset_path> <query> <column_ordering> <expected_result> [is_packed]"

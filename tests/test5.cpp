@@ -1,4 +1,5 @@
 #include <chrono>
+#include <cstring>
 #include <iostream>
 #include <memory>
 #include <sink_operator.hh>
@@ -33,6 +34,8 @@ ulong pipeline_example(const std::string &query) {
     const std::unordered_map<std::string, std::string> column_alias_map{{"a", "src"}, {"b", "dest"}};
     const std::vector<std::string> column_ordering = {"a", "b"};
     print_column_ordering(column_ordering);
+    VFEngine::DataSourceTable::set_dataset_path(DATASET_PATH);
+    VFEngine::DataSourceTable::set_serialized_dataset_path(SERIALIZED_DATASET_PATH);
 
     const auto parser = std::make_unique<VFEngine::QueryParser>(
             query, column_ordering, true, VFEngine::SinkType::PACKED, column_names, column_alias_map);
@@ -66,17 +69,14 @@ ulong pipeline_example(const std::string &query) {
 ulong test(const std::string &query) { return pipeline_example(query); }
 
 ulong get_expected_value() {
-    if (get_dataset_csv_path()) {
-        if (is_running_amazon0601())
-            return 3387388;
-        if (is_running_google_web())
-            return 5105039;
-        if (is_running_live_journal())
-            return 68993773;
-        if (is_running_soc_epinions())
-            return 508837;
-        return -1;
-    }
+    if (strcmp(DATASET_NAME, "AMAZON0601") == 0)
+        return 3387388;
+    if (strcmp(DATASET_NAME, "WEB_GOOGLE") == 0)
+        return 5105039;
+    if (strcmp(DATASET_NAME, "LIVE_JOURNAL") == 0)
+        return 68993773;
+    if (strcmp(DATASET_NAME, "SOC_EPINIONS1") == 0)
+        return 508837;
     return 6;
 }
 
