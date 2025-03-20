@@ -15,7 +15,7 @@
 #endif
 
 namespace VFEngine {
-    enum class SinkType { UNPACKED = 0, PACKED, NO_OP, PACKED_VECTORIZED, HARDCODED_LINEAR, PACKED_MIN};
+    enum class SinkType { UNPACKED = 0, PACKED, NO_OP, PACKED_VECTORIZED, HARDCODED_LINEAR, PACKED_MIN, FAILURE_PROP };
 
     class QueryParser {
     public:
