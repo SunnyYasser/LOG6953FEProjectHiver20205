@@ -2,7 +2,6 @@
 #include <cassert>
 #include <cmath>
 #include <cstring>
-#include <numeric>
 #include "include/operator_utils.hh"
 
 namespace VFEngine {
