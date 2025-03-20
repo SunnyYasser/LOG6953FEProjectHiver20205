@@ -37,11 +37,12 @@ void __M_Assert(const char *expr_str, bool expr, const char *file, int line, con
 namespace VFEngine {
 
     QueryParser::QueryParser(const std::string &query, const std::vector<std::string> &column_ordering,
-                             const bool &is_packed, const SinkType sink_type,
+                             const bool &is_packed, const std::vector<uint64_t> &src_nodes, const SinkType sink_type,
                              const std::vector<std::string> &column_names,
                              const std::unordered_map<std::string, std::string> &column_alias_map) :
         _query(query), _column_ordering(column_ordering), _is_packed(is_packed), _sink_type(sink_type),
-        _delimiter("->"), _column_names(column_names), _column_alias_map(column_alias_map), _ftree(nullptr) {
+        _delimiter("->"), _column_names(column_names), _column_alias_map(column_alias_map), _ftree(nullptr),
+        _src_nodes(src_nodes) {
         if (_is_packed) {
             assert(_sink_type != SinkType::UNPACKED);
         } else {
@@ -51,24 +52,6 @@ namespace VFEngine {
             assert(_sink_type != SinkType::PACKED_MIN);
         }
     }
-
-    QueryParser::QueryParser(const std::string &query, const std::vector<std::string> &column_ordering,
-                             const bool &is_packed, const SinkType sink_type,
-                             const std::vector<std::string> &column_names,
-                             const std::unordered_map<std::string, std::string> &column_alias_map,
-                             const std::shared_ptr<FactorizedTreeElement> &ftree) :
-        _query(query), _column_ordering(column_ordering), _is_packed(is_packed), _sink_type(sink_type),
-        _delimiter("->"), _column_names(column_names), _column_alias_map(column_alias_map), _ftree(ftree) {
-        if (_is_packed) {
-            assert(_sink_type != SinkType::UNPACKED);
-        } else {
-            assert(_sink_type != SinkType::PACKED);
-            assert(_sink_type != SinkType::PACKED_VECTORIZED);
-            assert(_sink_type != SinkType::HARDCODED_LINEAR);
-            assert(_sink_type != SinkType::PACKED_MIN);
-        }
-    }
-
 
     static std::vector<std::string> split(const std::string &str, char delimiter) {
         std::vector<std::string> tokens;

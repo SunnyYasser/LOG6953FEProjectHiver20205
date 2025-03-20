@@ -4,8 +4,7 @@
 #include <memory>
 #include <sys/resource.h>
 #include "src/engine/include/pipeline.hh"
-#include "src/operator/include/sink_operator.hh"
-#include "src/operator/include/sink_packed_operator.hh"
+#include "src/operator/include/sink_failure_prop.hh"
 #include "src/parser/include/query_parser.hh"
 
 void print_column_ordering(const std::vector<std::string> &column_ordering) {
@@ -44,7 +43,7 @@ std::vector<std::vector<uint64_t>> run_pipeline(const std::string &dataset_path,
 
     print_column_ordering(column_ordering);
     const auto parser = std::make_unique<VFEngine::QueryParser>(
-            query, column_ordering, true, VFEngine::SinkType::FAILURE_PROP, column_names, column_alias_map);
+            query, column_ordering, true, src_nodes, VFEngine::SinkType::FAILURE_PROP, column_names, column_alias_map);
 
     VFEngine::DataSourceTable::set_dataset_path(dataset_path);
     VFEngine::DataSourceTable::set_serialized_dataset_path(serialized_dataset_path);
@@ -75,7 +74,8 @@ std::vector<std::vector<uint64_t>> run_pipeline(const std::string &dataset_path,
         first_op = first_op->get_next_operator();
     }
 
-    return VFEngine::SinkFailureProp::get_total_row_size_if_materialized();
+    const auto sink_op = std::static_pointer_cast<VFEngine::SinkFailureProp>(first_op);
+    return sink_op->get_total_rows();
 }
 
 std::vector<std::string> split(const std::string &str, char delimiter) {
@@ -119,7 +119,7 @@ std::vector<std::vector<uint64_t>> execute(const std::string &dataset_path, cons
     return actual_result;
 }
 
-int main(const int argc, const char *argv[]) {
+int main() {
     const std::string dataset_path = "../data.txt";
     const std::string serialized_dataset_path = "../serialized_data.bin";
     const std::string query = "a->b,b->c,c->d,d->e";
