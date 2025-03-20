@@ -6,12 +6,12 @@
 #include "include/operator_utils.hh"
 
 namespace VFEngine {
-    ScanFailureProp::ScanFailureProp(const std::string &scan_attribute, const std::vector<uint64_t>& src_nodes, const std::shared_ptr<Operator> &next_operator):
-        Operator(next_operator), _output_vector(nullptr), _output_selection_mask(nullptr),
-        _attribute(scan_attribute), _src_nodes(src_nodes) {
-    }
+    ScanFailureProp::ScanFailureProp(const std::string &scan_attribute, const std::vector<uint64_t> &src_nodes,
+                                     const std::shared_ptr<Operator> &next_operator) :
+        Operator(next_operator), _output_vector(nullptr), _output_selection_mask(nullptr), _attribute(scan_attribute),
+        _src_nodes(src_nodes) {}
 
-    operator_type_t ScanFailureProp::get_operator_type() const { return OP_SCAN; }
+    operator_type_t ScanFailureProp::get_operator_type() const { return OP_SCAN_FAILURE_PROP; }
 
     void ScanFailureProp::execute() {
         _exec_call_counter++;
@@ -40,13 +40,9 @@ namespace VFEngine {
             _output_vector->_state->_state_info._size = static_cast<int32_t>(_curr_chunk_size);
             _output_vector->_state->_state_info._pos = -1;
 
-            // only needed for INLJ Packed
-            // Set start and end position in the selection mask
-            // Mark all bits as valid
             SET_START_POS(**_output_selection_mask, 0);
             SET_END_POS(**_output_selection_mask, _curr_chunk_size - 1);
             SET_BITS_TILL_IDX(**_output_selection_mask, _curr_chunk_size - 1);
-            // Initialize output RLE
 
 #ifdef VECTOR_STATE_ARENA_ALLOCATOR
             std::memset(_output_vector->_state->_rle, 0, (State::MAX_VECTOR_SIZE + 1) * sizeof(uint32_t));
@@ -78,7 +74,8 @@ namespace VFEngine {
      * We only need to create a copy of the data of given column (attribute)
      * Input vector is not required for scan operator
      */
-    void ScanFailureProp::init(const std::shared_ptr<ContextMemory> &context, const std::shared_ptr<DataStore> &datastore) {
+    void ScanFailureProp::init(const std::shared_ptr<ContextMemory> &context,
+                               const std::shared_ptr<DataStore> &datastore) {
         context->allocate_memory_for_column(_attribute);
         _output_vector = context->read_vector_for_column(_attribute);
         _output_vector->allocate_rle();

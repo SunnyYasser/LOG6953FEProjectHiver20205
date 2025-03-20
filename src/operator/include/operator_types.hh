@@ -5,6 +5,7 @@ namespace VFEngine {
     enum operator_type_t {
         OP_GENERIC,
         OP_SCAN,
+        OP_SCAN_FAILURE_PROP,
         OP_INLJ,
         OP_INLJ_PACKED,
         OP_INLJ_NTO1,
