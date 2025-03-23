@@ -50,14 +50,12 @@ namespace VFEngine {
             std::vector<uint64_t> result;
 
             // Get the valid range from the selection mask
-            const auto start_pos = GET_START_POS(*selection_mask);
-            const auto end_pos = GET_END_POS(*selection_mask);
+            const auto start_pos = 0;
+            const auto end_pos = state->_state_info._size - 1;
 
             // Collect all valid values at this level
             for (auto i = start_pos; i <= end_pos; i++) {
-                if (TEST_BIT(*selection_mask, i)) {
-                    result.push_back(values[i]);
-                }
+                result.push_back(values[i]);
             }
 
             return result;

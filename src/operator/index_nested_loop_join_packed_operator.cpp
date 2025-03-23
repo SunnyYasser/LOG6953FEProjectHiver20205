@@ -46,6 +46,7 @@ namespace VFEngine {
         SET_BITS_TILL_IDX(*_output_vector->_state->_selection_mask, op_filled_idx - 1);
         SET_START_POS(*_output_vector->_state->_selection_mask, 0);
         SET_END_POS(*_output_vector->_state->_selection_mask, op_filled_idx - 1);
+        _output_vector->_state->_state_info._size = op_filled_idx;
 
         // First get a copy of the current ip bitmask, since we need to restore it after
         // the function stack returns
