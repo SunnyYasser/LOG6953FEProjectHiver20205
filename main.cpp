@@ -175,8 +175,8 @@ int main() {
         src_nodes_failure_prop.push_back(static_cast<uint64_t>(std::stoi(item)));
     }
 
-    std::vector<std::vector<uint64_t>> result = execute(dataset_path.c_str(), serialized_dataset_path.c_str(),
-                                                        query.c_str(), column_ordering.c_str(), src_nodes_failure_prop);
+    std::vector<std::vector<uint64_t>> result =
+            execute(dataset_path, serialized_dataset_path, query, column_ordering, src_nodes_failure_prop);
 
     // Write result to TachosDB_output.txt
     std::ofstream output_file(output_filename);
