@@ -21,7 +21,7 @@ namespace VFEngine {
         void fill_vectors_in_ftree() const;
         [[nodiscard]] operator_type_t get_operator_type() const override;
         std::shared_ptr<FactorizedTreeElement> _ftree;
-        std::vector<std::vector<uint64_t>> total_rows;
+        std::unique_ptr<std::vector<std::vector<uint64_t>>> _total_rows;
         unsigned long _exec_call_counter{};
         std::shared_ptr<ContextMemory> _context;
     };

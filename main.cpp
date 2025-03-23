@@ -58,7 +58,8 @@ std::vector<std::vector<uint64_t>> run_pipeline(const std::string &dataset_path,
     benchmark_barrier();
     exec_end_time = std::chrono::steady_clock::now();
 
-    auto first_op = pipeline->get_first_operator();
+    auto current_op = pipeline->get_first_operator();
+    std::shared_ptr<VFEngine::Operator> sink_op = nullptr;
 
     std::vector<std::string> operator_names;
     operator_names.emplace_back("SCAN");
@@ -68,14 +69,18 @@ std::vector<std::vector<uint64_t>> run_pipeline(const std::string &dataset_path,
     operator_names.emplace_back("SINK");
 
     int idx = 0;
-    while (first_op) {
-        std::cout << operator_names[idx++] << " " << first_op->get_uuid() << " : " << first_op->get_exec_call_counter()
-                  << std::endl;
-        first_op = first_op->get_next_operator();
+    while (current_op) {
+        std::cout << operator_names[idx++] << " " << current_op->get_uuid() << " : "
+                  << current_op->get_exec_call_counter() << std::endl;
+        const auto next_op = current_op->get_next_operator();
+        if (!next_op) {
+            sink_op = current_op;
+        }
+        current_op = next_op;
     }
 
-    const auto sink_op = std::static_pointer_cast<VFEngine::SinkFailureProp>(first_op);
-    return sink_op->get_total_rows();
+    const auto sink_failure_prop = std::static_pointer_cast<VFEngine::SinkFailureProp>(sink_op);
+    return sink_failure_prop->get_total_rows();
 }
 
 std::vector<std::string> split(const std::string &str, char delimiter) {
@@ -120,10 +125,10 @@ std::vector<std::vector<uint64_t>> execute(const std::string &dataset_path, cons
 }
 
 int main() {
-    const std::string dataset_path = "../data.txt";
-    const std::string serialized_dataset_path = "../serialized_data.bin";
-    const std::string query = "a->b,b->c,c->d,d->e";
-    const std::string column_ordering = "c,b,a,d,e";
+    const std::string dataset_path = "../new_data.txt";
+    const std::string serialized_dataset_path = "../new_data";
+    const std::string query = "a->b,b->c";
+    const std::string column_ordering = "a,b,c";
     const auto input_filename = "../input_query.txt";
     const auto output_filename = "../TachosDB_output.txt";
 

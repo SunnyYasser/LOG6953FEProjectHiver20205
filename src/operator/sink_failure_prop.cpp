@@ -6,7 +6,8 @@
 #include <vector>
 
 namespace VFEngine {
-    SinkFailureProp::SinkFailureProp(const std::shared_ptr<FactorizedTreeElement> &ftree) : Operator(), _ftree(ftree) {}
+    SinkFailureProp::SinkFailureProp(const std::shared_ptr<FactorizedTreeElement> &ftree) :
+        Operator(), _ftree(ftree), _total_rows(nullptr) {}
 
     operator_type_t SinkFailureProp::get_operator_type() const { return OP_SINK_FAILURE_PROP; }
 
@@ -87,7 +88,7 @@ namespace VFEngine {
 
     void SinkFailureProp::update_total_rows() {
         // First, get the height of the tree
-        int tree_height = get_tree_height(_ftree);
+        const int tree_height = get_tree_height(_ftree);
 
         // Collect values level by level (BFS manner)
         for (int level = 0; level < tree_height; level++) {
@@ -95,13 +96,13 @@ namespace VFEngine {
 
             // If we got values at this level, add them to total_rows
             if (!level_values.empty()) {
-                total_rows.push_back(level_values);
+                _total_rows->push_back(level_values);
             }
         }
 
         // Add a demarcation row filled with -1
-        std::vector<uint64_t> demarcation_row(State::MAX_VECTOR_SIZE, -1);
-        total_rows.push_back(demarcation_row);
+        std::vector<uint64_t> demarcation_row(State::MAX_VECTOR_SIZE, 0);
+        _total_rows->push_back(demarcation_row);
     }
 
     static void dfs_helper(const std::shared_ptr<FactorizedTreeElement> &root, std::unordered_set<std::string> &visited,
@@ -128,9 +129,10 @@ namespace VFEngine {
                                const std::shared_ptr<DataStore> &datastore) {
         _context = context;
         fill_vectors_in_ftree();
+        _total_rows = std::make_unique<std::vector<std::vector<uint64_t>>>();
     }
 
-    std::vector<std::vector<uint64_t>> SinkFailureProp::get_total_rows() const { return total_rows; }
+    std::vector<std::vector<uint64_t>> SinkFailureProp::get_total_rows() const { return *_total_rows; }
 
     unsigned long SinkFailureProp::get_exec_call_counter() const { return _exec_call_counter; }
 } // namespace VFEngine
