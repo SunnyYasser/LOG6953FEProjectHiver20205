@@ -26,10 +26,9 @@ inline void benchmark_barrier() {
 std::chrono::steady_clock::time_point exec_start_time;
 std::chrono::steady_clock::time_point exec_end_time;
 
-std::vector<std::vector<uint64_t>> run_pipeline(const std::string &dataset_path,
-                                                const std::string &serialized_dataset_path, const std::string &query,
-                                                const std::vector<std::string> &column_ordering,
-                                                const std::vector<uint64_t> &src_nodes) {
+std::vector<uint64_t> run_pipeline(const std::string &dataset_path, const std::string &serialized_dataset_path,
+                                   const std::string &query, const std::vector<std::string> &column_ordering,
+                                   const std::vector<uint64_t> &src_nodes) {
     std::vector<std::string> column_names{"src", "dest"};
 
     std::unordered_map<std::string, std::string> column_alias_map;
@@ -80,7 +79,7 @@ std::vector<std::vector<uint64_t>> run_pipeline(const std::string &dataset_path,
     }
 
     const auto sink_failure_prop = std::static_pointer_cast<VFEngine::SinkFailureProp>(sink_op);
-    return sink_failure_prop->get_total_rows();
+    return *sink_failure_prop->get_total_rows();
 }
 
 std::vector<std::string> split(const std::string &str, char delimiter) {
@@ -97,52 +96,63 @@ std::vector<std::string> split(const std::string &str, char delimiter) {
 }
 
 std::vector<std::vector<uint64_t>> execute(const std::string &dataset_path, const std::string &serialized_dataset_path,
-                                           const std::string &query, const std::string &column_ordering,
+                                           const std::vector<std::string> &queries,
+                                           const std::vector<std::string> &column_orderings,
                                            const std::vector<uint64_t> &src_nodes_failure_prop,
                                            const std::string &output_stats_filename) {
 
-    std::cout << "Executed Query: " << query << std::endl;
-    const auto start = std::chrono::steady_clock::now();
-    const std::vector<std::string> column_ordering_vector = split(column_ordering, ',');
-    const auto actual_result =
-            run_pipeline(dataset_path, serialized_dataset_path, query, column_ordering_vector, src_nodes_failure_prop);
-    const auto end = std::chrono::steady_clock::now();
-    const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    const auto exec_duration = std::chrono::duration_cast<std::chrono::milliseconds>(exec_end_time - exec_start_time);
+    std::cout << queries.size() << std::endl;
+    std::cout << column_orderings.size() << std::endl;
+    assert(queries.size() == column_orderings.size());
+    std::vector<std::vector<uint64_t>> result;
+    for (size_t i = 0; i < column_orderings.size(); i++) {
+        const auto &query = queries[i];
+        const auto &column_ordering = column_orderings[i];
+        std::cout << "Executed Query: " << query << std::endl;
+        std::cout << "Executed Ordering: " << column_ordering << std::endl;
+        const auto start = std::chrono::steady_clock::now();
+        const std::vector<std::string> column_ordering_vector = split(column_ordering, ',');
+        const auto actual_result = run_pipeline(dataset_path, serialized_dataset_path, query, column_ordering_vector,
+                                                src_nodes_failure_prop);
+        const auto end = std::chrono::steady_clock::now();
+        const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        const auto exec_duration =
+                std::chrono::duration_cast<std::chrono::milliseconds>(exec_end_time - exec_start_time);
 
-    struct rusage usage;
-    double peak_memory_mb = 0;
-    // Get resource usage
-    if (getrusage(RUSAGE_SELF, &usage) == 0) {
-        peak_memory_mb = usage.ru_maxrss / 1024.0;
-        printf("Peak Memory Usage: %.2f MB\n", peak_memory_mb);
-    } else {
-        printf("Peak Memory Usage: %d MB\n", -1);
+        struct rusage usage;
+        double peak_memory_mb = 0;
+        // Get resource usage
+        if (getrusage(RUSAGE_SELF, &usage) == 0) {
+            peak_memory_mb = usage.ru_maxrss / 1024.0;
+            printf("Peak Memory Usage: %.2f MB\n", peak_memory_mb);
+        } else {
+            printf("Peak Memory Usage: %d MB\n", -1);
+        }
+
+        std::cout << "Total Time: " << duration.count() << " ms" << std::endl;
+        std::cout << "Execution Time: " << exec_duration.count() << " ms" << std::endl;
+
+        // Write result to TachosDB_stats.txt
+        std::ofstream output_file(output_stats_filename);
+        if (!output_file.is_open()) {
+            std::cerr << "Failed to open " << output_stats_filename << " for writing" << std::endl;
+            exit(-1);
+        }
+
+        output_file << "Total Time: " << duration.count() << " ms" << std::endl;
+        output_file << "Execution Time: " << exec_duration.count() << " ms" << std::endl;
+        output_file << "Peak Memory: " << std::fixed << std::setprecision(2) << peak_memory_mb << " MB" << std::endl;
+        output_file.close();
+        result.push_back(actual_result);
     }
-
-    std::cout << "Total Time: " << duration.count() << " ms" << std::endl;
-    std::cout << "Execution Time: " << exec_duration.count() << " ms" << std::endl;
-
-    // Write result to TachosDB_stats.txt
-    std::ofstream output_file(output_stats_filename);
-    if (!output_file.is_open()) {
-        std::cerr << "Failed to open " << output_stats_filename << " for writing" << std::endl;
-        exit(-1);
-    }
-
-    output_file << "Total Time: " << duration.count() << " ms" << std::endl;
-    output_file << "Execution Time: " << exec_duration.count() << " ms" << std::endl;
-    output_file << "Peak Memory: " << std::fixed << std::setprecision(2) << peak_memory_mb << " MB" << std::endl;
-    output_file.close();
-
-    return actual_result;
+    return result;
 }
 
 int main() {
     const std::string dataset_path = "../data.txt";
     const std::string serialized_dataset_path = "../amazon0601";
-    const std::string query = "a->b,b->c,c->d,d->e";
-    const std::string column_ordering = "a,b,c,d,e";
+    const std::vector<std::string> queries = {"a->b", "a->b,b->c", "a->b,b->c,c->d", "a->b,b->c,c->d,d->e"};
+    const std::vector<std::string> column_orderings = {"a,b", "b,a,c", "b,a,c,d", "c,b,a,d,e"};
     const auto input_filename = "../input_query.txt";
     const auto output_filename = "../TachosDB_output.txt";
     const auto output_stats_filename = "../TachosDB_statistics.txt";
@@ -195,8 +205,9 @@ int main() {
         src_nodes_failure_prop.push_back(static_cast<uint64_t>(std::stoi(item)));
     }
 
-    std::vector<std::vector<uint64_t>> result = execute(dataset_path, serialized_dataset_path, query, column_ordering,
-                                                        src_nodes_failure_prop, output_stats_filename);
+    std::vector<std::vector<uint64_t>> result =
+            execute(dataset_path, serialized_dataset_path, queries, column_orderings, src_nodes_failure_prop,
+                    output_stats_filename);
 
     // Write result to TachosDB_output.txt
     std::ofstream output_file(output_filename);
