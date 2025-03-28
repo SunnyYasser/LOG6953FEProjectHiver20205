@@ -62,17 +62,7 @@ std::vector<uint64_t> run_pipeline(const std::string &dataset_path, const std::s
     auto current_op = pipeline->get_first_operator();
     std::shared_ptr<VFEngine::Operator> sink_op = nullptr;
 
-    std::vector<std::string> operator_names;
-    operator_names.emplace_back("SCAN");
-    for (int i = 0; i < static_cast<int>(column_ordering.size()) - 1; i++) {
-        operator_names.push_back("INLJ_PACKED" + std::to_string(i + 1));
-    }
-    operator_names.emplace_back("SINK");
-
-    int idx = 0;
     while (current_op) {
-        std::cout << operator_names[idx++] << " " << current_op->get_uuid() << " : "
-                  << current_op->get_exec_call_counter() << std::endl;
         const auto next_op = current_op->get_next_operator();
         if (!next_op) {
             sink_op = current_op;
@@ -146,8 +136,8 @@ std::vector<std::vector<uint64_t>> execute(const std::string &dataset_path, cons
             printf("Peak Memory Usage: %d MB\n", -1);
         }
 
-        std::cout << "Total Time: " << duration.count() << " ms" << std::endl;
-        std::cout << "Execution Time: " << exec_duration.count() << " ms" << std::endl;
+        std::cout << "Total Time: " << duration.count() << " us" << std::endl;
+        std::cout << "Execution Time: " << exec_duration.count() << " us" << std::endl;
 
         // Write result to TachosDB_stats.txt
         std::ofstream output_file(output_stats_filename, std::ios::app);

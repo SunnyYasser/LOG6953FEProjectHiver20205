@@ -70,7 +70,7 @@ namespace VFEngine {
          * Cached leaf nodes for faster access
          * Using the first letter of attribute as index (a-z)
          */
-        static const FactorizedTreeElement *_leaves[26];
+        const FactorizedTreeElement *_leaves[26];
 
         /**
          * Context memory reference

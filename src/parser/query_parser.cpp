@@ -1,5 +1,6 @@
 #include "include/query_parser.hh"
 
+#include <cascade_selection_operator.hh>
 #include <cassert>
 #include <factorized_tree.hh>
 #include <hardcoded_linear_plan_sink_packed.hh>
@@ -158,6 +159,7 @@ namespace VFEngine {
                 M_Assert(found, err_msg.c_str());
             }
         }
+        _logical_pipeline.push_back({OP_CASCADE_SELECTION, "", "", ANY});
         _logical_pipeline.push_back({OP_SINK_FAILURE_PROP, "", "", ANY});
     }
 
@@ -168,6 +170,13 @@ namespace VFEngine {
             const auto &[operator_type, first_col, second_col, join_direction, relation_type] = *it;
 
             switch (operator_type) {
+                case OP_CASCADE_SELECTION: {
+                    auto next_op = !physical_pipeline.empty() ? physical_pipeline.back() : nullptr;
+                    auto cascade =
+                            std::static_pointer_cast<Operator>(std::make_shared<CascadeSelection>(_ftree, next_op));
+                    physical_pipeline.push_back(cascade);
+                } break;
+
                 case OP_SCAN_FAILURE_PROP: {
                     auto next_op = !physical_pipeline.empty() ? physical_pipeline.back() : nullptr;
                     auto scan = std::static_pointer_cast<Operator>(

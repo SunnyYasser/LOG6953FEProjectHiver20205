@@ -5,12 +5,14 @@
 #include <vector>
 
 namespace VFEngine {
-    const FactorizedTreeElement *CascadeSelection::_leaves[26] = {
-            nullptr}; // This will zero-initialize all elements to nullptr
-
     CascadeSelection::CascadeSelection(const std::shared_ptr<FactorizedTreeElement> &ftree,
                                        const std::shared_ptr<Operator> &next_operator) :
         Operator(next_operator), _ftree(ftree), _backup_masks(nullptr), _backup_nodes(nullptr) {
+
+        // Initialize _leaves array to nullptr
+        for (int i = 0; i < 26; i++) {
+            _leaves[i] = nullptr;
+        }
 
 #ifdef MY_DEBUG
         _debug = std::make_unique<OperatorDebugUtility>(this);
