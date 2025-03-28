@@ -5,6 +5,7 @@ namespace VFEngine {
     enum operator_type_t {
         OP_GENERIC,
         OP_SCAN,
+        OP_SCAN_FAILURE_PROP,
         OP_INLJ,
         OP_INLJ_PACKED,
         OP_INLJ_NTO1,
@@ -15,6 +16,7 @@ namespace VFEngine {
         OP_SINK_PACKED_HARDCODED_LINEAR,
         OP_SINK_PACKED_MIN,
         OP_CASCADE_SELECTION,
+        OP_SINK_FAILURE_PROP,
         OP_SIZE
     };
 }

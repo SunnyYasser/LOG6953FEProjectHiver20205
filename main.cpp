@@ -1,10 +1,10 @@
+#include <cassert>
 #include <chrono>
 #include <iostream>
 #include <memory>
-#include "src/operator/include/sink_packed_operator.hh"
 #include <sys/resource.h>
 #include "src/engine/include/pipeline.hh"
-#include "src/operator/include/sink_operator.hh"
+#include "src/operator/include/sink_failure_prop.hh"
 #include "src/parser/include/query_parser.hh"
 
 void print_column_ordering(const std::vector<std::string> &column_ordering) {
@@ -26,8 +26,10 @@ inline void benchmark_barrier() {
 std::chrono::steady_clock::time_point exec_start_time;
 std::chrono::steady_clock::time_point exec_end_time;
 
-ulong run_pipeline(const std::string &dataset_path, const std::string &serialized_dataset_path,
-                   const std::string &query, const std::vector<std::string> &column_ordering, const bool &is_packed) {
+std::vector<std::vector<uint64_t>> run_pipeline(const std::string &dataset_path,
+                                                const std::string &serialized_dataset_path, const std::string &query,
+                                                const std::vector<std::string> &column_ordering,
+                                                const std::vector<uint64_t> &src_nodes) {
     std::vector<std::string> column_names{"src", "dest"};
 
     std::unordered_map<std::string, std::string> column_alias_map;
@@ -41,8 +43,7 @@ ulong run_pipeline(const std::string &dataset_path, const std::string &serialize
 
     print_column_ordering(column_ordering);
     const auto parser = std::make_unique<VFEngine::QueryParser>(
-            query, column_ordering, is_packed, is_packed ? VFEngine::SinkType::PACKED : VFEngine::SinkType::UNPACKED,
-            column_names, column_alias_map);
+            query, column_ordering, true, src_nodes, VFEngine::SinkType::FAILURE_PROP, column_names, column_alias_map);
 
     VFEngine::DataSourceTable::set_dataset_path(dataset_path);
     VFEngine::DataSourceTable::set_serialized_dataset_path(serialized_dataset_path);
@@ -57,28 +58,29 @@ ulong run_pipeline(const std::string &dataset_path, const std::string &serialize
     benchmark_barrier();
     exec_end_time = std::chrono::steady_clock::now();
 
-    auto first_op = pipeline->get_first_operator();
+    auto current_op = pipeline->get_first_operator();
+    std::shared_ptr<VFEngine::Operator> sink_op = nullptr;
 
     std::vector<std::string> operator_names;
     operator_names.emplace_back("SCAN");
     for (int i = 0; i < static_cast<int>(column_ordering.size()) - 1; i++) {
-        if (is_packed) {
-            operator_names.push_back("INLJ_PACKED" + std::to_string(i + 1));
-        } else {
-            operator_names.push_back("INLJ" + std::to_string(i + 1));
-        }
+        operator_names.push_back("INLJ_PACKED" + std::to_string(i + 1));
     }
     operator_names.emplace_back("SINK");
 
     int idx = 0;
-    while (first_op) {
-        std::cout << operator_names[idx++] << " " << first_op->get_uuid() << " : " << first_op->get_exec_call_counter()
-                  << std::endl;
-        first_op = first_op->get_next_operator();
+    while (current_op) {
+        std::cout << operator_names[idx++] << " " << current_op->get_uuid() << " : "
+                  << current_op->get_exec_call_counter() << std::endl;
+        const auto next_op = current_op->get_next_operator();
+        if (!next_op) {
+            sink_op = current_op;
+        }
+        current_op = next_op;
     }
 
-    return is_packed ? VFEngine::SinkPacked::get_total_row_size_if_materialized()
-                     : VFEngine::Sink::get_total_row_size_if_materialized();
+    const auto sink_failure_prop = std::static_pointer_cast<VFEngine::SinkFailureProp>(sink_op);
+    return sink_failure_prop->get_total_rows();
 }
 
 std::vector<std::string> split(const std::string &str, char delimiter) {
@@ -94,49 +96,130 @@ std::vector<std::string> split(const std::string &str, char delimiter) {
     return result;
 }
 
-int execute(const std::string &dataset_path, const std::string &serialized_dataset_path, const std::string &query,
-            const std::string &column_ordering, const ulong &expected_result, const bool &is_packed = false) {
+std::vector<std::vector<uint64_t>> execute(const std::string &dataset_path, const std::string &serialized_dataset_path,
+                                           const std::string &query, const std::string &column_ordering,
+                                           const std::vector<uint64_t> &src_nodes_failure_prop,
+                                           const std::string &output_stats_filename) {
+
     std::cout << "Executed Query: " << query << std::endl;
     const auto start = std::chrono::steady_clock::now();
     const std::vector<std::string> column_ordering_vector = split(column_ordering, ',');
     const auto actual_result =
-            run_pipeline(dataset_path, serialized_dataset_path, query, column_ordering_vector, is_packed);
+            run_pipeline(dataset_path, serialized_dataset_path, query, column_ordering_vector, src_nodes_failure_prop);
     const auto end = std::chrono::steady_clock::now();
     const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    const auto exec_duration = std::chrono::duration_cast<std::chrono::microseconds>(exec_end_time - exec_start_time);
+    const auto exec_duration = std::chrono::duration_cast<std::chrono::milliseconds>(exec_end_time - exec_start_time);
 
     struct rusage usage;
+    double peak_memory_mb = 0;
     // Get resource usage
     if (getrusage(RUSAGE_SELF, &usage) == 0) {
-        double peak_memory_mb = usage.ru_maxrss / 1024.0;
+        peak_memory_mb = usage.ru_maxrss / 1024.0;
         printf("Peak Memory Usage: %.2f MB\n", peak_memory_mb);
     } else {
         printf("Peak Memory Usage: %d MB\n", -1);
     }
 
-    std::cout << "Total Time: " << duration.count() << " us" << std::endl;
-    std::cout << "Execution Time: " << exec_duration.count() << " us" << std::endl;
-    std::cout << "Actual Result: " << actual_result << std::endl;
-    std::cout << "Expected Result: " << expected_result << std::endl;
-    const auto is_valid = actual_result == expected_result;
-    std::cout << "Is Valid: " << is_valid << std::endl;
+    std::cout << "Total Time: " << duration.count() << " ms" << std::endl;
+    std::cout << "Execution Time: " << exec_duration.count() << " ms" << std::endl;
 
-    if (actual_result != expected_result) {
-        std::cerr << "Execution failed: Expected " << expected_result << " but got " << actual_result << std::endl;
-        return 1;
+    // Write result to TachosDB_stats.txt
+    std::ofstream output_file(output_stats_filename);
+    if (!output_file.is_open()) {
+        std::cerr << "Failed to open " << output_stats_filename << " for writing" << std::endl;
+        exit(-1);
     }
 
-    return 0;
+    output_file << "Total Time: " << duration.count() << " ms" << std::endl;
+    output_file << "Execution Time: " << exec_duration.count() << " ms" << std::endl;
+    output_file << "Peak Memory: " << std::fixed << std::setprecision(2) << peak_memory_mb << " MB" << std::endl;
+    output_file.close();
+
+    return actual_result;
 }
 
-int main(const int argc, const char *argv[]) {
-    if (argc != 6 && argc != 7) {
-        std::cerr << "Usage: " << argv[0]
-                  << " <dataset_path> <serialized_dataset_path> <query> <column_ordering> <expected_result> [is_packed]"
-                  << std::endl;
+int main() {
+    const std::string dataset_path = "../data.txt";
+    const std::string serialized_dataset_path = "../amazon0601";
+    const std::string query = "a->b,b->c,c->d,d->e";
+    const std::string column_ordering = "a,b,c,d,e";
+    const auto input_filename = "../input_query.txt";
+    const auto output_filename = "../TachosDB_output.txt";
+    const auto output_stats_filename = "../TachosDB_statistics.txt";
+
+    // Read input_query.txt file
+    std::ifstream input_file(input_filename);
+    if (!input_file.is_open()) {
+        std::cerr << "Failed to open input_query.txt" << std::endl;
         return 1;
     }
-    const bool is_packed = argc == 7 ? std::stoi(argv[6]) : false;
 
-    return execute(argv[1], argv[2], argv[3], argv[4], std::stoul(argv[5]), is_packed);
+    std::string line;
+    std::getline(input_file, line);
+    input_file.close();
+
+    // Validate input format
+    // Check if the string starts with '[' and ends with ']'
+    if (line.empty() || line.front() != '[' || line.back() != ']') {
+        std::cerr << "Invalid input format in input_query.txt. Expected format: [1, 2, 3]" << std::endl;
+        return 1;
+    }
+
+    // Parse the vector from the input
+    std::vector<uint64_t> src_nodes_failure_prop;
+    std::string content = line.substr(1, line.size() - 2); // Remove brackets
+
+    std::stringstream ss(content);
+    std::string item;
+
+    // Parse comma-separated values
+    while (std::getline(ss, item, ',')) {
+        // Trim whitespace
+        item.erase(0, item.find_first_not_of(" \t"));
+        item.erase(item.find_last_not_of(" \t") + 1);
+
+        // Check if the item is a valid integer
+        bool valid = true;
+        for (char c: item) {
+            if (!std::isdigit(c)) {
+                valid = false;
+                break;
+            }
+        }
+
+        if (!valid || item.empty()) {
+            std::cerr << "Invalid number in input_file: '" << item << "'" << std::endl;
+            return 1;
+        }
+
+        src_nodes_failure_prop.push_back(static_cast<uint64_t>(std::stoi(item)));
+    }
+
+    std::vector<std::vector<uint64_t>> result = execute(dataset_path, serialized_dataset_path, query, column_ordering,
+                                                        src_nodes_failure_prop, output_stats_filename);
+
+    // Write result to TachosDB_output.txt
+    std::ofstream output_file(output_filename);
+    if (!output_file.is_open()) {
+        std::cerr << "Failed to open TachosDB_output.txt for writing" << std::endl;
+        return 1;
+    }
+
+    // Write each vector on a new line
+    for (const auto &row: result) {
+        bool first = true;
+        output_file << "[";
+        for (const auto &val: row) {
+            if (!first) {
+                output_file << ", ";
+            }
+            output_file << val;
+            first = false;
+        }
+        output_file << "]\n";
+    }
+
+    output_file.close();
+
+    return 0;
 }

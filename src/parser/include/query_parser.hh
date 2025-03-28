@@ -15,18 +15,14 @@
 #endif
 
 namespace VFEngine {
-    enum class SinkType { UNPACKED = 0, PACKED, NO_OP, PACKED_VECTORIZED, HARDCODED_LINEAR, PACKED_MIN};
+    enum class SinkType { UNPACKED = 0, PACKED, NO_OP, PACKED_VECTORIZED, HARDCODED_LINEAR, PACKED_MIN, FAILURE_PROP };
 
     class QueryParser {
     public:
         QueryParser(const std::string &query, const std::vector<std::string> &column_ordering, const bool &is_packed,
-                    SinkType sink_type, const std::vector<std::string> &column_names,
+                    const std::vector<uint64_t> &src_nodes, SinkType sink_type,
+                    const std::vector<std::string> &column_names,
                     const std::unordered_map<std::string, std::string> &column_alias_map);
-
-        QueryParser(const std::string &query, const std::vector<std::string> &column_ordering, const bool &is_packed,
-                    SinkType sink_type, const std::vector<std::string> &column_names,
-                    const std::unordered_map<std::string, std::string> &column_alias_map,
-                    const std::shared_ptr<FactorizedTreeElement> &ftree);
 
         std::shared_ptr<Pipeline> build_physical_pipeline();
         std::shared_ptr<FactorizedTreeElement> create_factorized_tree();
@@ -45,6 +41,7 @@ namespace VFEngine {
         std::vector<LogicalPipelineElement> _logical_pipeline;
         std::unordered_map<std::string, std::vector<std::pair<std::string, JoinDirection>>> _direction_map;
         std::shared_ptr<FactorizedTreeElement> _ftree;
+        std::vector<uint64_t> _src_nodes;
         void build_direction_map();
         void build_logical_pipeline();
         std::vector<std::pair<std::string, SchemaType>> create_schema();

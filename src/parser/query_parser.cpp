@@ -4,6 +4,8 @@
 #include <factorized_tree.hh>
 #include <hardcoded_linear_plan_sink_packed.hh>
 #include <iostream>
+#include <scan_failure_prop_operator.hh>
+#include <sink_failure_prop.hh>
 #include <sink_packed_min_operator.hh>
 #include <sstream>
 #include <unordered_set>
@@ -37,38 +39,14 @@ void __M_Assert(const char *expr_str, bool expr, const char *file, int line, con
 namespace VFEngine {
 
     QueryParser::QueryParser(const std::string &query, const std::vector<std::string> &column_ordering,
-                             const bool &is_packed, const SinkType sink_type,
+                             const bool &is_packed, const std::vector<uint64_t> &src_nodes, const SinkType sink_type,
                              const std::vector<std::string> &column_names,
                              const std::unordered_map<std::string, std::string> &column_alias_map) :
         _query(query), _column_ordering(column_ordering), _is_packed(is_packed), _sink_type(sink_type),
-        _delimiter("->"), _column_names(column_names), _column_alias_map(column_alias_map), _ftree(nullptr) {
-        if (_is_packed) {
-            assert(_sink_type != SinkType::UNPACKED);
-        } else {
-            assert(_sink_type != SinkType::PACKED);
-            assert(_sink_type != SinkType::PACKED_VECTORIZED);
-            assert(_sink_type != SinkType::HARDCODED_LINEAR);
-            assert(_sink_type != SinkType::PACKED_MIN);
-        }
+        _delimiter("->"), _column_names(column_names), _column_alias_map(column_alias_map), _ftree(nullptr),
+        _src_nodes(src_nodes) {
+        assert(_sink_type == SinkType::FAILURE_PROP);
     }
-
-    QueryParser::QueryParser(const std::string &query, const std::vector<std::string> &column_ordering,
-                             const bool &is_packed, const SinkType sink_type,
-                             const std::vector<std::string> &column_names,
-                             const std::unordered_map<std::string, std::string> &column_alias_map,
-                             const std::shared_ptr<FactorizedTreeElement> &ftree) :
-        _query(query), _column_ordering(column_ordering), _is_packed(is_packed), _sink_type(sink_type),
-        _delimiter("->"), _column_names(column_names), _column_alias_map(column_alias_map), _ftree(ftree) {
-        if (_is_packed) {
-            assert(_sink_type != SinkType::UNPACKED);
-        } else {
-            assert(_sink_type != SinkType::PACKED);
-            assert(_sink_type != SinkType::PACKED_VECTORIZED);
-            assert(_sink_type != SinkType::HARDCODED_LINEAR);
-            assert(_sink_type != SinkType::PACKED_MIN);
-        }
-    }
-
 
     static std::vector<std::string> split(const std::string &str, char delimiter) {
         std::vector<std::string> tokens;
@@ -156,17 +134,17 @@ namespace VFEngine {
         for (size_t i = 0; i < _column_ordering.size(); i++) {
             const auto &column = _column_ordering[i];
             if (i == 0) {
-                _logical_pipeline.push_back({OP_SCAN, column, "", ANY, MANY_TO_MANY});
+                _logical_pipeline.push_back({OP_SCAN_FAILURE_PROP, column, "", ANY, MANY_TO_MANY});
             } else {
                 bool found = false;
                 for (size_t j = 0; j < i; j++) {
                     auto parent = _column_ordering[j];
                     for (const auto &nbrs: _direction_map[parent]) {
                         if (nbrs.first == column) {
-                            const auto operator_type = _is_packed ? OP_INLJ_PACKED : OP_INLJ;
+                            constexpr auto operator_type = OP_INLJ_PACKED;
                             const auto &first_col = parent;
                             const auto &second_col = column;
-                            const auto relation_type = MANY_TO_MANY;
+                            constexpr auto relation_type = MANY_TO_MANY;
                             const auto join_direction = nbrs.second;
                             _logical_pipeline.push_back(
                                     {operator_type, first_col, second_col, join_direction, relation_type});
@@ -180,26 +158,7 @@ namespace VFEngine {
                 M_Assert(found, err_msg.c_str());
             }
         }
-
-        switch (_sink_type) {
-            case SinkType::PACKED:
-                _logical_pipeline.push_back({OP_SINK_PACKED, "", "", ANY});
-                break;
-            case SinkType::UNPACKED:
-                _logical_pipeline.push_back({OP_SINK, "", "", ANY});
-                break;
-            case SinkType::NO_OP:
-                _logical_pipeline.push_back({OP_SINK_NO_OP, "", "", ANY});
-                break;
-            case SinkType::PACKED_VECTORIZED:
-                _logical_pipeline.push_back({OP_SINK_PACKED_VECTORIZED, "", "", ANY});
-                break;
-            case SinkType::HARDCODED_LINEAR:
-                _logical_pipeline.push_back({OP_SINK_PACKED_HARDCODED_LINEAR, "", "", ANY});
-                break;
-            case SinkType::PACKED_MIN:
-                _logical_pipeline.push_back({OP_SINK_PACKED_MIN, "", "", ANY});
-        }
+        _logical_pipeline.push_back({OP_SINK_FAILURE_PROP, "", "", ANY});
     }
 
     std::shared_ptr<Pipeline> QueryParser::build_physical_pipeline() {
@@ -209,63 +168,19 @@ namespace VFEngine {
             const auto &[operator_type, first_col, second_col, join_direction, relation_type] = *it;
 
             switch (operator_type) {
-                case OP_SCAN: {
+                case OP_SCAN_FAILURE_PROP: {
                     auto next_op = !physical_pipeline.empty() ? physical_pipeline.back() : nullptr;
-                    auto scan = std::static_pointer_cast<Operator>(std::make_shared<Scan>(first_col, next_op));
+                    auto scan = std::static_pointer_cast<Operator>(
+                            std::make_shared<ScanFailureProp>(first_col, _src_nodes, next_op));
                     physical_pipeline.push_back(scan);
                 } break;
 
-                case OP_SINK: {
-                    auto schema = create_schema();
-                    auto sink = std::static_pointer_cast<Operator>(std::make_shared<Sink>(schema));
-                    physical_pipeline.push_back(sink);
-                } break;
-
-                case OP_SINK_NO_OP: {
-                    auto sink_no_op = std::static_pointer_cast<Operator>(std::make_shared<SinkNoOp>());
-                    physical_pipeline.push_back(sink_no_op);
-                } break;
-
-                case OP_SINK_PACKED: {
+                case OP_SINK_FAILURE_PROP: {
                     if (!_ftree) {
                         _ftree = create_factorized_tree();
                     }
-                    auto sink_packed = std::static_pointer_cast<Operator>(std::make_shared<SinkPacked>(_ftree));
+                    auto sink_packed = std::static_pointer_cast<Operator>(std::make_shared<SinkFailureProp>(_ftree));
                     physical_pipeline.push_back(sink_packed);
-                } break;
-
-                case OP_SINK_PACKED_VECTORIZED: {
-                    if (!_ftree) {
-                        _ftree = create_factorized_tree();
-                    }
-                    auto sink_packed =
-                            std::static_pointer_cast<Operator>(std::make_shared<SinkPackedPostOrder>(_ftree));
-                    physical_pipeline.push_back(sink_packed);
-                } break;
-
-                case OP_SINK_PACKED_HARDCODED_LINEAR: {
-                    if (!_ftree) {
-                        _ftree = create_factorized_tree();
-                    }
-                    auto sink_packed =
-                            std::static_pointer_cast<Operator>(std::make_shared<SinkLinearHardcoded>(_ftree));
-                    physical_pipeline.push_back(sink_packed);
-                } break;
-
-                case OP_SINK_PACKED_MIN: {
-                    if (!_ftree) {
-                        _ftree = create_factorized_tree();
-                    }
-                    auto sink_packed = std::static_pointer_cast<Operator>(std::make_shared<SinkPackedMin>(_ftree));
-                    physical_pipeline.push_back(sink_packed);
-                } break;
-
-                case OP_INLJ: {
-                    auto next_op = !physical_pipeline.empty() ? physical_pipeline.back() : nullptr;
-                    auto is_join_index_fwd = join_direction == FORWARD;
-                    auto extend = std::static_pointer_cast<Operator>(std::make_shared<IndexNestedLoopJoin>(
-                            first_col, second_col, is_join_index_fwd, relation_type, next_op));
-                    physical_pipeline.push_back(extend);
                 } break;
 
                 case OP_INLJ_PACKED: {
