@@ -3,6 +3,7 @@
 #include <iostream>
 #include <memory>
 #include <sys/resource.h>
+#include <unordered_set>
 #include "src/engine/include/pipeline.hh"
 #include "src/operator/include/sink_failure_prop.hh"
 #include "src/parser/include/query_parser.hh"
@@ -101,10 +102,9 @@ std::vector<std::vector<uint64_t>> execute(const std::string &dataset_path, cons
                                            const std::vector<uint64_t> &src_nodes_failure_prop,
                                            const std::string &output_stats_filename) {
 
-    std::cout << queries.size() << std::endl;
-    std::cout << column_orderings.size() << std::endl;
     assert(queries.size() == column_orderings.size());
     std::vector<std::vector<uint64_t>> result;
+    result.push_back(src_nodes_failure_prop);
     for (size_t i = 0; i < column_orderings.size(); i++) {
         const auto &query = queries[i];
         const auto &column_ordering = column_orderings[i];
@@ -112,8 +112,8 @@ std::vector<std::vector<uint64_t>> execute(const std::string &dataset_path, cons
         std::cout << "Executed Ordering: " << column_ordering << std::endl;
         const auto start = std::chrono::steady_clock::now();
         const std::vector<std::string> column_ordering_vector = split(column_ordering, ',');
-        auto actual_result = run_pipeline(dataset_path, serialized_dataset_path, query, column_ordering_vector,
-                                          src_nodes_failure_prop);
+        const auto actual_result = run_pipeline(dataset_path, serialized_dataset_path, query, column_ordering_vector,
+                                                src_nodes_failure_prop);
         const auto end = std::chrono::steady_clock::now();
         const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
         const auto exec_duration =
@@ -144,8 +144,10 @@ std::vector<std::vector<uint64_t>> execute(const std::string &dataset_path, cons
         output_file << "Peak Memory: " << std::fixed << std::setprecision(2) << peak_memory_mb << " MB" << std::endl;
         output_file.close();
 
-        std::sort(actual_result.begin(), actual_result.end());
-        result.push_back(actual_result);
+        auto unique_vals = std::unordered_set(actual_result.begin(), actual_result.end());
+        auto filtered_vals = std::vector(unique_vals.begin(), unique_vals.end());
+        std::sort(filtered_vals.begin(), filtered_vals.end());
+        result.push_back(filtered_vals);
     }
     return result;
 }
@@ -154,7 +156,7 @@ int main() {
     const std::string dataset_path = "../data.txt";
     const std::string serialized_dataset_path = "../amazon0601";
     const std::vector<std::string> queries = {"a->b", "a->b,b->c", "a->b,b->c,c->d", "a->b,b->c,c->d,d->e"};
-    const std::vector<std::string> column_orderings = {"a,b", "b,a,c", "b,a,c,d", "c,b,a,d,e"};
+    const std::vector<std::string> column_orderings = {"a,b", "a,b,c", "a,b,c,d", "a,b,c,d,e"};
     const auto input_filename = "../input_query.txt";
     const auto output_filename = "../TachosDB_output.txt";
     const auto output_stats_filename = "../TachosDB_statistics.txt";
