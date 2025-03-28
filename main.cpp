@@ -25,8 +25,8 @@ inline void benchmark_barrier() {
     asm volatile("" ::: "memory"); // prevent compiler reordering (only for gcc)
 }
 
-std::chrono::steady_clock::time_point exec_start_time;
-std::chrono::steady_clock::time_point exec_end_time;
+std::chrono::steady_clock::time_point total_start_time, exec_start_time;
+std::chrono::steady_clock::time_point end_time;
 
 std::vector<uint64_t> run_pipeline(const std::string &dataset_path, const std::string &serialized_dataset_path,
                                    const std::string &query, const std::vector<std::string> &column_ordering,
@@ -48,6 +48,7 @@ std::vector<uint64_t> run_pipeline(const std::string &dataset_path, const std::s
 
     VFEngine::DataSourceTable::set_dataset_path(dataset_path);
     VFEngine::DataSourceTable::set_serialized_dataset_path(serialized_dataset_path);
+    total_start_time = std::chrono::steady_clock::now();
     const auto pipeline = parser->build_physical_pipeline();
     pipeline->init();
 
@@ -57,7 +58,7 @@ std::vector<uint64_t> run_pipeline(const std::string &dataset_path, const std::s
     pipeline->execute();
 
     benchmark_barrier();
-    exec_end_time = std::chrono::steady_clock::now();
+    end_time = std::chrono::steady_clock::now();
 
     auto current_op = pipeline->get_first_operator();
     std::shared_ptr<VFEngine::Operator> sink_op = nullptr;
@@ -117,14 +118,11 @@ std::vector<std::vector<uint64_t>> execute(const std::string &dataset_path, cons
         const auto &column_ordering = column_orderings[i];
         std::cout << "Executed Query: " << query << std::endl;
         std::cout << "Executed Ordering: " << column_ordering << std::endl;
-        const auto start = std::chrono::steady_clock::now();
         const std::vector<std::string> column_ordering_vector = split(column_ordering, ',');
         const auto actual_result = run_pipeline(dataset_path, serialized_dataset_path, query, column_ordering_vector,
                                                 src_nodes_failure_prop);
-        const auto end = std::chrono::steady_clock::now();
-        const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        const auto exec_duration =
-                std::chrono::duration_cast<std::chrono::microseconds>(exec_end_time - exec_start_time);
+        const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - total_start_time);
+        const auto exec_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - exec_start_time);
 
         struct rusage usage;
         double peak_memory_mb = 0;

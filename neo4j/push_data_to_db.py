@@ -4,7 +4,7 @@ from neo4j_auth import URI, USERNAME, PASSWORD
 driver = GraphDatabase.driver(URI, auth=(USERNAME, PASSWORD))
 
 def create_constraints():
-    """Create uniqueness constraint for Product nodes."""
+    """Create uniqueness constraint for nodes."""
     with driver.session() as session:
         session.run("CREATE CONSTRAINT FOR (p:Product) REQUIRE p.id IS UNIQUE;")
 
