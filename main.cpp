@@ -112,8 +112,8 @@ std::vector<std::vector<uint64_t>> execute(const std::string &dataset_path, cons
         std::cout << "Executed Ordering: " << column_ordering << std::endl;
         const auto start = std::chrono::steady_clock::now();
         const std::vector<std::string> column_ordering_vector = split(column_ordering, ',');
-        const auto actual_result = run_pipeline(dataset_path, serialized_dataset_path, query, column_ordering_vector,
-                                                src_nodes_failure_prop);
+        auto actual_result = run_pipeline(dataset_path, serialized_dataset_path, query, column_ordering_vector,
+                                          src_nodes_failure_prop);
         const auto end = std::chrono::steady_clock::now();
         const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
         const auto exec_duration =
@@ -143,6 +143,7 @@ std::vector<std::vector<uint64_t>> execute(const std::string &dataset_path, cons
         output_file << "Execution Time: " << exec_duration.count() << " ms" << std::endl;
         output_file << "Peak Memory: " << std::fixed << std::setprecision(2) << peak_memory_mb << " MB" << std::endl;
         output_file.close();
+        std::sort(actual_result.begin(), actual_result.end());
         result.push_back(actual_result);
     }
     return result;
