@@ -1,10 +1,10 @@
 #include <cassert>
 #include <chrono>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <set>
 #include <sys/resource.h>
-#include <unordered_set>
 #include "src/engine/include/pipeline.hh"
 #include "src/operator/include/sink_failure_prop.hh"
 #include "src/parser/include/query_parser.hh"
@@ -97,6 +97,21 @@ std::vector<std::string> split(const std::string &str, char delimiter) {
     return result;
 }
 
+void deleteFileIfExists(const std::string &filename) {
+    namespace fs = std::filesystem;
+
+    if (fs::exists(filename)) {
+        try {
+            fs::remove(filename);
+            std::cout << "File " << filename << " was deleted successfully." << std::endl;
+        } catch (const fs::filesystem_error &e) {
+            std::cerr << "Error deleting file: " << e.what() << std::endl;
+        }
+    } else {
+        std::cout << "File " << filename << " does not exist." << std::endl;
+    }
+}
+
 std::vector<std::vector<uint64_t>> execute(const std::string &dataset_path, const std::string &serialized_dataset_path,
                                            const std::vector<std::string> &queries,
                                            const std::vector<std::string> &column_orderings,
@@ -106,6 +121,7 @@ std::vector<std::vector<uint64_t>> execute(const std::string &dataset_path, cons
     assert(queries.size() == column_orderings.size());
     std::vector<std::vector<uint64_t>> result;
     result.push_back(src_nodes_failure_prop);
+    deleteFileIfExists(output_stats_filename);
     for (size_t i = 0; i < column_orderings.size(); i++) {
         const auto &query = queries[i];
         const auto &column_ordering = column_orderings[i];
