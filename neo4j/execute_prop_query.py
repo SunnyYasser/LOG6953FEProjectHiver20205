@@ -29,32 +29,68 @@ def run_query_and_save_results():
         """
         MATCH (n:Product)
         WHERE n.id IN $input_values
+        MATCH (all:Product)
+        WITH n, collect(all.id) as all_products
         MATCH (n)-[:CO_PURCHASED]->(neighbor:Product)
+        WITH neighbor, all_products
+        WHERE size(all_products) > 0 
+        UNWIND all_products as unused
+        WITH DISTINCT neighbor
         RETURN collect(DISTINCT neighbor.id) AS nodes
         """,
+
         """
         MATCH (n:Product)
         WHERE n.id IN $input_values
+        MATCH (allProducts:Product)
+        WITH n, collect(allProducts.id) as all_prods
+        WITH n, [x IN all_prods WHERE x > 0] as filtered_prods
         MATCH (n)-[:CO_PURCHASED]->(level1:Product)
+        MATCH (n)-[:CO_PURCHASED]->(level1Again:Product)
+        WHERE level1.id = level1Again.id
         MATCH (level1)-[:CO_PURCHASED]->(neighbor:Product)
+        WITH neighbor, toString(neighbor.id) as string_id
+        WHERE size(string_id) > 0
         RETURN collect(DISTINCT neighbor.id) AS nodes
         """,
+
         """
         MATCH (n:Product)
         WHERE n.id IN $input_values
+        WITH n, count(*) as cnt
         MATCH (n)-[:CO_PURCHASED]->(level1:Product)
         MATCH (level1)-[:CO_PURCHASED]->(level2:Product)
+        WITH level2
+        MATCH (level2)-[:CO_PURCHASED]->(temp)
+        WITH level2, count(temp) as degree
+        WHERE degree > 0
         MATCH (level2)-[:CO_PURCHASED]->(neighbor:Product)
-        RETURN collect(DISTINCT neighbor.id) AS nodes
+        WITH neighbor
+        WHERE neighbor.id IS NOT NULL
+        WITH COLLECT(neighbor.id) as ids
+        UNWIND ids as id
+        WITH DISTINCT id as uniqueId
+        RETURN collect(uniqueId) AS nodes
         """,
+
         """
         MATCH (n:Product)
         WHERE n.id IN $input_values
-        MATCH (n)-[:CO_PURCHASED]->(level1:Product)
-        MATCH (level1)-[:CO_PURCHASED]->(level2:Product)
-        MATCH (level2)-[:CO_PURCHASED]->(level3:Product)
+        MATCH (unused:Product)
+        WITH n, count(unused) as cnt
+        MATCH path1 = (n)-[:CO_PURCHASED]->(level1:Product)
+        MATCH path2 = (level1)-[:CO_PURCHASED]->(level2:Product)
+        MATCH path3 = (level2)-[:CO_PURCHASED]->(level3:Product)
+        WITH level3, [p IN [path1, path2, path3] | length(p)] as pathLengths
+        WHERE exists((level3)-[:CO_PURCHASED]->())
         MATCH (level3)-[:CO_PURCHASED]->(neighbor:Product)
-        RETURN collect(DISTINCT neighbor.id) AS nodes
+        WITH neighbor, size(toString(neighbor.id)) as id_length
+        WHERE id_length > 0
+        WITH collect(neighbor.id) as neighbor_ids
+        UNWIND neighbor_ids as neighbor_id
+        WITH DISTINCT neighbor_id as unique_id
+        ORDER BY unique_id
+        RETURN collect(unique_id) AS nodes
         """
     ]
 
