@@ -117,7 +117,7 @@ std::vector<std::vector<uint64_t>> execute(const std::string &dataset_path, cons
         const auto end = std::chrono::steady_clock::now();
         const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
         const auto exec_duration =
-                std::chrono::duration_cast<std::chrono::milliseconds>(exec_end_time - exec_start_time);
+                std::chrono::duration_cast<std::chrono::microseconds>(exec_end_time - exec_start_time);
 
         struct rusage usage;
         double peak_memory_mb = 0;
@@ -133,16 +133,17 @@ std::vector<std::vector<uint64_t>> execute(const std::string &dataset_path, cons
         std::cout << "Execution Time: " << exec_duration.count() << " ms" << std::endl;
 
         // Write result to TachosDB_stats.txt
-        std::ofstream output_file(output_stats_filename);
+        std::ofstream output_file(output_stats_filename, std::ios::app);
         if (!output_file.is_open()) {
             std::cerr << "Failed to open " << output_stats_filename << " for writing" << std::endl;
             exit(-1);
         }
 
-        output_file << "Total Time: " << duration.count() << " ms" << std::endl;
-        output_file << "Execution Time: " << exec_duration.count() << " ms" << std::endl;
+        output_file << "Total Time: " << duration.count() << " us" << std::endl;
+        output_file << "Execution Time: " << exec_duration.count() << " us" << std::endl;
         output_file << "Peak Memory: " << std::fixed << std::setprecision(2) << peak_memory_mb << " MB" << std::endl;
         output_file.close();
+
         std::sort(actual_result.begin(), actual_result.end());
         result.push_back(actual_result);
     }
