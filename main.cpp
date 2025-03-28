@@ -2,6 +2,7 @@
 #include <chrono>
 #include <iostream>
 #include <memory>
+#include <set>
 #include <sys/resource.h>
 #include <unordered_set>
 #include "src/engine/include/pipeline.hh"
@@ -144,10 +145,8 @@ std::vector<std::vector<uint64_t>> execute(const std::string &dataset_path, cons
         output_file << "Peak Memory: " << std::fixed << std::setprecision(2) << peak_memory_mb << " MB" << std::endl;
         output_file.close();
 
-        auto unique_vals = std::unordered_set(actual_result.begin(), actual_result.end());
-        auto filtered_vals = std::vector(unique_vals.begin(), unique_vals.end());
-        std::sort(filtered_vals.begin(), filtered_vals.end());
-        result.push_back(filtered_vals);
+        auto sorted_unique_vals = std::set(actual_result.begin(), actual_result.end());
+        result.emplace_back(sorted_unique_vals.begin(), sorted_unique_vals.end());
     }
     return result;
 }
