@@ -1,7 +1,9 @@
 extends Node3D
 
+@onready var rmq_connection = get_node("rmq_listener")
+
 @export var city_size: int = 4  # Number of city blocks in each direction
-@export var block_size: int = 16  # Number of buildings per block (excluding roads)
+@export var block_size: int = 4  # Number of buildings per block (excluding roads)
 @export var tile_size: float = 10.0  # Distance between buildings
 @export var road_width: float = 2.0  # Width of the road
 @export var road_scene: PackedScene = preload("res://road.tscn")
@@ -11,11 +13,30 @@ extends Node3D
 @export var city_seed: int = 42
 
 var building_id_counter: int = 0  # Unique ID counter
+var buildings = []  # A list to store all the building nodes
+var building_id_map = {}  # A map to associate building_id with buildings
 
 func _ready():
 	seed(city_seed)
 	generate_city()
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)  # Ensure the cursor is visible
+	if rmq_connection:
+		rmq_connection.connect("OnMessage", _on_message_received)
+	else:
+		print("Error: RabbitMQListener not found!")
+
+func _on_message_received(message: String):
+	print("Received message from RabbitMQ:", message)
+
+	# Assume the message is a JSON array of building ids
+	var building_ids = JSON.parse_string(message)
+
+	# Check if message was successfully parsed
+	if building_ids is Array:
+		for building_id in building_ids:
+			turn_building_red(building_id)
+	else:
+		print("Error: Received message is not a valid list of building IDs")
 
 func generate_city():
 	for bx in range(city_size):
@@ -70,10 +91,31 @@ func place_building(pos: Vector3):
 	building.set_meta("building_id", building_id_counter)  # Assign a unique ID
 	building_id_counter += 1  # Increment for next building
 	
+	var mesh_instance = building.get_node("MeshInstance3D")
+	var original_material = mesh_instance.get_surface_override_material(0) as StandardMaterial3D
+	if original_material:
+		var new_material = original_material.duplicate()  # Create a copy of the material
+		mesh_instance.set_surface_override_material(0, new_material)  # Apply the new material to the building
+	
 	# Enable input detection for clicking
 	building.set_script(preload("res://building_script.gd"))
 	
+	# Add the building to the list and map
+	buildings.append(building)
+	building_id_map[building_id_counter - 1] = building  # Map the building ID to the building node
+	
 	add_child(building)
+
+# Helper method to change the building's color to red
+func turn_building_red(building_id: int):
+	# Find the building with the matching meta_building_id
+	var building = building_id_map[building_id]
+	var mesh_instance = building.get_node("MeshInstance3D")
+	var building_material = mesh_instance.get_surface_override_material(0) as StandardMaterial3D
+	
+	# Assuming your building has a method to change color, like changing a material's albedo or sprite color
+	building_material.albedo_color = Color.RED  # Implement this method in your building class
+	print("Building with ID ", building_id, " turned red.")
 
 func _input(event):
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
