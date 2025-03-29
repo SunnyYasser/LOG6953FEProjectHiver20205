@@ -161,8 +161,8 @@ int main() {
     const std::vector<std::string> queries = {"a->b", "a->b,b->c", "a->b,b->c,c->d", "a->b,b->c,c->d,d->e"};
     const std::vector<std::string> column_orderings = {"a,b", "a,b,c", "a,b,c,d", "a,b,c,d,e"};
     const auto input_filename = "../input_query.txt";
-    const auto output_filename = "../TachosDB_output.txt";
-    const auto output_stats_filename = "../TachosDB_statistics.txt";
+    const auto output_filename = "TachosDB_results.txt";
+    const auto output_stats_filename = "TachosDB_stats.txt";
 
     // Read input_query.txt file
     std::ifstream input_file(input_filename);
