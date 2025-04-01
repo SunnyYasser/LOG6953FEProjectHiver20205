@@ -165,41 +165,37 @@ namespace VFEngine {
 
     std::shared_ptr<Pipeline> QueryParser::build_physical_pipeline() {
         build_logical_pipeline();
+
+        // Preallocate the vector with known size N to avoid reallocations
+        const size_t N = _logical_pipeline.size();
         std::vector<std::shared_ptr<Operator>> physical_pipeline;
+        physical_pipeline.reserve(N);
+
         for (auto it = _logical_pipeline.rbegin(); it != _logical_pipeline.rend(); it++) {
             const auto &[operator_type, first_col, second_col, join_direction, relation_type] = *it;
+            std::shared_ptr<Operator> next_op = !physical_pipeline.empty() ? physical_pipeline.back() : nullptr;
 
             switch (operator_type) {
                 case OP_CASCADE_SELECTION: {
-                    auto next_op = !physical_pipeline.empty() ? physical_pipeline.back() : nullptr;
-                    auto cascade =
-                            std::static_pointer_cast<Operator>(std::make_shared<CascadeSelection>(_ftree, next_op));
-                    physical_pipeline.push_back(cascade);
+                    physical_pipeline.emplace_back(std::make_shared<CascadeSelection>(_ftree, next_op));
                 } break;
 
                 case OP_SCAN_FAILURE_PROP: {
-                    auto next_op = !physical_pipeline.empty() ? physical_pipeline.back() : nullptr;
-                    auto scan = std::static_pointer_cast<Operator>(
-                            std::make_shared<ScanFailureProp>(first_col, _src_nodes, next_op));
-                    physical_pipeline.push_back(scan);
+                    physical_pipeline.emplace_back(std::make_shared<ScanFailureProp>(first_col, _src_nodes, next_op));
                 } break;
 
                 case OP_SINK_FAILURE_PROP: {
                     if (!_ftree) {
                         _ftree = create_factorized_tree();
                     }
-                    auto sink_packed = std::static_pointer_cast<Operator>(std::make_shared<SinkFailureProp>(_ftree));
-                    physical_pipeline.push_back(sink_packed);
+                    physical_pipeline.emplace_back(std::make_shared<SinkFailureProp>(_ftree));
                 } break;
 
                 case OP_INLJ_PACKED: {
-                    auto next_op = !physical_pipeline.empty() ? physical_pipeline.back() : nullptr;
                     auto is_join_index_fwd = join_direction == FORWARD;
-                    auto extend = std::static_pointer_cast<VFEngine::Operator>(
-                            std::make_shared<VFEngine::IndexNestedLoopJoinPacked>(
-                                    first_col, second_col, is_join_index_fwd, relation_type, next_op));
-                    physical_pipeline.push_back(extend);
-                }
+                    physical_pipeline.emplace_back(std::make_shared<VFEngine::IndexNestedLoopJoinPacked>(
+                            first_col, second_col, is_join_index_fwd, relation_type, next_op));
+                } break;
 
                 default:;
             }

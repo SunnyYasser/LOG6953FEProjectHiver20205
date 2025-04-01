@@ -58,17 +58,6 @@ std::vector<uint64_t> run_pipeline(const std::string &dataset_path, const std::s
     benchmark_barrier();
     end_time = std::chrono::steady_clock::now();
 
-    // auto current_op = pipeline->get_first_operator();
-    // std::shared_ptr<VFEngine::Operator> sink_op = nullptr;
-    //
-    // while (current_op) {
-    //     const auto next_op = current_op->get_next_operator();
-    //     if (!next_op) {
-    //         sink_op = current_op;
-    //     }
-    //     current_op = next_op;
-    // }
-
     const auto sink_failure_prop = std::static_pointer_cast<VFEngine::SinkFailureProp>(pipeline->get_last_operator());
     return *sink_failure_prop->get_total_rows();
 }
