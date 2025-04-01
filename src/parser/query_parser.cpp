@@ -207,6 +207,7 @@ namespace VFEngine {
 
         auto _physical_pipeline = std::make_shared<Pipeline>(_column_names, _column_alias_map);
         _physical_pipeline->set_first_operator(physical_pipeline.back());
+        _physical_pipeline->set_last_operator(physical_pipeline.front());
 
         return _physical_pipeline;
     }

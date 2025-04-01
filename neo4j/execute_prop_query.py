@@ -64,7 +64,6 @@ def run_query_and_save_results():
 
     # Execute each query and measure time
     for i, query in enumerate(queries):
-        # Create a new session for each query
         session = driver.session(**session_config)
         
         try:

@@ -46,8 +46,6 @@ std::vector<uint64_t> run_pipeline(const std::string &dataset_path, const std::s
     const auto parser = std::make_unique<VFEngine::QueryParser>(
             query, column_ordering, true, src_nodes, VFEngine::SinkType::FAILURE_PROP, column_names, column_alias_map);
 
-    VFEngine::DataSourceTable::set_dataset_path(dataset_path);
-    VFEngine::DataSourceTable::set_serialized_dataset_path(serialized_dataset_path);
     total_start_time = std::chrono::steady_clock::now();
     const auto pipeline = parser->build_physical_pipeline();
     pipeline->init();
@@ -60,22 +58,22 @@ std::vector<uint64_t> run_pipeline(const std::string &dataset_path, const std::s
     benchmark_barrier();
     end_time = std::chrono::steady_clock::now();
 
-    auto current_op = pipeline->get_first_operator();
-    std::shared_ptr<VFEngine::Operator> sink_op = nullptr;
+    // auto current_op = pipeline->get_first_operator();
+    // std::shared_ptr<VFEngine::Operator> sink_op = nullptr;
+    //
+    // while (current_op) {
+    //     const auto next_op = current_op->get_next_operator();
+    //     if (!next_op) {
+    //         sink_op = current_op;
+    //     }
+    //     current_op = next_op;
+    // }
 
-    while (current_op) {
-        const auto next_op = current_op->get_next_operator();
-        if (!next_op) {
-            sink_op = current_op;
-        }
-        current_op = next_op;
-    }
-
-    const auto sink_failure_prop = std::static_pointer_cast<VFEngine::SinkFailureProp>(sink_op);
+    const auto sink_failure_prop = std::static_pointer_cast<VFEngine::SinkFailureProp>(pipeline->get_last_operator());
     return *sink_failure_prop->get_total_rows();
 }
 
-std::vector<std::string> split(const std::string &str, char delimiter) {
+std::vector<std::string> split(const std::string &str, const char delimiter) {
     std::vector<std::string> result;
     size_t start = 0, end;
 
@@ -113,6 +111,10 @@ std::vector<std::vector<uint64_t>> execute(const std::string &dataset_path, cons
     std::vector<std::vector<uint64_t>> result;
     result.push_back(src_nodes_failure_prop);
     deleteFileIfExists(output_stats_filename);
+
+    VFEngine::DataSourceTable::set_dataset_path(dataset_path);
+    VFEngine::DataSourceTable::set_serialized_dataset_path(serialized_dataset_path);
+
     for (size_t i = 0; i < column_orderings.size(); i++) {
         const auto &query = queries[i];
         const auto &column_ordering = column_orderings[i];
