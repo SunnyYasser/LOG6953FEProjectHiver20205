@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://0eg43e12aqsh"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_m8u0t"]
+size = Vector3(10, 0.2, 2)
+
+[node name="MeshInstance3D" type="MeshInstance3D"]
+mesh = SubResource("BoxMesh_m8u0t")
