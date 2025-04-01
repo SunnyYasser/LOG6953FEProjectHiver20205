@@ -24,11 +24,14 @@ namespace VFEngine {
         std::shared_ptr<ContextMemory> get_context_memory();
         std::shared_ptr<DataStore> get_datastore();
         void set_first_operator(const std::shared_ptr<Operator> &);
+        void set_last_operator(const std::shared_ptr<Operator> &last_operator);
         const std::shared_ptr<Operator> &get_first_operator();
+        const std::shared_ptr<Operator> &get_last_operator();
 
     private:
         const std::vector<std::string> _columns;
         std::shared_ptr<Operator> _first_operator;
+        std::shared_ptr<Operator> _last_operator;
         std::shared_ptr<ContextMemory> _context_memory;
         std::shared_ptr<DataStore> _datastore;
     };

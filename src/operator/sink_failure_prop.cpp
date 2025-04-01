@@ -1,11 +1,10 @@
 #include "include/sink_failure_prop.hh"
-
 #include <cassert>
-#include <queue>
 #include <unordered_set>
 #include <vector>
 
 namespace VFEngine {
+
     SinkFailureProp::SinkFailureProp(const std::shared_ptr<FactorizedTreeElement> &ftree) :
         Operator(), _ftree(ftree), _total_rows(nullptr) {}
 
@@ -13,100 +12,175 @@ namespace VFEngine {
 
     void SinkFailureProp::execute() {
         _exec_call_counter++;
-        update_total_rows();
+        count(_ftree);
     }
 
-    static std::vector<uint64_t> collect_values_at_level(const std::shared_ptr<FactorizedTreeElement> &node, int level,
-                                                         int target_level) {
-
-        // Base case: we've reached our target level
-        if (level == target_level) {
+    void SinkFailureProp::count_leaf(const std::shared_ptr<FactorizedTreeElement> &op, const uint32_t parent_idx) {
 #ifdef STORAGE_TO_VECTOR_MEMCPY_PTR_ALIAS
 #ifdef VECTOR_STATE_ARENA_ALLOCATOR
-            const Vector *const __restrict__ vec = node->_value;
-            const State *const __restrict__ state = vec->_state;
-            const BitMask<State::MAX_VECTOR_SIZE> *const __restrict__ selection_mask = state->_selection_mask;
-            const uint64_t *const __restrict__ values = vec->_values;
+        const Vector *const __restrict__ vec = op->_value;
+        const auto *const __restrict__ values = vec->_values;
+        const State *const __restrict__ state = vec->_state;
+        const uint32_t *const __restrict__ rle = state->_rle;
+        const BitMask<State::MAX_VECTOR_SIZE> *const __restrict__ selection_mask = state->_selection_mask;
 #else
-            const Vector *const __restrict__ vec = node->_value;
-            const State *const __restrict__ state = vec->_state.get();
-            const BitMask<State::MAX_VECTOR_SIZE> *const __restrict__ selection_mask = state->_selection_mask;
-            const uint64_t *const __restrict__ values = vec->_values;
+        const Vector *const __restrict__ vec = op->_value;
+        const auto *const __restrict__ values = vec->_values;
+        const State *const __restrict__ state = vec->_state.get();
+        const uint32_t *const __restrict__ rle = state->_rle.get();
+        const BitMask<State::MAX_VECTOR_SIZE> *const __restrict__ selection_mask = state->_selection_mask;
 #endif
 #else
 #ifdef VECTOR_STATE_ARENA_ALLOCATOR
-            const Vector *const vec = node->_value;
-            const State *const state = vec->_state;
-            const BitMask<State::MAX_VECTOR_SIZE> *const selection_mask = state->_selection_mask;
-            const uint64_t *const values = vec->_values;
+        const Vector *const vec = op->_value;
+        const auto *const values = vec->_values;
+        const State *const state = vec->_state;
+        const uint32_t *const rle = state->_rle;
+        const BitMask<State::MAX_VECTOR_SIZE> *const selection_mask = state->_selection_mask;
 #else
-            const Vector *const vec = node->_value;
-            const State *const state = vec->_state.get();
-            const BitMask<State::MAX_VECTOR_SIZE> *const selection_mask = state->_selection_mask;
-            const uint64_t *const values = vec->_values;
+        const Vector *const vec = op->_value;
+        const auto *const values = vec->_values;
+        const State *const state = vec->_state.get();
+        const uint32_t *const rle = state->_rle.get();
+        const BitMask<State::MAX_VECTOR_SIZE> *const selection_mask = state->_selection_mask;
 #endif
 #endif
 
-            std::vector<uint64_t> result;
-
-            // Get the valid range from the selection mask
-            const auto start_pos = 0;
-            const auto end_pos = state->_state_info._size - 1;
-
-            // Collect all valid values at this level
-            for (auto i = start_pos; i <= end_pos; i++) {
-                result.push_back(values[i]);
-            }
-
-            return result;
+        // Get the RLE value for this index - number of elements
+        // For index i, the number of elements is rle[i+1] - rle[i]
+        const auto start_pos = rle[parent_idx];
+        const auto end_pos = rle[parent_idx + 1];
+        for (auto i = start_pos; i < end_pos; i++) {
+            _total_rows->push_back(values[i]);
         }
-
-        // If we're not at the target level, recursively check children
-        std::vector<uint64_t> result;
-        for (const auto &child: node->_children) {
-            auto child_values = collect_values_at_level(child, level + 1, target_level);
-            result.insert(result.end(), child_values.begin(), child_values.end());
-        }
-
-        return result;
     }
 
-    static int get_tree_height(const std::shared_ptr<FactorizedTreeElement> &node) {
-        if (node->_children.empty()) {
-            return 1;
-        }
+    void SinkFailureProp::count_internal(const std::shared_ptr<FactorizedTreeElement> &op, const uint32_t parent_idx) {
+#ifdef STORAGE_TO_VECTOR_MEMCPY_PTR_ALIAS
+#ifdef VECTOR_STATE_ARENA_ALLOCATOR
+        const Vector *const __restrict__ vec = op->_value;
+        const State *const __restrict__ state = vec->_state;
+        const BitMask<State::MAX_VECTOR_SIZE> *const __restrict__ selection_mask = state->_selection_mask;
+        const uint32_t *const rle = state->_rle;
+#else
+        const Vector *const __restrict__ vec = op->_value;
+        const State *const __restrict__ state = vec->_state.get();
+        const BitMask<State::MAX_VECTOR_SIZE> *const __restrict__ selection_mask = state->_selection_mask;
+        const uint32_t *const rle = state->_rle.get();
+#endif
+#else
+#ifdef VECTOR_STATE_ARENA_ALLOCATOR
+        const Vector *const vec = op->_value;
+        const State *const state = vec->_state;
+        const BitMask<State::MAX_VECTOR_SIZE> *const selection_mask = state->_selection_mask;
+        const uint32_t *const rle = state->_rle;
+#else
+        const Vector *const vec = op->_value;
+        const State *const state = vec->_state.get();
+        const BitMask<State::MAX_VECTOR_SIZE> *const selection_mask = state->_selection_mask;
+        const uint32_t *const rle = state->_rle.get();
+#endif
+#endif
+        const auto &children = op->_children;
 
-        int max_height = 0;
-        for (const auto &child: node->_children) {
-            max_height = std::max(max_height, get_tree_height(child));
-        }
+        // Get the valid range from the selection mask
+        const auto selection_start_pos = GET_START_POS(*selection_mask);
+        const auto selection_end_pos = GET_END_POS(*selection_mask);
+        const auto start_pos = rle[parent_idx];
+        const auto num_elems = rle[parent_idx + 1] - rle[parent_idx];
+        const auto end_pos = start_pos + num_elems - 1;
 
-        return 1 + max_height;
-    }
+#ifdef MY_DEBUG
+        assert(selection_start_pos <= selection_end_pos);
+        assert(selection_start_pos >= 0 && selection_start_pos < State::MAX_VECTOR_SIZE);
+        assert(selection_end_pos >= 0 && selection_end_pos < State::MAX_VECTOR_SIZE);
+        assert(start_pos >= 0 && start_pos < State::MAX_VECTOR_SIZE);
+        assert(end_pos >= 0 && end_pos < State::MAX_VECTOR_SIZE);
+#endif
 
-    void SinkFailureProp::update_total_rows() {
-        // First, get the height of the tree
-        const int tree_height = get_tree_height(_ftree);
+        // Process all values for this specific parent_idx
+        const auto children_size = children.size();
 
-        // Collect values level by level (BFS manner)
-        for (int level = 0; level < tree_height; level++) {
-            std::vector<uint64_t> level_values = collect_values_at_level(_ftree, 0, level);
+        // set iteration limits
+        const auto start_val = std::max(static_cast<int32_t>(start_pos), selection_start_pos);
+        const auto end_val = std::min(static_cast<int32_t>(end_pos), selection_end_pos);
 
-            // If we got values at this level, add them to total_rows
-            if (!level_values.empty()) {
-                _total_rows->push_back(level_values);
+
+        // For this valid parent, calculate product of all children
+        for (auto idx = start_val; idx <= end_val; idx++) {
+            if (!TEST_BIT(*selection_mask, idx)) {
+                continue;
+            }
+
+            for (size_t child_idx = 0; child_idx < children_size; child_idx++) {
+                const auto &node = children[child_idx];
+                if (node->_children.empty()) {
+                    count_leaf(node, idx);
+                } else {
+                    count_internal(node, idx);
+                }
             }
         }
+    }
 
-        // Add a demarcation row filled with -1
-        std::vector<uint64_t> demarcation_row(State::MAX_VECTOR_SIZE, 0);
-        _total_rows->push_back(demarcation_row);
+    void SinkFailureProp::count(const std::shared_ptr<FactorizedTreeElement> &root) {
+#ifdef STORAGE_TO_VECTOR_MEMCPY_PTR_ALIAS
+#ifdef VECTOR_STATE_ARENA_ALLOCATOR
+        const Vector *const __restrict__ vec = root->_value;
+        const State *const __restrict__ state = vec->_state;
+        const BitMask<State::MAX_VECTOR_SIZE> *const __restrict__ selection_mask = state->_selection_mask;
+#else
+        const Vector *const __restrict__ vec = root->_value;
+        const State *const __restrict__ state = vec->_state.get();
+        const BitMask<State::MAX_VECTOR_SIZE> *const __restrict__ selection_mask = state->_selection_mask;
+#endif
+#else
+#ifdef VECTOR_STATE_ARENA_ALLOCATOR
+        const Vector *const vec = root->_value;
+        const State *const state = vec->_state;
+        const BitMask<State::MAX_VECTOR_SIZE> *const selection_mask = state->_selection_mask;
+#else
+        const Vector *const vec = root->_value;
+        const State *const state = vec->_state.get();
+        const BitMask<State::MAX_VECTOR_SIZE> *const selection_mask = state->_selection_mask;
+#endif
+#endif
+        const auto &children = root->_children;
+
+        // Get the valid range from the selection mask
+        const auto start_pos = GET_START_POS(*selection_mask);
+        const auto end_pos = GET_END_POS(*selection_mask);
+
+#ifdef MY_DEBUG
+        assert(start_pos <= end_pos);
+        assert(start_pos >= 0 && start_pos < State::MAX_VECTOR_SIZE);
+        assert(end_pos >= 0 && end_pos < State::MAX_VECTOR_SIZE);
+
+#endif
+
+        // Process each valid index and its children
+        const auto children_size = children.size();
+
+        for (auto i = start_pos; i <= end_pos; i++) {
+            if (!TEST_BIT(*selection_mask, i)) {
+                continue;
+            }
+
+            for (size_t child_idx = 0; child_idx < children_size; child_idx++) {
+                const auto &node = children[child_idx];
+                if (node->_children.empty()) {
+                    count_leaf(node, i);
+                } else {
+                    count_internal(node, i);
+                }
+            }
+        }
     }
 
     static void dfs_helper(const std::shared_ptr<FactorizedTreeElement> &root, std::unordered_set<std::string> &visited,
                            const std::shared_ptr<ContextMemory> &context) {
         const auto &attr = root->_attribute;
-        if (visited.find(attr) != visited.end())
+        if (visited.contains(attr))
             return;
 
         root->_value = context->read_vector_for_column(attr);
@@ -127,10 +201,11 @@ namespace VFEngine {
                                const std::shared_ptr<DataStore> &datastore) {
         _context = context;
         fill_vectors_in_ftree();
-        _total_rows = std::make_unique<std::vector<std::vector<uint64_t>>>();
+        _total_rows = std::make_shared<std::vector<uint64_t>>();
+        _total_rows->reserve(State::MAX_VECTOR_SIZE * State::MAX_VECTOR_SIZE);
     }
 
-    std::vector<std::vector<uint64_t>> SinkFailureProp::get_total_rows() const { return *_total_rows; }
+    std::vector<uint64_t> *SinkFailureProp::get_total_rows() const { return _total_rows.get(); }
 
     unsigned long SinkFailureProp::get_exec_call_counter() const { return _exec_call_counter; }
 } // namespace VFEngine

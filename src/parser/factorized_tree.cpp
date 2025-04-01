@@ -98,7 +98,7 @@ namespace VFEngine {
         auto root = create_node(scan_op, true);
         cache[scan_op.first_col] = root;
 
-        for (size_t i = 1; i < _logical_plan.size() - 1; ++i) {
+        for (size_t i = 1; i < _logical_plan.size() - 2; ++i) {
             const auto &elem = _logical_plan[i];
 
             const auto &parent = elem.first_col;

@@ -6,7 +6,7 @@
 namespace VFEngine {
     Pipeline::Pipeline(const std::vector<std::string> &columns,
                        const std::unordered_map<std::string, std::string> &column_alias_map) :
-        _first_operator(nullptr) {
+        _first_operator(nullptr), _last_operator(nullptr) {
 #ifdef VECTOR_STATE_ARENA_ALLOCATOR
         ArenaSetup::initialize(1ULL * 1024 * 1024 * 1024); // 1GB arena
 #endif
@@ -28,6 +28,11 @@ namespace VFEngine {
         _first_operator = first_operator;
     }
 
+    void Pipeline::set_last_operator(const std::shared_ptr<Operator> &last_operator) { _last_operator = last_operator; }
+
     const std::shared_ptr<Operator> &Pipeline::get_first_operator() { return _first_operator; }
+
+    const std::shared_ptr<Operator> &Pipeline::get_last_operator() { return _last_operator; }
+
 
 } // namespace VFEngine

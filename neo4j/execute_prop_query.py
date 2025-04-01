@@ -1,102 +1,157 @@
 from neo4j import GraphDatabase
-import time
-import os
 from neo4j_auth import URI, USERNAME, PASSWORD
 
-def run_query_and_save_results():
-    # Connect to Neo4j
-    driver = GraphDatabase.driver(URI, auth=(USERNAME, PASSWORD))
 
-    # Read input query from file
+def run_query_and_save_results():
+    # Open files for writing results and stats
+    results_file = open("Neo4J_results.txt", "w")
+    stats_file = open("Neo4J_stats.txt", "w")
+
+    # Read affected buildings from input file
     with open("../input_query.txt", "r") as f:
         input_text = f.read().strip()
 
-    # Convert string representation of list to actual list
+    # Process input - remove brackets and split by commas
     input_text = input_text.strip('[]')
     input_values = [int(x.strip()) for x in input_text.split(',') if x.strip()]
 
-    # Create a session
-    session = driver.session()
-
-    # Start timing
-    start_time = time.time()
-
-    # BFS propagation results
     all_levels = []
+    query_times = []
 
-    # Level 0: Starting nodes (input values)
-    level0_query = """
-    MATCH (n:Product)
-    WHERE n.id IN $input_values
-    RETURN collect(n.id) AS nodes
-    """
-    level0_result = session.run(level0_query, input_values=input_values)
-    level0_nodes = level0_result.single()["nodes"]
-    all_levels.append(level0_nodes)
+    # Level 0 - starting buildings (directly affected)
+    level0_nodes = input_values
+    all_levels.append(sorted(level0_nodes))
+    results_file.write(str(sorted(level0_nodes)) + "\n")
 
-    # Level 1: Direct neighbors of starting nodes
-    level1_query = """
-    MATCH (n:Product)-[:CO_PURCHASED]->(neighbor:Product)
-    WHERE n.id IN $prev_level_nodes
-    RETURN collect(DISTINCT neighbor.id) AS nodes
-    """
-    level1_result = session.run(level1_query, prev_level_nodes=level0_nodes)
-    level1_nodes = level1_result.single()["nodes"]
-    all_levels.append(level1_nodes)
+    # Inefficient Queries for different propagation levels
+    queries = [
+        """
+        // Level 1 - One hop neighbors (Inefficient)
+        CYPHER runtime = slotted
+        PROFILE
+        MATCH (n:Building)
+        WHERE n.id IN $input_values
+        WITH n
+        MATCH (n)-[:CONNECTED_TO]->(neighbor:Building)
+        WITH collect(neighbor.id) as neighbors
+        UNWIND neighbors AS node
+        WITH DISTINCT node as distinctNode
+        RETURN collect(distinctNode) as nodes
+        """,
 
-    # Level 2: Neighbors of level 1 nodes
-    level2_query = """
-    MATCH (n:Product)-[:CO_PURCHASED]->(neighbor:Product)
-    WHERE n.id IN $prev_level_nodes
-    RETURN collect(DISTINCT neighbor.id) AS nodes
-    """
-    level2_result = session.run(level2_query, prev_level_nodes=level1_nodes)
-    level2_nodes = level2_result.single()["nodes"]
-    all_levels.append(level2_nodes)
+        """
+        // Level 2 - Two hop neighbors (Inefficient)
+        CYPHER runtime = slotted
+        PROFILE
+        MATCH (n:Building)
+        WHERE n.id IN $input_values
+        WITH n
+        MATCH (n)-[:CONNECTED_TO]->(m:Building)-[:CONNECTED_TO]->(neighbor:Building)
+        WITH collect(neighbor.id) as neighbors
+        UNWIND neighbors AS node
+        WITH DISTINCT node as distinctNode
+        RETURN collect(distinctNode) as nodes
+        """,
 
-    # Level 3: Neighbors of level 2 nodes
-    level3_query = """
-    MATCH (n:Product)-[:CO_PURCHASED]->(neighbor:Product)
-    WHERE n.id IN $prev_level_nodes
-    RETURN collect(DISTINCT neighbor.id) AS nodes
-    """
-    level3_result = session.run(level3_query, prev_level_nodes=level2_nodes)
-    level3_nodes = level3_result.single()["nodes"]
-    all_levels.append(level3_nodes)
+        """
+        // Level 3 - Three hop neighbors (Inefficient)
+        CYPHER runtime = slotted
+        PROFILE
+        MATCH (n:Building)
+        WHERE n.id IN $input_values
+        WITH n
+        MATCH (n)-[:CONNECTED_TO]->(m1:Building)-[:CONNECTED_TO]->(m2:Building)-[:CONNECTED_TO]->(neighbor:Building)
+        WITH collect(neighbor.id) as neighbors
+        UNWIND neighbors AS node
+        WITH DISTINCT node as distinctNode
+        RETURN collect(distinctNode) as nodes
+        """,
 
-    # Level 4: Neighbors of level 3 nodes
-    level4_query = """
-    MATCH (n:Product)-[:CO_PURCHASED]->(neighbor:Product)
-    WHERE n.id IN $prev_level_nodes
-    RETURN collect(DISTINCT neighbor.id) AS nodes
-    """
-    level4_result = session.run(level4_query, prev_level_nodes=level3_nodes)
-    level4_nodes = level4_result.single()["nodes"]
-    all_levels.append(level4_nodes)
+        """
+        // Level 4 - Four hop neighbors (Inefficient)
+        CYPHER runtime = slotted
+        PROFILE
+        MATCH (n:Building)
+        WHERE n.id IN $input_values
+        WITH n
+        MATCH (n)-[:CONNECTED_TO]->(m1:Building)-[:CONNECTED_TO]->(m2:Building)-[:CONNECTED_TO]->(m3:Building)-[:CONNECTED_TO]->(neighbor:Building)
+        WITH collect(neighbor.id) as neighbors
+        UNWIND neighbors AS node
+        WITH DISTINCT node as distinctNode
+        RETURN collect(distinctNode) as nodes
+        """
+    ]
 
-    # End timing
-    end_time = time.time()
-    execution_time = end_time - start_time
+    # Execute each query and measure time using Neo4j's PROFILE feature
+    for i, query in enumerate(queries):
+        # Create a new driver and session for each query - this ensures a fresh connection
+        driver = GraphDatabase.driver(URI, auth=(USERNAME, PASSWORD))
+        session = driver.session(database="neo4j")
 
-    # Close the session
-    session.close()
-    driver.close()
+        try:
+            # Try to clear query cache if the procedure exists
+            try:
+                session.run("CALL db.clearQueryCaches()")
+            except Exception:
+                # If procedure doesn't exist, continue without clearing
+                pass
 
-    # Write results to file
-    with open("Neo4J_results.txt", "w") as f:
-        for level_nodes in all_levels:
-            f.write(str(level_nodes) + "\n")
+            # Execute the query with PROFILE to get execution timing
+            result = session.run(query, input_values=input_values)
 
-    # Write stats to file
-    with open("Neo4J_stats.txt", "w") as f:
-        f.write(f"Execution time: {execution_time:.6f} seconds\n")
-        f.write(f"Number of levels: {len(all_levels)}\n")
-        for i, level in enumerate(all_levels):
-            f.write(f"Level {i} nodes: {len(level)}\n")
+            # Get the result data
+            record = result.single()
+            nodes = record["nodes"]
+            nodes.sort()  # Sort for consistent output
 
-    print(f"Query executed in {execution_time:.6f} seconds")
-    print(f"Results saved to Neo4J_results.txt")
-    print(f"Stats saved to Neo4J_stats.txt")
+            # Get the query execution statistics
+            summary = result.consume()
+
+            # Get the execution time in microseconds (Neo4j reports in ms)
+            query_time_ms = summary.result_available_after
+            query_time_us = query_time_ms * 1000  # Convert ms to microseconds
+            query_times.append(query_time_us)
+
+            # Save results
+            all_levels.append(nodes)
+            results_file.write(str(nodes) + "\n")
+            stats_file.write(f"Query {i + 1} time: {int(query_time_us)} us\n")
+            print(f"Query {i + 1} execution time: {int(query_time_us)} us")
+
+            # Try to clear stats if the procedure exists
+            try:
+                session.run("CALL db.stats.clear()")
+            except Exception:
+                # If procedure doesn't exist, continue without clearing
+                pass
+
+        except Exception as e:
+            print(f"Error executing query {i + 1}: {str(e)}")
+            stats_file.write(f"Query {i + 1} error: {str(e)}\n")
+            # Add empty result for this level to maintain consistency
+            all_levels.append([])
+            results_file.write("[]\n")
+        finally:
+            # Always close the session and driver after each query
+            session.close()
+            driver.close()
+
+    # Write summary statistics
+    total_time = sum(query_times)
+    stats_file.write(f"Total execution time: {int(total_time)} us\n")
+
+    stats_file.write(f"Number of levels: {len(all_levels)}\n")
+    for i, level in enumerate(all_levels):
+        stats_file.write(f"Level {i} nodes: {len(level)}\n")
+
+    # Close files
+    results_file.close()
+    stats_file.close()
+
+    print("Queries executed successfully")
+    print("Results saved to Neo4J_results.txt")
+    print("Stats saved to Neo4J_stats.txt")
+
 
 if __name__ == "__main__":
     run_query_and_save_results()
