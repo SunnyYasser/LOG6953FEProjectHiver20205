@@ -211,7 +211,7 @@ int main() {
 
         src_nodes_failure_prop.push_back(static_cast<uint64_t>(std::stoi(item)));
     }
-
+    sort(src_nodes_failure_prop.begin(), src_nodes_failure_prop.end());
     std::vector<std::vector<uint64_t>> result =
             execute(dataset_path, serialized_dataset_path, queries, column_orderings, src_nodes_failure_prop,
                     output_stats_filename);
@@ -219,7 +219,7 @@ int main() {
     // Write result to TachosDB_output.txt
     std::ofstream output_file(output_filename);
     if (!output_file.is_open()) {
-        std::cerr << "Failed to open TachosDB_output.txt for writing" << std::endl;
+        std::cerr << "Failed to open TachosDB_results.txt for writing" << std::endl;
         return 1;
     }
 
