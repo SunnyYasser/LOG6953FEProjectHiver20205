@@ -13,7 +13,7 @@ namespace VFEngine {
 
     class Pipeline {
     public:
-        Pipeline() = delete;
+        Pipeline();
         Pipeline(const std::vector<std::string> &columns,
                  const std::unordered_map<std::string, std::string> &column_alias_map);
 
@@ -25,6 +25,7 @@ namespace VFEngine {
         std::shared_ptr<DataStore> get_datastore();
         void set_first_operator(const std::shared_ptr<Operator> &);
         void set_last_operator(const std::shared_ptr<Operator> &last_operator);
+        void set_datastore(const std::shared_ptr<DataStore> &datastore);
         const std::shared_ptr<Operator> &get_first_operator();
         const std::shared_ptr<Operator> &get_last_operator();
 

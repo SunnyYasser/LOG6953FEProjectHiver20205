@@ -45,8 +45,11 @@ std::vector<uint64_t> run_pipeline(const std::string &query, const std::vector<s
     const auto parser = std::make_unique<VFEngine::QueryParser>(
             query, column_ordering, true, src_nodes, VFEngine::SinkType::FAILURE_PROP, column_names, column_alias_map);
 
-    const auto pipeline = parser->build_physical_pipeline();
+    const auto datastore = std::make_shared<VFEngine::DataStore>(column_names, column_alias_map);
     total_start_time = std::chrono::steady_clock::now();
+
+    const auto pipeline = parser->build_physical_pipeline();
+    pipeline->set_datastore(datastore);
     pipeline->init();
 
     benchmark_barrier();
