@@ -28,8 +28,7 @@ inline void benchmark_barrier() {
 std::chrono::steady_clock::time_point total_start_time, exec_start_time;
 std::chrono::steady_clock::time_point end_time;
 
-std::vector<uint64_t> run_pipeline(const std::string &dataset_path, const std::string &serialized_dataset_path,
-                                   const std::string &query, const std::vector<std::string> &column_ordering,
+std::vector<uint64_t> run_pipeline(const std::string &query, const std::vector<std::string> &column_ordering,
                                    const std::vector<uint64_t> &src_nodes) {
     std::vector<std::string> column_names{"src", "dest"};
 
@@ -46,8 +45,8 @@ std::vector<uint64_t> run_pipeline(const std::string &dataset_path, const std::s
     const auto parser = std::make_unique<VFEngine::QueryParser>(
             query, column_ordering, true, src_nodes, VFEngine::SinkType::FAILURE_PROP, column_names, column_alias_map);
 
-    total_start_time = std::chrono::steady_clock::now();
     const auto pipeline = parser->build_physical_pipeline();
+    total_start_time = std::chrono::steady_clock::now();
     pipeline->init();
 
     benchmark_barrier();
@@ -110,8 +109,7 @@ std::vector<std::vector<uint64_t>> execute(const std::string &dataset_path, cons
         std::cout << "Executed Query: " << query << std::endl;
         std::cout << "Executed Ordering: " << column_ordering << std::endl;
         const std::vector<std::string> column_ordering_vector = split(column_ordering, ',');
-        const auto actual_result = run_pipeline(dataset_path, serialized_dataset_path, query, column_ordering_vector,
-                                                src_nodes_failure_prop);
+        const auto actual_result = run_pipeline(query, column_ordering_vector, src_nodes_failure_prop);
         const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - total_start_time);
         const auto exec_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - exec_start_time);
 

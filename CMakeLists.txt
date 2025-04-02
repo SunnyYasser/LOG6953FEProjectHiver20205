@@ -59,7 +59,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_options(serializer PRIVATE -fsanitize=address -fsanitize=leak -g3 -Wall -Wextra -Wpedantic -Werror)
     target_link_options(serializer PRIVATE -fsanitize=address -fsanitize=leak)
 elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
-    target_compile_options(mydb2 PRIVATE -Ofast -march=native)
+    target_compile_options(mydb2 PRIVATE -Ofast -march=native -g3)
     target_compile_options(serializer PRIVATE -Ofast -march=native)
 endif ()
 
