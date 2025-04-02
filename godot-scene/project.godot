@@ -11,9 +11,9 @@ config_version=5
 [application]
 
 config/name="DT Project"
-run/main_scene="res://node_3d.tscn"
+run/main_scene="res://scenes/node_3d.tscn"
 config/features=PackedStringArray("4.3", "C#", "Forward Plus")
-config/icon="res://icon.svg"
+config/icon="res://addons/icon.svg"
 
 [dotnet]
 
