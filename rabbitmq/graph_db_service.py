@@ -3,6 +3,7 @@ import json
 import os
 import subprocess
 import time
+import re
 from threading import Thread
 
 # RabbitMQ configuration
@@ -13,6 +14,7 @@ EXCHANGE_NAME = "PropagationProject"
 ROUTING_KEY_AFFECTED = "propagation.affected.buildings"  # Queue to listen to
 ROUTING_KEY_NEO4J_RESULTS = "propagation.neo4j.results"  # Queue to send Neo4j results to
 ROUTING_KEY_TACHOSDB_RESULTS = "propagation.tachosdb.results"  # Queue to send TachosDB results to
+ROUTING_KEY_PERFORMANCE_RATIO = "propagation.performance.ratio"  # New routing key for performance ratio
 QUEUE_NAME = "failure_propagation_queue"
 
 # File paths
@@ -53,6 +55,65 @@ def send_to_rabbitmq(channel, routing_key, message_type, content):
         return True
     except Exception as e:
         print(f"❌ Error sending {message_type}: {e}")
+        return False
+
+def extract_total_execution_time(file_path):
+    """Extract the total execution time from a stats file"""
+    try:
+        with open(file_path, 'r') as f:
+            content = f.read()
+
+        # Look for the total execution time line
+        match = re.search(r'Total Execution Time \(all queries\): (\d+) us', content)
+        if match:
+            return int(match.group(1))
+
+        # If not found with the new format, try the old format (sum of individual queries)
+        # This is a fallback in case the format differs
+        total_time = 0
+        for match in re.finditer(r'(?:Query \d+ )?Execution Time: (\d+) us', content):
+            total_time += int(match.group(1))
+
+        return total_time
+    except Exception as e:
+        print(f"❌ Error extracting execution time from {file_path}: {e}")
+        return None
+
+def calculate_performance_ratio(channel):
+    """Calculate the ratio of Neo4j to TachosDB execution times and send to RabbitMQ"""
+    try:
+        # Wait for files to be completely written
+        time.sleep(2)
+
+        # Extract execution times
+        neo4j_time = extract_total_execution_time(NEO4J_STATS_PATH)
+        tachosdb_time = extract_total_execution_time(TACHOSDB_STATS_PATH)
+
+        if neo4j_time is None or tachosdb_time is None:
+            print("❌ Failed to extract execution times")
+            return False
+
+        if tachosdb_time == 0:
+            print("❌ TachosDB execution time is zero, cannot calculate ratio")
+            return False
+
+        # Calculate ratio (Neo4j time / TachosDB time)
+        ratio = neo4j_time / tachosdb_time
+
+        # Prepare detailed result
+        performance_data = {
+            "neo4j_time_us": neo4j_time,
+            "tachosdb_time_us": tachosdb_time,
+            "ratio_neo4j_to_tachosdb": ratio,
+            "timestamp": time.time()
+        }
+
+        # Send to RabbitMQ
+        print(f"📊 Performance ratio: Neo4j/TachosDB = {ratio:.2f} ({neo4j_time}/{tachosdb_time})")
+        return send_to_rabbitmq(channel, ROUTING_KEY_PERFORMANCE_RATIO, "performance_ratio", performance_data)
+
+    except Exception as e:
+        print(f"❌ Error calculating performance ratio: {e}")
         return False
 
 def process_neo4j_results(channel):
@@ -172,6 +233,10 @@ def process_message(channel, body):
             # Run the TachosDB executable
             tachosdb_success = run_tachosdb_executable(channel)
 
+            # Calculate and send performance ratio
+            if neo4j_success and tachosdb_success:
+                calculate_performance_ratio(channel)
+
             # Reset processing flag
             is_processing = False
             print("🔄 Ready for next query")
@@ -190,16 +255,51 @@ def callback(ch, method, properties, body):
     """RabbitMQ message callback"""
     process_message(ch, body)
 
+def setup_rabbitmq(channel):
+    """Set up RabbitMQ exchange, queues, and bindings"""
+    try:
+        # Declare exchange
+        channel.exchange_declare(exchange=EXCHANGE_NAME, exchange_type="topic", durable=True)
+        print(f"✅ Exchange '{EXCHANGE_NAME}' declared")
+
+        # Declare main queue
+        channel.queue_declare(queue=QUEUE_NAME, durable=True)
+        print(f"✅ Queue '{QUEUE_NAME}' declared")
+
+        # Bind queue to exchange
+        channel.queue_bind(exchange=EXCHANGE_NAME, queue=QUEUE_NAME, routing_key=ROUTING_KEY_AFFECTED)
+        print(f"✅ Queue '{QUEUE_NAME}' bound to exchange '{EXCHANGE_NAME}' with routing key '{ROUTING_KEY_AFFECTED}'")
+
+        # Declare result queues
+        neo4j_queue = "neo4j_results_queue"
+        tachosdb_queue = "tachosdb_results_queue"
+        performance_queue = "performance_ratio_queue"
+
+        channel.queue_declare(queue=neo4j_queue, durable=True)
+        channel.queue_bind(exchange=EXCHANGE_NAME, queue=neo4j_queue, routing_key=ROUTING_KEY_NEO4J_RESULTS)
+        print(f"✅ Queue '{neo4j_queue}' declared and bound")
+
+        channel.queue_declare(queue=tachosdb_queue, durable=True)
+        channel.queue_bind(exchange=EXCHANGE_NAME, queue=tachosdb_queue, routing_key=ROUTING_KEY_TACHOSDB_RESULTS)
+        print(f"✅ Queue '{tachosdb_queue}' declared and bound")
+
+        channel.queue_declare(queue=performance_queue, durable=True)
+        channel.queue_bind(exchange=EXCHANGE_NAME, queue=performance_queue, routing_key=ROUTING_KEY_PERFORMANCE_RATIO)
+        print(f"✅ Queue '{performance_queue}' declared and bound")
+
+        return True
+    except Exception as e:
+        print(f"❌ Error setting up RabbitMQ: {e}")
+        return False
+
 def main():
     try:
         # Create connection
         connection = pika.BlockingConnection(parameters)
         channel = connection.channel()
 
-        # Set up exchange and queue
-        channel.exchange_declare(exchange=EXCHANGE_NAME, exchange_type="topic", durable=False)
-        channel.queue_declare(queue=QUEUE_NAME, durable=False)
-        channel.queue_bind(exchange=EXCHANGE_NAME, queue=QUEUE_NAME, routing_key=ROUTING_KEY_AFFECTED)
+        # Set up RabbitMQ with proper exchange and queues
+        setup_rabbitmq(channel)
 
         print(f"🔄 Waiting for '{ROUTING_KEY_AFFECTED}' messages... Press CTRL+C to exit.")
 
