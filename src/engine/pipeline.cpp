@@ -11,8 +11,10 @@ namespace VFEngine {
         ArenaSetup::initialize(1ULL * 1024 * 1024 * 1024); // 1GB arena
 #endif
         _context_memory = std::make_shared<ContextMemory>();
-        _datastore = std::make_shared<DataStore>(columns, column_alias_map);
+        // _datastore = std::make_shared<DataStore>(columns, column_alias_map);
     }
+
+    void Pipeline::set_datastore(const std::shared_ptr<DataStore> &datastore) { _datastore = datastore; }
 
     void Pipeline::debug() const { return; }
 
