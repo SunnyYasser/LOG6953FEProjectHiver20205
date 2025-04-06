@@ -106,6 +106,8 @@ std::vector<std::vector<uint64_t>> execute(const std::string &dataset_path, cons
     VFEngine::DataSourceTable::set_dataset_path(dataset_path);
     VFEngine::DataSourceTable::set_serialized_dataset_path(serialized_dataset_path);
 
+    long long total_execution_time = 0;  // Track the sum of all execution times
+
     for (size_t i = 0; i < column_orderings.size(); i++) {
         const auto &query = queries[i];
         const auto &column_ordering = column_orderings[i];
@@ -115,6 +117,9 @@ std::vector<std::vector<uint64_t>> execute(const std::string &dataset_path, cons
         const auto actual_result = run_pipeline(query, column_ordering_vector, src_nodes_failure_prop);
         const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - total_start_time);
         const auto exec_duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - exec_start_time);
+
+        // Add this query's execution time to the total
+        total_execution_time += duration.count();
 
         struct rusage usage;
         double peak_memory_mb = 0;
@@ -136,14 +141,23 @@ std::vector<std::vector<uint64_t>> execute(const std::string &dataset_path, cons
             exit(-1);
         }
 
-        output_file << "Total Time: " << duration.count() << " us" << std::endl;
-        output_file << "Execution Time: " << exec_duration.count() << " us" << std::endl;
-        output_file << "Peak Memory: " << std::fixed << std::setprecision(2) << peak_memory_mb << " MB" << std::endl;
+        output_file << "Query " << i+1 << " Total Time: " << duration.count() << " us" << std::endl;
+        output_file << "Query " << i+1 << " Execution Time: " << exec_duration.count() << " us" << std::endl;
+        output_file << "Query " << i+1 << " Peak Memory: " << std::fixed << std::setprecision(2) << peak_memory_mb << " MB" << std::endl;
         output_file.close();
 
         auto sorted_unique_vals = std::set(actual_result.begin(), actual_result.end());
         result.emplace_back(sorted_unique_vals.begin(), sorted_unique_vals.end());
     }
+
+    // Add the total execution time to the stats file
+    std::ofstream summary_file(output_stats_filename, std::ios::app);
+    if (summary_file.is_open()) {
+        summary_file << "\nTotal Execution Time (all queries): " << total_execution_time << " us" << std::endl;
+        summary_file.close();
+        std::cout << "Total Execution Time (all queries): " << total_execution_time << " us" << std::endl;
+    }
+
     return result;
 }
 

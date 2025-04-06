@@ -108,7 +108,7 @@ def run_query_and_save_results():
 
     total_execution_time = sum(total_times)
 
-    stats_file.write(f"Total execution time (consumed): {int(total_execution_time)} us\n")
+    stats_file.write(f"Total Execution Time (all queries): {int(total_execution_time)} us\n")
 
     stats_file.write(f"\nNumber of levels: {len(all_levels)}\n")
     for i, level in enumerate(all_levels):
