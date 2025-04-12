@@ -5,6 +5,8 @@
 #include <vector>
 
 namespace VFEngine {
+
+  typedef unsigned long ulong;
     class AdjList;
     class MemoryDebugUtility {
     public:
