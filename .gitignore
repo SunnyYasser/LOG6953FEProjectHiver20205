@@ -35,10 +35,11 @@
 scripts/
 
 cmake-build-debug
-cmake-build-release
 *results.txt
 *stats.txt
 .idea
 amazon0601/
 .DS_Store
 __pycache__/
+src/
+tests/
