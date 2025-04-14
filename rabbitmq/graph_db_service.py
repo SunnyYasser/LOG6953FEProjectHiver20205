@@ -4,6 +4,7 @@ import os
 import subprocess
 import time
 import re
+import platform
 from threading import Thread
 
 # RabbitMQ configuration
@@ -26,7 +27,12 @@ TACHOSDB_STATS_PATH = "TachosDB_stats.txt"
 
 # Executable paths
 NEO4J_SCRIPT_PATH = "../neo4j/execute_prop_query.py"
-TACHOSDB_EXEC_PATH = "../cmake-build-release/mydb2"
+
+# Set TachosDB executable path based on OS
+if platform.system() == "Darwin":  # macOS
+    TACHOSDB_EXEC_PATH = "../cmake-build-release-arm/mydb2"
+else:  # Linux, Windows, etc.
+    TACHOSDB_EXEC_PATH = "../cmake-build-release/mydb2"
 
 # Set up connection parameters
 credentials = pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASSWORD)
@@ -187,7 +193,7 @@ def run_neo4j_script(channel):
 def run_tachosdb_executable(channel):
     """Run the TachosDB executable and process its output"""
     try:
-        print("🚀 Running TachosDB executable...")
+        print(f"🚀 Running TachosDB executable at: {TACHOSDB_EXEC_PATH}...")
         process = subprocess.Popen(
             [TACHOSDB_EXEC_PATH],
             stdout=subprocess.PIPE,
@@ -300,6 +306,10 @@ def main():
 
         # Set up RabbitMQ with proper exchange and queues
         setup_rabbitmq(channel)
+
+        # Log the OS-specific executable path
+        print(f"🖥️ Operating System: {platform.system()}")
+        print(f"🔧 Using TachosDB executable: {TACHOSDB_EXEC_PATH}")
 
         print(f"🔄 Waiting for '{ROUTING_KEY_AFFECTED}' messages... Press CTRL+C to exit.")
 
