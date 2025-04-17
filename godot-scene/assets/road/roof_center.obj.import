@@ -1,0 +1,22 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://bgradrfdjxi6o"
+path="res://.godot/imported/roof_center.obj-bea05cabe7c81159b3ffce2d706a3f79.mesh"
+
+[deps]
+
+files=["res://.godot/imported/roof_center.obj-bea05cabe7c81159b3ffce2d706a3f79.mesh"]
+
+source_file="res://assets/road/roof_center.obj"
+dest_files=["res://.godot/imported/roof_center.obj-bea05cabe7c81159b3ffce2d706a3f79.mesh", "res://.godot/imported/roof_center.obj-bea05cabe7c81159b3ffce2d706a3f79.mesh"]
+
+[params]
+
+generate_tangents=true
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+optimize_mesh=true
+force_disable_mesh_compression=false

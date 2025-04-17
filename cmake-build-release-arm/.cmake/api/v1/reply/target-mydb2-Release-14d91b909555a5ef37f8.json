@@ -1,0 +1,256 @@
+{
+	"artifacts" : 
+	[
+		{
+			"path" : "mydb2"
+		}
+	],
+	"backtrace" : 1,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_executable",
+			"target_link_libraries",
+			"target_compile_options"
+		],
+		"files" : 
+		[
+			"CMakeLists.txt",
+			"src/graph/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 30,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 32,
+				"parent" : 0
+			},
+			{
+				"file" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 6,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 62,
+				"parent" : 0
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "-O3 -DNDEBUG -std=gnu++20 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.2.sdk -fcolor-diagnostics"
+				},
+				{
+					"backtrace" : 5,
+					"fragment" : "-Ofast"
+				},
+				{
+					"backtrace" : 5,
+					"fragment" : "-march=native"
+				},
+				{
+					"backtrace" : 5,
+					"fragment" : "-g3"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 2,
+					"path" : "/Users/anas/Documents/LOG6953FEProjectHiver20205/src/parser/include"
+				},
+				{
+					"backtrace" : 2,
+					"path" : "/Users/anas/Documents/LOG6953FEProjectHiver20205/src/graph/include"
+				},
+				{
+					"backtrace" : 2,
+					"path" : "/Users/anas/Documents/LOG6953FEProjectHiver20205/src/operator/include"
+				},
+				{
+					"backtrace" : 2,
+					"path" : "/Users/anas/Documents/LOG6953FEProjectHiver20205/src/memory/include"
+				},
+				{
+					"backtrace" : 2,
+					"path" : "/Users/anas/Documents/LOG6953FEProjectHiver20205/src/engine/include"
+				},
+				{
+					"backtrace" : 2,
+					"path" : "/Users/anas/Documents/LOG6953FEProjectHiver20205/src/utils/include"
+				},
+				{
+					"backtrace" : 2,
+					"path" : "/Users/anas/Documents/LOG6953FEProjectHiver20205/src/debug/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					1
+				],
+				"standard" : "20"
+			},
+			"sourceIndexes" : 
+			[
+				0
+			]
+		}
+	],
+	"dependencies" : 
+	[
+		{
+			"backtrace" : 2,
+			"id" : "libdata::@e5ccf62099f28249f155"
+		},
+		{
+			"backtrace" : 2,
+			"id" : "libgraph::@ac88e395dda6631a5a41"
+		},
+		{
+			"backtrace" : 2,
+			"id" : "libutils::@f1b38b22aeb65474a6c5"
+		}
+	],
+	"id" : "mydb2::@6890427a1f51a3e7e1df",
+	"link" : 
+	{
+		"commandFragments" : 
+		[
+			{
+				"fragment" : "-O3 -DNDEBUG",
+				"role" : "flags"
+			},
+			{
+				"fragment" : "",
+				"role" : "flags"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "src/parser/liblibparser.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "src/graph/liblibgraph.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "src/operator/libliboperator.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "src/memory/liblibmem.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "src/engine/liblibengine.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "src/utils/liblibutils.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "src/debug/liblibdebug.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "src/parser/liblibparser.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "src/graph/liblibgraph.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "src/operator/libliboperator.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "src/memory/liblibmem.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "src/engine/liblibengine.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "src/debug/liblibdebug.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 4,
+				"fragment" : "src/data/liblibdata.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "src/utils/liblibutils.a",
+				"role" : "libraries"
+			}
+		],
+		"language" : "CXX"
+	},
+	"name" : "mydb2",
+	"nameOnDisk" : "mydb2",
+	"paths" : 
+	{
+		"build" : ".",
+		"source" : "."
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				0
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "main.cpp",
+			"sourceGroupIndex" : 0
+		}
+	],
+	"type" : "EXECUTABLE"
+}
