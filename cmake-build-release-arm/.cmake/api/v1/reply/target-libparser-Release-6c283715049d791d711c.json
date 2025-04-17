@@ -1,0 +1,149 @@
+{
+	"archive" : {},
+	"artifacts" : 
+	[
+		{
+			"path" : "src/parser/liblibparser.a"
+		}
+	],
+	"backtrace" : 1,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_library",
+			"target_link_libraries",
+			"target_include_directories"
+		],
+		"files" : 
+		[
+			"src/parser/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 1,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 5,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 4,
+				"parent" : 0
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "-O3 -DNDEBUG -std=gnu++20 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.2.sdk -fcolor-diagnostics"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 3,
+					"path" : "/Users/anas/Documents/LOG6953FEProjectHiver20205/src/parser/include"
+				},
+				{
+					"backtrace" : 2,
+					"path" : "/Users/anas/Documents/LOG6953FEProjectHiver20205/src/memory/include"
+				},
+				{
+					"backtrace" : 2,
+					"path" : "/Users/anas/Documents/LOG6953FEProjectHiver20205/src/graph/include"
+				},
+				{
+					"backtrace" : 2,
+					"path" : "/Users/anas/Documents/LOG6953FEProjectHiver20205/src/operator/include"
+				},
+				{
+					"backtrace" : 2,
+					"path" : "/Users/anas/Documents/LOG6953FEProjectHiver20205/src/debug/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					1
+				],
+				"standard" : "20"
+			},
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2
+			]
+		}
+	],
+	"dependencies" : 
+	[
+		{
+			"backtrace" : 2,
+			"id" : "libdata::@e5ccf62099f28249f155"
+		},
+		{
+			"backtrace" : 2,
+			"id" : "libutils::@f1b38b22aeb65474a6c5"
+		}
+	],
+	"id" : "libparser::@980325688ee7b2ed96bc",
+	"name" : "libparser",
+	"nameOnDisk" : "liblibparser.a",
+	"paths" : 
+	{
+		"build" : "src/parser",
+		"source" : "src/parser"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/parser/query_parser.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/parser/factorized_tree.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/parser/factorized_tree_element.cpp",
+			"sourceGroupIndex" : 0
+		}
+	],
+	"type" : "STATIC_LIBRARY"
+}

@@ -1,0 +1,36 @@
+/home/sunny/.local/share/JetBrains/Toolbox/apps/clion/bin/cmake/linux/x64/bin/cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_MAKE_PROGRAM=/home/sunny/.local/share/JetBrains/Toolbox/apps/clion/bin/ninja/linux/x64/ninja -DCMAKE_C_COMPILER=/usr/bin/clang-15 -DCMAKE_CXX_COMPILER=/usr/bin/clang++-15 -G Ninja -DPython_EXECUTABLE=/home/sunny/work/SampleDB2/.venv/bin/python -DPython3_EXECUTABLE=/home/sunny/work/SampleDB2/.venv/bin/python -S /home/sunny/work/TachosDB -B /home/sunny/work/TachosDB/cmake-build-release
+-- The CXX compiler identification is Clang 15.0.7
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - failed
+-- Check for working CXX compiler: /usr/bin/clang++-15
+-- Check for working CXX compiler: /usr/bin/clang++-15 - broken
+CMake Error at /home/sunny/.local/share/JetBrains/Toolbox/apps/clion/bin/cmake/linux/x64/share/cmake-3.30/Modules/CMakeTestCXXCompiler.cmake:73 (message):
+  The C++ compiler
+
+    "/usr/bin/clang++-15"
+
+  is not able to compile a simple test program.
+
+  It fails with the following output:
+
+    Change Dir: '/home/sunny/work/TachosDB/cmake-build-release/CMakeFiles/CMakeScratch/TryCompile-hSiksr'
+    
+    Run Build Command(s): /home/sunny/.local/share/JetBrains/Toolbox/apps/clion/bin/ninja/linux/x64/ninja -v cmTC_77c39
+    [1/2] /usr/bin/clang++-15   -fcolor-diagnostics -MD -MT CMakeFiles/cmTC_77c39.dir/testCXXCompiler.cxx.o -MF CMakeFiles/cmTC_77c39.dir/testCXXCompiler.cxx.o.d -o CMakeFiles/cmTC_77c39.dir/testCXXCompiler.cxx.o -c /home/sunny/work/TachosDB/cmake-build-release/CMakeFiles/CMakeScratch/TryCompile-hSiksr/testCXXCompiler.cxx
+    [2/2] : && /usr/bin/clang++-15   CMakeFiles/cmTC_77c39.dir/testCXXCompiler.cxx.o -o cmTC_77c39   && :
+    FAILED: cmTC_77c39 
+    : && /usr/bin/clang++-15   CMakeFiles/cmTC_77c39.dir/testCXXCompiler.cxx.o -o cmTC_77c39   && :
+    /usr/bin/ld: cannot find -lstdc++: No such file or directory
+    clang: error: linker command failed with exit code 1 (use -v to see invocation)
+    ninja: build stopped: subcommand failed.
+    
+    
+
+  
+
+  CMake will not be able to correctly generate this project.
+Call Stack (most recent call first):
+  CMakeLists.txt:3 (project)
+
+
+-- Configuring incomplete, errors occurred!
