@@ -1,7 +1,7 @@
 # 🚀 Launcher
 
 This is the course project for LOG6953FE - Digital Twins Engineering at Polytechnique Montreal, Winter 2025 term.
-The project has two seperate parts - a frontend service and a backend service. The frontend is a Godot project which connects
+The project has two separate parts - a frontend service and a backend service. The frontend is a Godot project which connects
 with the backend service via a RabbitMQ message broker.
 
 ---
@@ -10,6 +10,8 @@ Simply run the Godot design AFTER the backend services are launched.
 
 
 ## 📦 Backend Services launcher - what It Does
+
+**⚠️ Important: We only support MacOS and Linux.**
 
 The `launch_services.sh` script performs the following:
 
